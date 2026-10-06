@@ -333,7 +333,7 @@ export const PrintResultScreen: React.FC = () => {
             data-testid="qr-code-container"
             className="bg-white p-5 rounded-xl flex flex-col items-center justify-center mx-auto"
           >
-            <QRCodeSVG value={driveUrl} size={196} level="M" />
+            <QRCodeSVG value={driveUrl} size={196} level="M" className="max-w-full" />
           </div>
 
           <div className="space-y-2 pt-2 border-t border-zinc-800">
