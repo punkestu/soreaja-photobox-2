@@ -25,13 +25,16 @@ export const FinalPreviewScreen: React.FC = () => {
     setSelectedFilter,
     customCaption,
     setCustomCaption,
+    isHydrated,
   } = usePhotobox();
 
-  const [isCompositing, setIsCompositing] = useState<boolean>(true);
+  const [isCompositing, setIsCompositing] = useState<boolean>(!finalLayoutBase64);
   const activeFrame = selectedFrame || DEFAULT_FRAMES[0];
 
-  // Ensure fallback photos if opened directly
+  // Ensure fallback photos only after hydration if opened directly without photos
   useEffect(() => {
+    if (!isHydrated) return;
+
     if (!selectedFrame) {
       setSelectedFrame(DEFAULT_FRAMES[0]);
     }
@@ -43,11 +46,11 @@ export const FinalPreviewScreen: React.FC = () => {
         )
       );
     }
-  }, [capturedPhotos.length, selectedFrame, setCapturedPhotos, setSelectedFrame]);
+  }, [capturedPhotos.length, isHydrated, selectedFrame, setCapturedPhotos, setSelectedFrame]);
 
   // Sesuai TSD 4.2.5: Gabungkan capturedPhotos + selectedFrame.frameImg menggunakan HTML Canvas
   useEffect(() => {
-    if (capturedPhotos.length === 0) return;
+    if (!isHydrated || capturedPhotos.length === 0) return;
     let active = true;
     setIsCompositing(true);
 
@@ -70,6 +73,7 @@ export const FinalPreviewScreen: React.FC = () => {
     activeFrame,
     capturedPhotos,
     customCaption,
+    isHydrated,
     selectedFilter,
     setFinalLayoutBase64,
   ]);

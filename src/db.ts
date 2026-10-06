@@ -1,9 +1,10 @@
 import Dexie, { type Table } from 'dexie';
-import type { AppSettings, SessionRecord } from './types/photobox';
+import type { AppSettings, SessionRecord, ActiveSessionRecord } from './types/photobox';
 
 export class PhotoboxDatabase extends Dexie {
   settings!: Table<AppSettings, string>;
   sessions!: Table<SessionRecord, number>;
+  activeSession!: Table<ActiveSessionRecord, string>;
 
   constructor() {
     super('PhotoboxDB');
@@ -11,10 +12,24 @@ export class PhotoboxDatabase extends Dexie {
       settings: 'id, driveUrl', // 'id' sebagai primary key sesuai TSD 3.1
       sessions: '++id, timestamp, frameId, frameName, driveUrl',
     });
+    this.version(2).stores({
+      settings: 'id, driveUrl',
+      sessions: '++id, timestamp, frameId, frameName, driveUrl',
+      activeSession: 'id, updatedAt',
+    });
   }
 }
 
 export const db = new PhotoboxDatabase();
+
+export async function clearActiveSession(): Promise<void> {
+  try {
+    await db.activeSession.delete('current_active_session');
+  } catch (err) {
+    console.warn('Error clearing active session:', err);
+  }
+}
+
 
 export const DEFAULT_DRIVE_URL =
   'https://drive.google.com/drive/folders/1SoreAjaPhotobox2StudioArchive';

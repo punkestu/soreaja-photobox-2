@@ -25,6 +25,7 @@ export const PrintResultScreen: React.FC = () => {
     selectedFilter,
     customCaption,
     resetSession,
+    isHydrated,
   } = usePhotobox();
 
   const [driveUrl, setDriveUrl] = useState<string>(DEFAULT_DRIVE_URL);
@@ -44,6 +45,7 @@ export const PrintResultScreen: React.FC = () => {
 
   // Sesuai TSD 4.2.6: Proses On-Mount
   useEffect(() => {
+    if (!isHydrated) return;
     if (hasInitializedRef.current) return;
     hasInitializedRef.current = true;
 

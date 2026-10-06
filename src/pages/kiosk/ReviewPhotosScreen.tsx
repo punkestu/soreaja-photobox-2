@@ -11,12 +11,15 @@ export const ReviewPhotosScreen: React.FC = () => {
     capturedPhotos,
     setCapturedPhotos,
     setRetakeIndex,
+    isHydrated,
   } = usePhotobox();
 
   const activeFrame = selectedFrame || DEFAULT_FRAMES[0];
 
-  // Ensure valid fallback photos if user navigated directly to /app/review-photos
+  // Ensure valid fallback photos only after hydration if user navigated directly without photos
   useEffect(() => {
+    if (!isHydrated) return;
+
     if (!selectedFrame) {
       setSelectedFrame(DEFAULT_FRAMES[0]);
     }
@@ -27,7 +30,7 @@ export const ReviewPhotosScreen: React.FC = () => {
       );
       setCapturedPhotos(seeded);
     }
-  }, [capturedPhotos.length, selectedFrame, setCapturedPhotos, setSelectedFrame]);
+  }, [capturedPhotos.length, isHydrated, selectedFrame, setCapturedPhotos, setSelectedFrame]);
 
   // Sesuai TSD 4.2.4: Klik foto -> Set retakeIndex ke index foto tersebut -> Kembali ke /app/camera
   const handleRetakeSinglePhoto = (index: number) => {

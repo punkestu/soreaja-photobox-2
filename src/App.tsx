@@ -3,13 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   BrowserRouter,
   Routes,
   Route,
   Navigate,
   useSearchParams,
+  useLocation,
 } from 'react-router-dom';
 import { PhotoboxProvider } from './context/PhotoboxContext';
 import { AdminLayout } from './components/admin/AdminLayout';
@@ -24,10 +25,59 @@ import { ReviewPhotosScreen } from './pages/kiosk/ReviewPhotosScreen';
 import { FinalPreviewScreen } from './pages/kiosk/FinalPreviewScreen';
 import { PrintResultScreen } from './pages/kiosk/PrintResultScreen';
 
+const LAST_ROUTE_KEY = 'soreaja_last_active_route';
+
+const getSavedRoute = (): string | null => {
+  try {
+    const saved =
+      localStorage.getItem(LAST_ROUTE_KEY) ||
+      sessionStorage.getItem(LAST_ROUTE_KEY);
+    if (saved && saved !== '/' && saved.startsWith('/')) {
+      return saved;
+    }
+  } catch {
+    // Ignore storage access errors
+  }
+  return null;
+};
+
+// Tracks the current page on every navigation so refreshing preserves the exact view
+const RouteTracker: React.FC = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.pathname && location.pathname !== '/') {
+      const fullPath = location.pathname + location.search;
+      try {
+        localStorage.setItem(LAST_ROUTE_KEY, fullPath);
+        sessionStorage.setItem(LAST_ROUTE_KEY, fullPath);
+      } catch {
+        // Ignore storage access errors
+      }
+    }
+  }, [location]);
+
+  return null;
+};
+
 const RootRedirect: React.FC = () => {
   const [searchParams] = useSearchParams();
   if (searchParams.get('autostart') === '1') {
     return <Navigate to="/app/frame-selection" replace />;
+  }
+
+  const savedRoute = getSavedRoute();
+  if (savedRoute) {
+    return <Navigate to={savedRoute} replace />;
+  }
+
+  return <Navigate to="/admin/welcome" replace />;
+};
+
+const FallbackRedirect: React.FC = () => {
+  const savedRoute = getSavedRoute();
+  if (savedRoute) {
+    return <Navigate to={savedRoute} replace />;
   }
   return <Navigate to="/admin/welcome" replace />;
 };
@@ -36,6 +86,7 @@ export default function App() {
   return (
     <PhotoboxProvider>
       <BrowserRouter>
+        <RouteTracker />
         <Routes>
           <Route path="/" element={<RootRedirect />} />
 
@@ -58,10 +109,11 @@ export default function App() {
             <Route path="print-result" element={<PrintResultScreen />} />
           </Route>
 
-          <Route path="*" element={<Navigate to="/admin/welcome" replace />} />
+          <Route path="*" element={<FallbackRedirect />} />
         </Routes>
       </BrowserRouter>
     </PhotoboxProvider>
   );
 }
+
 

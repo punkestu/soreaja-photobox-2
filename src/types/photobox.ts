@@ -44,6 +44,18 @@ export interface SessionRecord {
   printedColor: boolean;
 }
 
+export interface ActiveSessionRecord {
+  id: string; // 'current_active_session'
+  selectedFrame: FrameMetadata | null;
+  capturedPhotos: string[];
+  retakeIndex: number | null;
+  finalLayoutBase64: string | null;
+  gifBlobUrl?: string | null;
+  selectedFilter: PhotoFilter;
+  customCaption: string;
+  updatedAt: number;
+}
+
 export interface PhotoboxState {
   selectedFrame: FrameMetadata | null;
   capturedPhotos: string[];
@@ -52,4 +64,6 @@ export interface PhotoboxState {
   gifBlobUrl: string | null;
   selectedFilter: PhotoFilter;
   customCaption: string;
+  isHydrated: boolean;
 }
+

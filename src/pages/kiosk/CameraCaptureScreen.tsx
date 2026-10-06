@@ -40,6 +40,15 @@ export const CameraCaptureScreen: React.FC = () => {
   const [isCapturingSequence, setIsCapturingSequence] = useState<boolean>(false);
   const [localShots, setLocalShots] = useState<string[]>(capturedPhotos);
 
+  // Sync localShots when capturedPhotos are restored from IndexedDB
+  useEffect(() => {
+    setLocalShots(capturedPhotos);
+    if (!isRetakeMode && capturedPhotos.length > 0 && capturedPhotos.length < totalShotsNeeded) {
+      setCurrentShotNumber(capturedPhotos.length + 1);
+      setActivePoseIdx(capturedPhotos.length % STUDIO_PORTRAITS.length);
+    }
+  }, [capturedPhotos, isRetakeMode, totalShotsNeeded]);
+
   // Ensure selectedFrame is set in context if user navigated directly
   useEffect(() => {
     if (!selectedFrame) {
