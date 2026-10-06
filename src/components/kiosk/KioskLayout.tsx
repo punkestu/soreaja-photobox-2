@@ -1,6 +1,8 @@
 import React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { usePhotobox } from '../../context/PhotoboxContext';
+import { PWAInstallButton } from '../common/PWAInstallButton';
+import { OfflineIndicator } from '../common/OfflineIndicator';
 
 const STEPS = [
   { path: '/app/idle', label: '01. Mulai' },
@@ -23,6 +25,7 @@ export const KioskLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0A0A0B] text-[#F4F4F0] flex flex-col">
+      <OfflineIndicator />
       {/* Top Bar Contract: 3 Zones (Brand Wordmark — Step Nav — Primary Action) */}
       <header className="flex items-center justify-between px-6 py-4 bg-[#0A0A0B]/95 border-b border-zinc-800 sticky top-0 z-30">
         <Link
@@ -54,6 +57,7 @@ export const KioskLayout: React.FC = () => {
         </nav>
 
         <div className="flex items-center gap-3">
+          <PWAInstallButton variant="kiosk" />
           {location.pathname !== '/app/idle' && (
             <button
               type="button"

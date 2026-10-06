@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom';
 import { ensureDefaultSettings } from '../../db';
+import { PWAInstallButton } from '../common/PWAInstallButton';
+import { OfflineIndicator } from '../common/OfflineIndicator';
 
 export const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
@@ -11,6 +13,7 @@ export const AdminLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#F4F4F0] text-[#111111] flex flex-col">
+      <OfflineIndicator />
       {/* Top Bar Contract: 3 Zones (Brand Wordmark — Nav Links — Primary Action) */}
       <header className="flex items-center justify-between px-6 py-4 bg-white border-b border-neutral-200 sticky top-0 z-30">
         <Link
@@ -63,6 +66,7 @@ export const AdminLayout: React.FC = () => {
         </nav>
 
         <div className="flex items-center gap-3">
+          <PWAInstallButton variant="admin" />
           <button
             type="button"
             onClick={() => navigate('/app/idle')}
