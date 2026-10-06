@@ -1,0 +1,49 @@
+import Dexie, { type Table } from 'dexie';
+import type { AppSettings, SessionRecord } from './types/photobox';
+
+export class PhotoboxDatabase extends Dexie {
+  settings!: Table<AppSettings, string>;
+  sessions!: Table<SessionRecord, number>;
+
+  constructor() {
+    super('PhotoboxDB');
+    this.version(1).stores({
+      settings: 'id, driveUrl', // 'id' sebagai primary key sesuai TSD 3.1
+      sessions: '++id, timestamp, frameId, frameName, driveUrl',
+    });
+  }
+}
+
+export const db = new PhotoboxDatabase();
+
+export const DEFAULT_DRIVE_URL =
+  'https://drive.google.com/drive/folders/1SoreAjaPhotobox2StudioArchive';
+
+export const DEFAULT_APP_SETTINGS: AppSettings = {
+  id: 'app_settings',
+  driveUrl: DEFAULT_DRIVE_URL,
+  studioName: 'SoreAja Studio — Booth 02',
+  eventName: 'SoreAja Sunset Session 2026',
+  countdownSeconds: 3,
+  autoDownload: true,
+  mirrorCamera: true,
+  cameraSourceMode: 'auto',
+  updatedAt: new Date().toISOString(),
+};
+
+export async function ensureDefaultSettings(): Promise<AppSettings> {
+  try {
+    const existing = await db.settings.get('app_settings');
+    if (existing && existing.driveUrl) {
+      return {
+        ...DEFAULT_APP_SETTINGS,
+        ...existing,
+      };
+    }
+    await db.settings.put(DEFAULT_APP_SETTINGS);
+    return DEFAULT_APP_SETTINGS;
+  } catch (err) {
+    console.warn('Dexie fallback to in-memory settings:', err);
+    return DEFAULT_APP_SETTINGS;
+  }
+}

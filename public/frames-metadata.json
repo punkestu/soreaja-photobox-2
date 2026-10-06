@@ -1,0 +1,126 @@
+[
+  {
+    "id": "frame_001",
+    "name": "Classic Strip",
+    "subtitle": "3-Cut Vertical Editorial Ivory",
+    "theme": "light",
+    "canvasWidth": 500,
+    "canvasHeight": 1220,
+    "previewImg": "/assets/frames/preview_001.png",
+    "frameImg": "/assets/frames/frame_001.png",
+    "photoCount": 3,
+    "positions": [
+      {
+        "x": 50,
+        "y": 100,
+        "width": 400,
+        "height": 300
+      },
+      {
+        "x": 50,
+        "y": 450,
+        "width": 400,
+        "height": 300
+      },
+      {
+        "x": 50,
+        "y": 800,
+        "width": 400,
+        "height": 300
+      }
+    ]
+  },
+  {
+    "id": "frame_002",
+    "name": "SoreAja Noir Strip",
+    "subtitle": "3-Cut Matte Black & Crimson",
+    "theme": "dark",
+    "canvasWidth": 500,
+    "canvasHeight": 1220,
+    "previewImg": "/assets/frames/preview_002.png",
+    "frameImg": "/assets/frames/frame_002.png",
+    "photoCount": 3,
+    "positions": [
+      {
+        "x": 50,
+        "y": 100,
+        "width": 400,
+        "height": 300
+      },
+      {
+        "x": 50,
+        "y": 450,
+        "width": 400,
+        "height": 300
+      },
+      {
+        "x": 50,
+        "y": 800,
+        "width": 400,
+        "height": 300
+      }
+    ]
+  },
+  {
+    "id": "frame_003",
+    "name": "Studio Contact 2x2",
+    "subtitle": "4-Cut Wide Gallery Sheet",
+    "theme": "light",
+    "canvasWidth": 920,
+    "canvasHeight": 820,
+    "previewImg": "/assets/frames/preview_003.png",
+    "frameImg": "/assets/frames/frame_003.png",
+    "photoCount": 4,
+    "positions": [
+      {
+        "x": 50,
+        "y": 100,
+        "width": 390,
+        "height": 292
+      },
+      {
+        "x": 480,
+        "y": 100,
+        "width": 390,
+        "height": 292
+      },
+      {
+        "x": 50,
+        "y": 422,
+        "width": 390,
+        "height": 292
+      },
+      {
+        "x": 480,
+        "y": 422,
+        "width": 390,
+        "height": 292
+      }
+    ]
+  },
+  {
+    "id": "frame_004",
+    "name": "Golden Hour Duo",
+    "subtitle": "2-Cut Warm Terracotta Edition",
+    "theme": "warm",
+    "canvasWidth": 500,
+    "canvasHeight": 880,
+    "previewImg": "/assets/frames/preview_004.png",
+    "frameImg": "/assets/frames/frame_004.png",
+    "photoCount": 2,
+    "positions": [
+      {
+        "x": 50,
+        "y": 100,
+        "width": 400,
+        "height": 300
+      },
+      {
+        "x": 50,
+        "y": 440,
+        "width": 400,
+        "height": 300
+      }
+    ]
+  }
+]
