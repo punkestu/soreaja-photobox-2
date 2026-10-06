@@ -83,8 +83,8 @@ export const FinalPreviewScreen: React.FC = () => {
   ]);
 
   return (
-    <div className="flex-1 max-w-6xl w-full mx-auto px-6 py-10 space-y-8">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-zinc-800 pb-6">
+    <div className="flex-1 w-full max-w-7xl mx-auto px-6 md:px-10 py-8 space-y-8">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4">
         <div>
           <div className="text-xs font-mono-tabular text-zinc-400 flex items-center gap-2 mb-2">
             <span>Tahap 05 dari 06</span>
@@ -106,7 +106,7 @@ export const FinalPreviewScreen: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/app/review-photos')}
-            className="px-5 py-2.5 text-xs font-semibold text-zinc-200 bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+            className="px-5 py-2.5 text-xs font-semibold text-zinc-200 bg-zinc-900/80 hover:bg-zinc-800 rounded-xl transition-colors whitespace-nowrap cursor-pointer"
           >
             ← Retake
           </button>
@@ -115,7 +115,7 @@ export const FinalPreviewScreen: React.FC = () => {
             type="button"
             disabled={isCompositing || !finalLayoutBase64}
             onClick={() => navigate('/app/print-result')}
-            className="px-7 py-2.5 text-sm font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] disabled:opacity-50 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+            className="px-7 py-2.5 text-sm font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] disabled:opacity-50 rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
           >
             Lanjut →
           </button>
@@ -124,7 +124,7 @@ export const FinalPreviewScreen: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Final Composite Preview */}
-        <div className="lg:col-span-7 bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col items-center justify-center min-h-[540px]">
+        <div className="lg:col-span-7 bg-zinc-900/80 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[540px] shadow-2xl">
           {isCompositing || !finalLayoutBase64 ? (
             <div className="text-center space-y-3 py-16">
               <p className="text-sm font-mono-tabular text-zinc-300">
@@ -139,13 +139,13 @@ export const FinalPreviewScreen: React.FC = () => {
               data-testid="final-composite-image"
               src={finalLayoutBase64}
               alt={`Hasil Akhir Bingkai ${activeFrame.name}`}
-              className="max-h-[600px] w-auto object-contain rounded shadow-2xl border border-zinc-800"
+              className="max-h-[640px] w-auto object-contain rounded-xl shadow-2xl"
             />
           )}
         </div>
 
         {/* Tone Filter & Caption Controls */}
-        <div className="lg:col-span-5 bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-6">
+        <div className="lg:col-span-5 bg-zinc-900/80 rounded-2xl p-6 space-y-6 shadow-xl">
           <div className="space-y-3">
             <h2 className="font-display text-lg font-bold text-[#F4F4F0]">
               Tone Warna Studio (Filter Kanvas)
@@ -162,10 +162,10 @@ export const FinalPreviewScreen: React.FC = () => {
                     key={f.id}
                     type="button"
                     onClick={() => setSelectedFilter(f.id)}
-                    className={`p-3 rounded-lg border text-left transition-colors cursor-pointer ${
+                    className={`p-3.5 rounded-xl text-left transition-all cursor-pointer ${
                       isActive
-                        ? 'bg-zinc-800 border-[#E11D48] text-white'
-                        : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                        ? 'bg-[#E11D48]/15 ring-2 ring-[#E11D48] text-white'
+                        : 'bg-zinc-950/80 text-zinc-300 hover:bg-zinc-800'
                     }`}
                   >
                     <p className="text-xs font-semibold">{f.label}</p>
@@ -177,7 +177,7 @@ export const FinalPreviewScreen: React.FC = () => {
           </div>
 
           {/* Stempel Teks Bingkai Toggle & Caption */}
-          <div className="pt-4 border-t border-zinc-800 space-y-3">
+          <div className="pt-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold text-zinc-200">
@@ -214,22 +214,22 @@ export const FinalPreviewScreen: React.FC = () => {
                   maxLength={32}
                   value={customCaption}
                   onChange={(e) => setCustomCaption(e.target.value)}
-                  className="w-full px-3.5 py-2 text-sm bg-zinc-950 border border-zinc-800 rounded-lg text-white focus:outline-none focus:border-zinc-600 font-mono-tabular"
+                  className="w-full px-3.5 py-2 text-sm bg-zinc-950 rounded-xl text-white focus:outline-none ring-1 ring-zinc-700 focus:ring-[#E11D48] font-mono-tabular"
                 />
               </div>
             ) : (
-              <p className="text-[11px] text-zinc-500 bg-zinc-950 p-2.5 rounded-lg border border-zinc-800/80">
+              <p className="text-[11px] text-zinc-400 bg-zinc-950/90 p-3 rounded-xl">
                 Mode bersih aktif: Tidak ada stempel teks yang dicetak di atas bingkai (cocok untuk custom frame).
               </p>
             )}
           </div>
 
-          <div className="pt-4 border-t border-zinc-800 space-y-3">
+          <div className="pt-4 space-y-3">
             <button
               type="button"
               disabled={isCompositing || !finalLayoutBase64}
               onClick={() => navigate('/app/print-result')}
-              className="w-full py-3.5 px-5 text-sm font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] disabled:opacity-50 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+              className="w-full py-4 px-5 text-sm font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] disabled:opacity-50 rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
             >
               Lanjut ke Cetak & QR Code →
             </button>
@@ -237,7 +237,7 @@ export const FinalPreviewScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate('/app/review-photos')}
-              className="w-full py-2.5 px-4 text-xs font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+              className="w-full py-3 px-4 text-xs font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors whitespace-nowrap cursor-pointer"
             >
               Retake (Kembali ke Evaluasi Foto)
             </button>

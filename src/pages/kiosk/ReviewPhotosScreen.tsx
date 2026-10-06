@@ -44,8 +44,8 @@ export const ReviewPhotosScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 max-w-6xl w-full mx-auto px-6 py-10 space-y-8">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-zinc-800 pb-6">
+    <div className="flex-1 w-full max-w-7xl mx-auto px-6 md:px-10 py-8 space-y-8">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4">
         <div>
           <div className="text-xs font-mono-tabular text-zinc-400 flex items-center gap-2 mb-2">
             <span>Tahap 04 dari 06</span>
@@ -71,7 +71,7 @@ export const ReviewPhotosScreen: React.FC = () => {
               setRetakeIndex(null);
               navigate('/app/camera');
             }}
-            className="px-4 py-2.5 text-xs font-medium text-zinc-300 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+            className="px-4 py-2.5 text-xs font-medium text-zinc-300 bg-zinc-900/80 hover:bg-zinc-800 rounded-xl transition-colors whitespace-nowrap cursor-pointer"
           >
             Ulangi Semua Foto
           </button>
@@ -79,7 +79,7 @@ export const ReviewPhotosScreen: React.FC = () => {
           <button
             type="button"
             onClick={handleFinishReview}
-            className="px-6 py-2.5 text-sm font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+            className="px-6 py-2.5 text-sm font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
           >
             Selesai & Gabungkan Frame →
           </button>
@@ -91,7 +91,7 @@ export const ReviewPhotosScreen: React.FC = () => {
         {capturedPhotos.map((photoSrc, index) => (
           <div
             key={index}
-            className="bg-zinc-900 border border-zinc-800 hover:border-zinc-600 rounded-xl p-4 flex flex-col justify-between gap-4 transition-colors"
+            className="bg-zinc-900/80 hover:bg-zinc-900 rounded-2xl p-5 flex flex-col justify-between gap-4 transition-all shadow-xl"
           >
             <div className="space-y-3">
               <div className="flex items-center justify-between text-xs font-mono-tabular text-zinc-400">
@@ -103,7 +103,7 @@ export const ReviewPhotosScreen: React.FC = () => {
                 type="button"
                 onClick={() => handleRetakeSinglePhoto(index)}
                 aria-label={`Retake Foto Nomor ${index + 1}`}
-                className="w-full aspect-[4/3] bg-zinc-950 rounded-lg overflow-hidden border border-zinc-800 relative group cursor-pointer block"
+                className="w-full aspect-[4/3] bg-zinc-950 rounded-xl overflow-hidden relative group cursor-pointer block"
               >
                 <img
                   src={photoSrc}
@@ -112,7 +112,7 @@ export const ReviewPhotosScreen: React.FC = () => {
                   className="w-full h-full object-cover group-hover:opacity-75 transition-opacity"
                 />
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/50">
-                  <span className="px-4 py-2 bg-white text-zinc-950 text-xs font-semibold rounded-md">
+                  <span className="px-4 py-2 bg-white text-zinc-950 text-xs font-semibold rounded-lg shadow-lg">
                     Klik untuk Retake Foto #{index + 1}
                   </span>
                 </div>
@@ -122,7 +122,7 @@ export const ReviewPhotosScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => handleRetakeSinglePhoto(index)}
-              className="w-full py-2.5 px-4 text-xs font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+              className="w-full py-2.5 px-4 text-xs font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors whitespace-nowrap cursor-pointer"
             >
               Ulangi Foto #{index + 1}
             </button>
@@ -131,7 +131,7 @@ export const ReviewPhotosScreen: React.FC = () => {
       </div>
 
       {/* Bottom Action Bar */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="bg-zinc-900/80 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
         <div className="space-y-1">
           <p className="text-sm font-semibold text-[#F4F4F0]">
             Sudah puas dengan semua ekspresi dan pose?
@@ -146,7 +146,7 @@ export const ReviewPhotosScreen: React.FC = () => {
         <button
           type="button"
           onClick={handleFinishReview}
-          className="px-8 py-3.5 text-sm font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+          className="px-8 py-3.5 text-sm font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
         >
           Selesai
         </button>

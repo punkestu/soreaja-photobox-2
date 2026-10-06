@@ -47,7 +47,7 @@ const RouteTracker: React.FC = () => {
 
   useEffect(() => {
     if (location.pathname && location.pathname !== '/') {
-      const fullPath = location.pathname + location.search;
+      const fullPath = location.pathname + location.search + location.hash;
       try {
         localStorage.setItem(LAST_ROUTE_KEY, fullPath);
         sessionStorage.setItem(LAST_ROUTE_KEY, fullPath);

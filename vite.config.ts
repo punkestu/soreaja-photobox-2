@@ -17,6 +17,7 @@ export default defineConfig(() => {
           'icon.svg',
           'assets/gif.worker.js',
           'assets/frames/*.png',
+          'assets/images/*.jpg',
           'metadata.json',
           'frames-metadata.json',
         ],
@@ -28,7 +29,8 @@ export default defineConfig(() => {
             'Offline-first web photobox application with local IndexedDB storage, WebRTC capture, and GIF generation.',
           theme_color: '#0A0A0B',
           background_color: '#0A0A0B',
-          display: 'standalone',
+          display: 'fullscreen',
+          display_override: ['fullscreen', 'standalone', 'minimal-ui', 'window-controls-overlay'],
           orientation: 'any',
           start_url: '/',
           scope: '/',
@@ -54,7 +56,8 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,json}'],
+          navigateFallback: '/index.html',
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,json,jpg,jpeg,webp}'],
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -94,7 +97,7 @@ export default defineConfig(() => {
     ],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(import.meta.dirname, '.'),
       },
     },
     server: {

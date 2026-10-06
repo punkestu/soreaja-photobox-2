@@ -134,9 +134,11 @@ export const PrintResultScreen: React.FC = () => {
     capturedPhotos,
     customCaption,
     finalLayoutBase64,
+    isHydrated,
     selectedFilter,
     setFinalLayoutBase64,
     setGifBlobUrl,
+    showFrameStamps,
   ]);
 
   const handleReprintThermal = async () => {
@@ -161,9 +163,9 @@ export const PrintResultScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 max-w-6xl w-full mx-auto px-6 py-10 space-y-8">
+    <div className="flex-1 w-full max-w-7xl mx-auto px-6 md:px-10 py-8 space-y-8">
       {/* Header & Live Hardware Status */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-zinc-800 pb-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4">
         <div>
           <div className="text-xs font-mono-tabular text-zinc-400 flex items-center gap-2 mb-2">
             <span>Tahap 06 dari 06</span>
@@ -188,7 +190,7 @@ export const PrintResultScreen: React.FC = () => {
             type="button"
             disabled={isPrintingThermal}
             onClick={handleReprintThermal}
-            className="px-4 py-2.5 text-xs font-semibold text-zinc-100 bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 disabled:opacity-50 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+            className="px-4 py-2.5 text-xs font-semibold text-zinc-100 bg-zinc-900/80 hover:bg-zinc-800 disabled:opacity-50 rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-md"
           >
             {isPrintingThermal ? 'Mencetak Thermal...' : 'Print Ulang Thermal'}
           </button>
@@ -197,7 +199,7 @@ export const PrintResultScreen: React.FC = () => {
             type="button"
             disabled={isPrintingColor}
             onClick={handlePrintColor}
-            className="px-4 py-2.5 text-xs font-semibold text-zinc-100 bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 disabled:opacity-50 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+            className="px-4 py-2.5 text-xs font-semibold text-zinc-100 bg-zinc-900/80 hover:bg-zinc-800 disabled:opacity-50 rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-md"
           >
             {isPrintingColor ? 'Mencetak Warna (3d)...' : 'Print Warna'}
           </button>
@@ -205,7 +207,7 @@ export const PrintResultScreen: React.FC = () => {
           <button
             type="button"
             onClick={handleNewSession}
-            className="px-6 py-2.5 text-sm font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+            className="px-6 py-2.5 text-sm font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
           >
             Sesi Baru
           </button>
@@ -215,7 +217,7 @@ export const PrintResultScreen: React.FC = () => {
       {/* 3-Column Result Showcase: Final Framed Strip | Animated GIF | QR Code Google Drive */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Column 1: Final Framed Photo Strip */}
-        <div className="lg:col-span-5 bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4">
+        <div className="lg:col-span-5 bg-zinc-900/80 rounded-2xl p-6 space-y-4 shadow-xl">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display text-base font-bold text-[#F4F4F0]">
@@ -232,19 +234,19 @@ export const PrintResultScreen: React.FC = () => {
                     `PB_${Date.now()}_final.png`
                   )
                 }
-                className="px-3 py-1.5 text-xs font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded-md transition-colors whitespace-nowrap cursor-pointer"
+                className="px-3 py-1.5 text-xs font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
               >
                 Unduh PNG
               </button>
             )}
           </div>
 
-          <div className="bg-zinc-950 rounded-lg border border-zinc-800 p-4 flex items-center justify-center min-h-[420px]">
+          <div className="bg-zinc-950 rounded-xl p-4 flex items-center justify-center min-h-[420px]">
             {finalLayoutBase64 ? (
               <img
                 src={finalLayoutBase64}
                 alt="Hasil akhir strip foto berbingkai"
-                className="max-h-[480px] w-auto object-contain rounded shadow-xl"
+                className="max-h-[480px] w-auto object-contain rounded shadow-2xl"
               />
             ) : (
               <span className="text-xs font-mono-tabular text-zinc-500">
@@ -255,7 +257,7 @@ export const PrintResultScreen: React.FC = () => {
         </div>
 
         {/* Column 2: Animated GIF (gif.js) */}
-        <div className="lg:col-span-4 bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4">
+        <div className="lg:col-span-4 bg-zinc-900/80 rounded-2xl p-6 space-y-4 shadow-xl">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display text-base font-bold text-[#F4F4F0]">
@@ -269,14 +271,14 @@ export const PrintResultScreen: React.FC = () => {
                 onClick={() =>
                   downloadSingleFile(gifBlobUrl, `PB_${Date.now()}_anim.gif`)
                 }
-                className="px-3 py-1.5 text-xs font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded-md transition-colors whitespace-nowrap cursor-pointer"
+                className="px-3 py-1.5 text-xs font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
               >
                 Unduh GIF
               </button>
             )}
           </div>
 
-          <div className="aspect-[3/2] bg-zinc-950 rounded-lg border border-zinc-800 overflow-hidden flex items-center justify-center">
+          <div className="aspect-[3/2] bg-zinc-950 rounded-xl overflow-hidden flex items-center justify-center">
             {isGeneratingGif ? (
               <div className="text-center space-y-2 p-4">
                 <p className="text-xs font-mono-tabular text-zinc-300">
@@ -297,7 +299,7 @@ export const PrintResultScreen: React.FC = () => {
           </div>
 
           {/* Auto-Download Manifest Summary */}
-          <div className="pt-3 border-t border-zinc-800 space-y-2">
+          <div className="pt-3 border-t border-zinc-800/80 space-y-2">
             <p className="text-xs font-semibold text-zinc-300">
               File Sesi Lokal ({downloadedManifest.length} File):
             </p>
@@ -305,7 +307,7 @@ export const PrintResultScreen: React.FC = () => {
               {downloadedManifest.map((item) => (
                 <li
                   key={item.filename}
-                  className="flex items-center justify-between py-1 border-b border-zinc-800/60"
+                  className="flex items-center justify-between py-1 border-b border-zinc-800/50"
                 >
                   <span className="truncate max-w-[200px]">{item.filename}</span>
                   <button
@@ -322,7 +324,7 @@ export const PrintResultScreen: React.FC = () => {
         </div>
 
         {/* Column 3: QR Code Google Drive (qrcode.react) */}
-        <div className="lg:col-span-3 bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-5 flex flex-col justify-between">
+        <div className="lg:col-span-3 bg-zinc-900/80 rounded-2xl p-6 space-y-5 flex flex-col justify-between shadow-xl">
           <div className="space-y-2">
             <h2 className="font-display text-base font-bold text-[#F4F4F0]">
               03. Scan untuk Mengunduh
@@ -335,19 +337,19 @@ export const PrintResultScreen: React.FC = () => {
 
           <div
             data-testid="qr-code-container"
-            className="bg-white p-5 rounded-xl flex flex-col items-center justify-center mx-auto"
+            className="bg-white p-5 rounded-2xl flex flex-col items-center justify-center mx-auto shadow-2xl"
           >
             <QRCodeSVG value={driveUrl} size={196} level="M" className="max-w-full" />
           </div>
 
-          <div className="space-y-2 pt-2 border-t border-zinc-800">
+          <div className="space-y-2 pt-2">
             <p className="text-[11px] font-mono-tabular text-zinc-400 break-all">
               {driveUrl}
             </p>
             <button
               type="button"
               onClick={handleNewSession}
-              className="w-full py-3 px-4 text-xs font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+              className="w-full py-3.5 px-4 text-xs font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
             >
               Mulai Sesi Baru
             </button>

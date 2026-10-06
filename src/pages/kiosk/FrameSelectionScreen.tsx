@@ -26,8 +26,8 @@ export const FrameSelectionScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 max-w-6xl w-full mx-auto px-6 py-10 space-y-8">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-zinc-800 pb-6">
+    <div className="flex-1 w-full max-w-7xl mx-auto px-6 md:px-10 py-8 space-y-8">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4">
         <div>
           <div className="text-xs font-mono-tabular text-zinc-400 flex items-center gap-2 mb-2">
             <span>Tahap 02 dari 06</span>
@@ -46,7 +46,7 @@ export const FrameSelectionScreen: React.FC = () => {
         <button
           type="button"
           onClick={() => navigate('/app/idle')}
-          className="px-4 py-2 text-xs font-medium text-zinc-300 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-lg transition-colors whitespace-nowrap self-start md:self-auto cursor-pointer"
+          className="px-4 py-2 text-xs font-medium text-zinc-300 bg-zinc-900 hover:bg-zinc-800 rounded-lg transition-colors whitespace-nowrap self-start md:self-auto cursor-pointer"
         >
           ← Kembali ke Layar Mulai
         </button>
@@ -57,7 +57,7 @@ export const FrameSelectionScreen: React.FC = () => {
           {[1, 2, 3, 4].map((n) => (
             <div
               key={n}
-              className="h-[440px] bg-zinc-900 border border-zinc-800 rounded-xl animate-pulse p-5"
+              className="h-[440px] bg-zinc-900/60 rounded-2xl animate-pulse p-5"
             />
           ))}
         </div>
@@ -68,20 +68,20 @@ export const FrameSelectionScreen: React.FC = () => {
             return (
               <div
                 key={frame.id}
-                className={`bg-zinc-900/90 border rounded-xl p-5 flex flex-col justify-between gap-5 transition-colors ${
+                className={`bg-zinc-900/70 hover:bg-zinc-900 rounded-2xl p-5 flex flex-col justify-between gap-5 transition-all ${
                   isSelected
-                    ? 'border-[#E11D48]'
-                    : 'border-zinc-800 hover:border-zinc-600'
+                    ? 'ring-2 ring-[#E11D48] bg-zinc-900'
+                    : 'hover:shadow-2xl'
                 }`}
               >
                 <div className="space-y-4">
                   {/* Visual Preview Container */}
-                  <div className="aspect-[3/4] bg-zinc-950 rounded-lg border border-zinc-800/80 p-4 flex items-center justify-center overflow-hidden">
+                  <div className="aspect-[3/4] bg-zinc-950 rounded-xl p-4 flex items-center justify-center overflow-hidden">
                     <img
                       src={frame.previewImg}
                       alt={`Pratinjau bingkai ${frame.name}`}
                       referrerPolicy="no-referrer"
-                      className="max-h-full max-w-full object-contain rounded shadow"
+                      className="max-h-full max-w-full object-contain rounded shadow-lg"
                     />
                   </div>
 
@@ -105,7 +105,7 @@ export const FrameSelectionScreen: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleSelectFrame(frame)}
-                  className="w-full py-3 px-4 text-xs font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+                  className="w-full py-3.5 px-4 text-xs font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] rounded-xl transition-colors whitespace-nowrap cursor-pointer"
                 >
                   Pilih {frame.name} ({frame.photoCount} Foto)
                 </button>

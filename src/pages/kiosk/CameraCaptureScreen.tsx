@@ -290,13 +290,14 @@ export const CameraCaptureScreen: React.FC = () => {
 
           const snap = captureSinglePhoto(currentIdx);
           accumulated.push(snap);
-          setLocalShots([...accumulated]);
+          const currentShots = [...accumulated];
+          setLocalShots(currentShots);
+          setCapturedPhotos(currentShots);
 
           currentIdx += 1;
           if (currentIdx < totalShotsNeeded) {
             setTimeout(runNextShot, 600);
           } else {
-            setCapturedPhotos(accumulated);
             setIsCapturingSequence(false);
             setTimeout(() => {
               navigate('/app/review-photos');
@@ -325,9 +326,9 @@ export const CameraCaptureScreen: React.FC = () => {
     STUDIO_PORTRAITS[activePoseIdx % STUDIO_PORTRAITS.length] || STUDIO_PORTRAITS[0];
 
   return (
-    <div className="flex-1 max-w-6xl w-full mx-auto px-6 py-8 flex flex-col justify-between gap-6">
+    <div className="flex-1 w-full max-w-7xl mx-auto px-6 md:px-10 py-6 flex flex-col justify-between gap-6">
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
         <div>
           <div className="text-xs font-mono-tabular text-zinc-400 flex items-center gap-2 mb-1">
             <span>Tahap 03 dari 06</span>
@@ -378,7 +379,7 @@ export const CameraCaptureScreen: React.FC = () => {
         <div className="lg:col-span-8 space-y-4">
           <div
             data-testid="camera-viewfinder"
-            className="relative aspect-[4/3] w-full bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden flex items-center justify-center"
+            className="relative aspect-[4/3] w-full bg-zinc-950 rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center"
           >
             {/* WebRTC Video Element */}
             <video
@@ -472,7 +473,7 @@ export const CameraCaptureScreen: React.FC = () => {
         </div>
 
         {/* Controls & Captured Slot Strip */}
-        <div className="lg:col-span-4 bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-6">
+        <div className="lg:col-span-4 bg-zinc-900/80 rounded-2xl p-6 space-y-6">
           <div className="space-y-2">
             <h2 className="font-display text-lg font-bold text-[#F4F4F0]">
               Kontrol Pemotretan
@@ -493,7 +494,7 @@ export const CameraCaptureScreen: React.FC = () => {
               type="button"
               disabled={isCapturingSequence}
               onClick={startCountdownSequence}
-              className="w-full py-3.5 px-5 text-sm font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] disabled:opacity-50 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+              className="w-full py-4 px-5 text-sm font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] disabled:opacity-50 rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
             >
               {isCapturingSequence
                 ? `Mengambil Foto (${countdown ?? '...'})`
@@ -505,7 +506,7 @@ export const CameraCaptureScreen: React.FC = () => {
             <button
               type="button"
               onClick={handleInstantCapture}
-              className="w-full py-3 px-4 text-xs font-semibold text-zinc-100 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+              className="w-full py-3 px-4 text-xs font-semibold text-zinc-100 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors whitespace-nowrap cursor-pointer"
             >
               {isRetakeMode
                 ? `Ambil Instan Foto #${(retakeIndex ?? 0) + 1} (Tanpa Delay)`
@@ -514,7 +515,7 @@ export const CameraCaptureScreen: React.FC = () => {
           </div>
 
           {/* Slot Thumbnails */}
-          <div className="pt-4 border-t border-zinc-800 space-y-3">
+          <div className="pt-4 space-y-3">
             <div className="flex items-center justify-between text-xs font-mono-tabular text-zinc-400">
               <span>Slot Bingkai</span>
               <span>
@@ -529,10 +530,10 @@ export const CameraCaptureScreen: React.FC = () => {
                 return (
                   <div
                     key={idx}
-                    className={`aspect-[4/3] rounded-lg border overflow-hidden relative bg-zinc-950 flex items-center justify-center ${
+                    className={`aspect-[4/3] rounded-xl overflow-hidden relative bg-zinc-950 flex items-center justify-center ${
                       isTargetRetake
-                        ? 'border-[#E11D48] ring-2 ring-[#E11D48]/40'
-                        : 'border-zinc-800'
+                        ? 'ring-2 ring-[#E11D48]'
+                        : ''
                     }`}
                   >
                     {shotSrc ? (

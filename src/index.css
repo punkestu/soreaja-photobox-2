@@ -8,6 +8,25 @@
     --font-mono: 'JetBrains Mono', monospace;
   }
 
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100%;
+    border: 0;
+    outline: 0;
+  }
+
+  #root {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
   body {
     font-family: var(--font-sans);
     background-color: #F4F4F0;
