@@ -12,6 +12,7 @@ interface PhotoboxContextValue extends PhotoboxState {
   setGifBlobUrl: (url: string | null) => void;
   setSelectedFilter: (filter: PhotoFilter) => void;
   setCustomCaption: (caption: string) => void;
+  setShowFrameStamps: (show: boolean) => void;
   resetSession: () => void;
   seedDemoSession: () => void;
 }
@@ -24,6 +25,7 @@ const initialState: PhotoboxState = {
   gifBlobUrl: null,
   selectedFilter: 'original',
   customCaption: 'SOREAJA — PHOTOBOX 2',
+  showFrameStamps: true,
   isHydrated: false,
 };
 
@@ -37,25 +39,56 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [gifBlobUrl, setGifBlobUrl] = useState<string | null>(initialState.gifBlobUrl);
   const [selectedFilter, setSelectedFilter] = useState<PhotoFilter>(initialState.selectedFilter);
   const [customCaption, setCustomCaption] = useState<string>(initialState.customCaption);
+  const [showFrameStamps, setShowFrameStamps] = useState<boolean>(initialState.showFrameStamps);
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
 
-  // Load saved session from Dexie IndexedDB on initial mount
+  // Load saved session and settings from Dexie IndexedDB on initial mount
   useEffect(() => {
     let isMounted = true;
-    db.activeSession
-      .get('current_active_session')
-      .then((saved) => {
-        if (isMounted && saved) {
-          if (saved.selectedFrame) setSelectedFrame(saved.selectedFrame);
-          if (saved.capturedPhotos && Array.isArray(saved.capturedPhotos) && saved.capturedPhotos.length > 0) {
-            setCapturedPhotos(saved.capturedPhotos);
+    Promise.all([
+      db.activeSession.get('current_active_session'),
+      db.settings.get('app_settings'),
+    ])
+      .then(([savedSession, savedSettings]) => {
+        const configuredDefaultCaption =
+          savedSettings?.defaultCaption?.trim() || 'SOREAJA — PHOTOBOX 2';
+        const configuredShowStamps =
+          savedSettings?.showFrameStamps !== undefined
+            ? savedSettings.showFrameStamps
+            : true;
+
+        if (isMounted && savedSession) {
+          if (savedSession.selectedFrame) setSelectedFrame(savedSession.selectedFrame);
+          if (
+            savedSession.capturedPhotos &&
+            Array.isArray(savedSession.capturedPhotos) &&
+            savedSession.capturedPhotos.length > 0
+          ) {
+            setCapturedPhotos(savedSession.capturedPhotos);
           }
-          if (typeof saved.retakeIndex === 'number' || saved.retakeIndex === null) {
-            setRetakeIndex(saved.retakeIndex);
+          if (
+            typeof savedSession.retakeIndex === 'number' ||
+            savedSession.retakeIndex === null
+          ) {
+            setRetakeIndex(savedSession.retakeIndex);
           }
-          if (saved.finalLayoutBase64) setFinalLayoutBase64(saved.finalLayoutBase64);
-          if (saved.selectedFilter) setSelectedFilter(saved.selectedFilter);
-          if (saved.customCaption) setCustomCaption(saved.customCaption);
+          if (savedSession.finalLayoutBase64)
+            setFinalLayoutBase64(savedSession.finalLayoutBase64);
+          if (savedSession.selectedFilter)
+            setSelectedFilter(savedSession.selectedFilter);
+          if (savedSession.customCaption) {
+            setCustomCaption(savedSession.customCaption);
+          } else {
+            setCustomCaption(configuredDefaultCaption);
+          }
+          if (savedSession.showFrameStamps !== undefined) {
+            setShowFrameStamps(savedSession.showFrameStamps);
+          } else {
+            setShowFrameStamps(configuredShowStamps);
+          }
+        } else if (isMounted) {
+          setCustomCaption(configuredDefaultCaption);
+          setShowFrameStamps(configuredShowStamps);
         }
         if (isMounted) setIsHydrated(true);
       })
@@ -92,6 +125,7 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             finalLayoutBase64,
             selectedFilter,
             customCaption,
+            showFrameStamps,
             updatedAt: Date.now(),
           })
           .catch((err) => {
@@ -113,6 +147,7 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     finalLayoutBase64,
     selectedFilter,
     customCaption,
+    showFrameStamps,
   ]);
 
   const updatePhotoAtIndex = useCallback((index: number, photoBase64: string) => {
@@ -135,7 +170,19 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return null;
     });
     setSelectedFilter('original');
-    setCustomCaption('SOREAJA — PHOTOBOX 2');
+
+    // Restore configured default caption & stamp settings from local settings
+    db.settings
+      .get('app_settings')
+      .then((settings) => {
+        setCustomCaption(settings?.defaultCaption?.trim() || 'SOREAJA — PHOTOBOX 2');
+        setShowFrameStamps(settings?.showFrameStamps !== undefined ? settings.showFrameStamps : true);
+      })
+      .catch(() => {
+        setCustomCaption('SOREAJA — PHOTOBOX 2');
+        setShowFrameStamps(true);
+      });
+
     db.activeSession.delete('current_active_session').catch(() => {});
   }, []);
 
@@ -155,6 +202,7 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         gifBlobUrl,
         selectedFilter,
         customCaption,
+        showFrameStamps,
         isHydrated,
         setSelectedFrame,
         setCapturedPhotos,
@@ -164,6 +212,7 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setGifBlobUrl,
         setSelectedFilter,
         setCustomCaption,
+        setShowFrameStamps,
         resetSession,
         seedDemoSession,
       }}

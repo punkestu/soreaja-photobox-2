@@ -25,6 +25,8 @@ export interface AppSettings {
   driveUrl: string;
   studioName?: string;
   eventName?: string;
+  defaultCaption?: string;
+  showFrameStamps?: boolean;
   countdownSeconds?: number;
   autoDownload?: boolean;
   mirrorCamera?: boolean;
@@ -53,6 +55,7 @@ export interface ActiveSessionRecord {
   gifBlobUrl?: string | null;
   selectedFilter: PhotoFilter;
   customCaption: string;
+  showFrameStamps?: boolean;
   updatedAt: number;
 }
 
@@ -64,6 +67,7 @@ export interface PhotoboxState {
   gifBlobUrl: string | null;
   selectedFilter: PhotoFilter;
   customCaption: string;
+  showFrameStamps: boolean;
   isHydrated: boolean;
 }
 

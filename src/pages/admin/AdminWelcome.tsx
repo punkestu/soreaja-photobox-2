@@ -68,7 +68,7 @@ export const AdminWelcome: React.FC = () => {
                 onClick={() => navigate('/app/idle')}
                 className="px-5 py-2.5 text-sm font-semibold text-white bg-[#E11D48] rounded-lg hover:bg-[#BE123C] transition-colors whitespace-nowrap cursor-pointer"
               >
-                Mulai Sesi Pelanggan (/app/idle)
+                Mulai Sesi Pelanggan
               </button>
               <button
                 type="button"
@@ -124,6 +124,18 @@ export const AdminWelcome: React.FC = () => {
               <span className="text-neutral-600">Konfigurasi Bingkai (/metadata.json)</span>
               <span className="font-mono-tabular font-medium text-neutral-900">
                 {loadingFrames ? 'Memuat...' : `${frames.length} Bingkai Siap`}
+              </span>
+            </div>
+            <div className="py-3 flex items-center justify-between gap-4">
+              <span className="text-neutral-600">Default Teks Stempel Bawah Bingkai</span>
+              <span className="font-mono-tabular font-medium text-neutral-900 truncate max-w-[220px]">
+                {settings?.defaultCaption || 'SOREAJA — PHOTOBOX 2'}
+              </span>
+            </div>
+            <div className="py-3 flex items-center justify-between gap-4">
+              <span className="text-neutral-600">Stempel Teks Bingkai (Header & Footer)</span>
+              <span className="font-mono-tabular font-medium text-neutral-900">
+                {settings?.showFrameStamps !== false ? 'Aktif (Ditampilkan)' : 'Sembunyi (Mode Custom Frame)'}
               </span>
             </div>
             <div className="py-3 flex items-center justify-between gap-4">

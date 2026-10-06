@@ -29,7 +29,7 @@ export const KioskLayout: React.FC = () => {
           to="/app/idle"
           className="font-display text-lg font-bold tracking-tight text-[#F4F4F0] whitespace-nowrap"
         >
-          SoreAja — Photobox 2
+          SoreAja — Photobox
         </Link>
 
         <nav

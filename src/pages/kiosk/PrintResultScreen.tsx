@@ -24,6 +24,7 @@ export const PrintResultScreen: React.FC = () => {
     setGifBlobUrl,
     selectedFilter,
     customCaption,
+    showFrameStamps,
     resetSession,
     isHydrated,
   } = usePhotobox();
@@ -80,7 +81,8 @@ export const PrintResultScreen: React.FC = () => {
           photosToUse,
           activeFrame,
           selectedFilter,
-          customCaption
+          customCaption,
+          showFrameStamps
         );
         setFinalLayoutBase64(layoutToUse);
       }
@@ -347,7 +349,7 @@ export const PrintResultScreen: React.FC = () => {
               onClick={handleNewSession}
               className="w-full py-3 px-4 text-xs font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] rounded-lg transition-colors whitespace-nowrap cursor-pointer"
             >
-              Mulai Sesi Baru (/app/idle)
+              Mulai Sesi Baru
             </button>
           </div>
         </div>

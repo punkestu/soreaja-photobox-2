@@ -39,6 +39,8 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   driveUrl: DEFAULT_DRIVE_URL,
   studioName: 'SoreAja Studio — Booth 02',
   eventName: 'SoreAja Sunset Session 2026',
+  defaultCaption: 'SOREAJA — PHOTOBOX 2',
+  showFrameStamps: true,
   countdownSeconds: 3,
   autoDownload: true,
   mirrorCamera: true,

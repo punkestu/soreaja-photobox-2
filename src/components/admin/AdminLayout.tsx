@@ -17,7 +17,7 @@ export const AdminLayout: React.FC = () => {
           to="/admin/welcome"
           className="font-display text-lg font-bold tracking-tight text-neutral-900 whitespace-nowrap"
         >
-          SoreAja — Photobox 2
+          SoreAja — Photobox
         </Link>
 
         <nav
@@ -107,7 +107,7 @@ export const AdminLayout: React.FC = () => {
                     }`
                   }
                 >
-                  02. Konfigurasi Dexie DB
+                  02. Konfigurasi Photobox
                 </NavLink>
                 <NavLink
                   to="/admin/launch"

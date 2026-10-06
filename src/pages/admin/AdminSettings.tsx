@@ -6,6 +6,8 @@ export const AdminSettings: React.FC = () => {
   const [driveUrl, setDriveUrl] = useState(DEFAULT_DRIVE_URL);
   const [studioName, setStudioName] = useState(DEFAULT_APP_SETTINGS.studioName || '');
   const [eventName, setEventName] = useState(DEFAULT_APP_SETTINGS.eventName || '');
+  const [defaultCaption, setDefaultCaption] = useState(DEFAULT_APP_SETTINGS.defaultCaption || 'SOREAJA — PHOTOBOX 2');
+  const [showFrameStamps, setShowFrameStamps] = useState<boolean>(true);
   const [countdownSeconds, setCountdownSeconds] = useState<number>(3);
   const [autoDownload, setAutoDownload] = useState<boolean>(true);
   const [mirrorCamera, setMirrorCamera] = useState<boolean>(true);
@@ -19,6 +21,10 @@ export const AdminSettings: React.FC = () => {
         if (data.driveUrl) setDriveUrl(data.driveUrl);
         if (data.studioName) setStudioName(data.studioName);
         if (data.eventName) setEventName(data.eventName);
+        if (data.defaultCaption) setDefaultCaption(data.defaultCaption);
+        if (typeof data.showFrameStamps === 'boolean') {
+          setShowFrameStamps(data.showFrameStamps);
+        }
         if (typeof data.countdownSeconds === 'number') {
           setCountdownSeconds(data.countdownSeconds);
         }
@@ -48,6 +54,8 @@ export const AdminSettings: React.FC = () => {
       driveUrl: cleanUrl,
       studioName: studioName.trim() || 'SoreAja Studio — Booth 02',
       eventName: eventName.trim() || 'SoreAja Sunset Session 2026',
+      defaultCaption: defaultCaption.trim() || 'SOREAJA — PHOTOBOX 2',
+      showFrameStamps,
       countdownSeconds,
       autoDownload,
       mirrorCamera,
@@ -70,6 +78,8 @@ export const AdminSettings: React.FC = () => {
     setDriveUrl(DEFAULT_APP_SETTINGS.driveUrl);
     setStudioName(DEFAULT_APP_SETTINGS.studioName || '');
     setEventName(DEFAULT_APP_SETTINGS.eventName || '');
+    setDefaultCaption(DEFAULT_APP_SETTINGS.defaultCaption || 'SOREAJA — PHOTOBOX 2');
+    setShowFrameStamps(true);
     setCountdownSeconds(DEFAULT_APP_SETTINGS.countdownSeconds || 3);
     setAutoDownload(true);
     setMirrorCamera(true);
@@ -158,6 +168,27 @@ export const AdminSettings: React.FC = () => {
             </div>
           </div>
 
+          <div className="space-y-1.5 pt-2 border-t border-neutral-200">
+            <label
+              htmlFor="defaultCaptionInput"
+              className="block text-xs font-semibold text-neutral-700"
+            >
+              Default Teks Stempel Bawah Bingkai (Caption Cetakan)
+            </label>
+            <input
+              id="defaultCaptionInput"
+              type="text"
+              maxLength={32}
+              value={defaultCaption}
+              onChange={(e) => setDefaultCaption(e.target.value)}
+              placeholder="SOREAJA — PHOTOBOX 2"
+              className="w-full px-3.5 py-2.5 text-sm bg-[#F4F4F0] border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900 font-mono-tabular"
+            />
+            <p className="text-xs text-neutral-500">
+              Teks ini menjadi nilai default stempel di bagian bawah bingkai foto pada setiap sesi photobox baru.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-neutral-200">
             <div className="space-y-1.5">
               <label
@@ -201,6 +232,23 @@ export const AdminSettings: React.FC = () => {
           </div>
 
           <div className="space-y-3 pt-2 border-t border-neutral-200">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showFrameStamps}
+                onChange={(e) => setShowFrameStamps(e.target.checked)}
+                className="w-4 h-4 mt-0.5 accent-[#E11D48] rounded"
+              />
+              <div>
+                <span className="text-sm font-medium text-neutral-800">
+                  Tampilkan stempel teks pada bingkai (Header & Footer Stamp)
+                </span>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  Hilangkan centang jika Anda menggunakan desain custom frame yang tidak kompatibel dengan teks stempel atau sudah memiliki logo/branding tersendiri.
+                </p>
+              </div>
+            </label>
+
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"

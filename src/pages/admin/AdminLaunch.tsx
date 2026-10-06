@@ -62,8 +62,7 @@ export const AdminLaunch: React.FC = () => {
             Siap Menerima Pelanggan di Booth?
           </h2>
           <p className="text-sm text-neutral-300 leading-relaxed">
-            Membuka antarmuka layar sentuh pelanggan dimulai dari layar tunggu (
-            <code className="font-mono-tabular text-white">/app/idle</code>), pemilihan
+            Membuka antarmuka layar sentuh pelanggan dimulai dari layar tunggu, pemilihan
             bingkai, pengambilan foto otomatis, hingga pencetakan dan QR Code.
           </p>
         </div>
@@ -82,7 +81,7 @@ export const AdminLaunch: React.FC = () => {
             rel="noopener noreferrer"
             className="px-6 py-2.5 text-xs font-medium text-neutral-200 bg-neutral-800 hover:bg-neutral-700 rounded-lg transition-colors whitespace-nowrap text-center"
           >
-            Buka di Tab Baru (/app/idle)
+            Buka di Tab Baru
           </Link>
         </div>
       </section>

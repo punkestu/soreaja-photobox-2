@@ -25,6 +25,8 @@ export const FinalPreviewScreen: React.FC = () => {
     setSelectedFilter,
     customCaption,
     setCustomCaption,
+    showFrameStamps,
+    setShowFrameStamps,
     isHydrated,
   } = usePhotobox();
 
@@ -58,7 +60,8 @@ export const FinalPreviewScreen: React.FC = () => {
       capturedPhotos,
       activeFrame,
       selectedFilter,
-      customCaption
+      customCaption,
+      showFrameStamps
     ).then((base64) => {
       if (active) {
         setFinalLayoutBase64(base64);
@@ -76,6 +79,7 @@ export const FinalPreviewScreen: React.FC = () => {
     isHydrated,
     selectedFilter,
     setFinalLayoutBase64,
+    showFrameStamps,
   ]);
 
   return (
@@ -172,21 +176,52 @@ export const FinalPreviewScreen: React.FC = () => {
             </div>
           </div>
 
-          <div className="space-y-2 pt-4 border-t border-zinc-800">
-            <label
-              htmlFor="captionInput"
-              className="block text-xs font-semibold text-zinc-300"
-            >
-              Teks Stempel Bawah Bingkai
-            </label>
-            <input
-              id="captionInput"
-              type="text"
-              maxLength={32}
-              value={customCaption}
-              onChange={(e) => setCustomCaption(e.target.value)}
-              className="w-full px-3.5 py-2 text-sm bg-zinc-950 border border-zinc-800 rounded-lg text-white focus:outline-none focus:border-zinc-600 font-mono-tabular"
-            />
+          {/* Stempel Teks Bingkai Toggle & Caption */}
+          <div className="pt-4 border-t border-zinc-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-zinc-200">
+                  Stempel Teks Bingkai
+                </p>
+                <p className="text-[11px] text-zinc-400">
+                  Header identitas studio & stempel bawah
+                </p>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showFrameStamps}
+                  onChange={(e) => setShowFrameStamps(e.target.checked)}
+                  className="w-4 h-4 accent-[#E11D48] rounded cursor-pointer"
+                />
+                <span className="text-xs font-mono-tabular text-zinc-300">
+                  {showFrameStamps ? 'Tampil' : 'Sembunyi'}
+                </span>
+              </label>
+            </div>
+
+            {showFrameStamps ? (
+              <div className="space-y-1.5 pt-1">
+                <label
+                  htmlFor="captionInput"
+                  className="block text-xs font-semibold text-zinc-300"
+                >
+                  Teks Stempel Bawah Bingkai
+                </label>
+                <input
+                  id="captionInput"
+                  type="text"
+                  maxLength={32}
+                  value={customCaption}
+                  onChange={(e) => setCustomCaption(e.target.value)}
+                  className="w-full px-3.5 py-2 text-sm bg-zinc-950 border border-zinc-800 rounded-lg text-white focus:outline-none focus:border-zinc-600 font-mono-tabular"
+                />
+              </div>
+            ) : (
+              <p className="text-[11px] text-zinc-500 bg-zinc-950 p-2.5 rounded-lg border border-zinc-800/80">
+                Mode bersih aktif: Tidak ada stempel teks yang dicetak di atas bingkai (cocok untuk custom frame).
+              </p>
+            )}
           </div>
 
           <div className="pt-4 border-t border-zinc-800 space-y-3">

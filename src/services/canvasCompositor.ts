@@ -28,7 +28,8 @@ export async function compositeFinalLayout(
   capturedPhotos: string[],
   frame: FrameMetadata,
   filter: PhotoFilter = 'original',
-  customCaption = 'SOREAJA — PHOTOBOX 2'
+  customCaption = 'SOREAJA — PHOTOBOX 2',
+  showStamps = true
 ): Promise<string> {
   const maxRight = Math.max(...frame.positions.map((p) => p.x + p.width));
   const maxBottom = Math.max(...frame.positions.map((p) => p.y + p.height));
@@ -97,37 +98,39 @@ export async function compositeFinalLayout(
     }
   }
 
-  // 4. Crisp Studio Typography Stamp (Top Header & Bottom Editorial Footer)
-  const textColor = isDark ? '#F4F4F0' : '#18181B';
-  const mutedColor = isDark ? '#A1A1AA' : '#52525B';
-  const accentColor = isWarm ? '#C2410C' : '#E11D48';
+  // 4. Crisp Studio Typography Stamp (Top Header & Bottom Editorial Footer) - Only if showStamps is enabled
+  if (showStamps) {
+    const textColor = isDark ? '#F4F4F0' : '#18181B';
+    const mutedColor = isDark ? '#A1A1AA' : '#52525B';
+    const accentColor = isWarm ? '#C2410C' : '#E11D48';
 
-  // Top Header Metadata
-  ctx.fillStyle = textColor;
-  ctx.font = '700 18px "Syne", sans-serif';
-  ctx.fillText('SOREAJA — PHOTOBOX 2', 50, 72);
+    // Top Header Metadata
+    ctx.fillStyle = textColor;
+    ctx.font = '700 18px "Syne", sans-serif';
+    ctx.fillText('SOREAJA — PHOTOBOX 2', 50, 72);
 
-  ctx.fillStyle = mutedColor;
-  ctx.font = '500 12px "JetBrains Mono", monospace';
-  ctx.textAlign = 'right';
-  ctx.fillText(frame.id.toUpperCase().replace('_', ' · '), canvasWidth - 50, 72);
+    ctx.fillStyle = mutedColor;
+    ctx.font = '500 12px "JetBrains Mono", monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(frame.id.toUpperCase().replace('_', ' · '), canvasWidth - 50, 72);
 
-  // Bottom Editorial Footer
-  ctx.textAlign = 'left';
-  ctx.fillStyle = textColor;
-  ctx.font = '700 20px "Syne", sans-serif';
-  const captionText = (customCaption || 'SOREAJA — PHOTOBOX 2').toUpperCase();
-  ctx.fillText(captionText, 50, canvasHeight - 34);
+    // Bottom Editorial Footer
+    ctx.textAlign = 'left';
+    ctx.fillStyle = textColor;
+    ctx.font = '700 20px "Syne", sans-serif';
+    const captionText = (customCaption || 'SOREAJA — PHOTOBOX 2').toUpperCase();
+    ctx.fillText(captionText, 50, canvasHeight - 34);
 
-  const dateStr = new Date().toLocaleDateString('id-ID', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
-  ctx.textAlign = 'right';
-  ctx.fillStyle = accentColor;
-  ctx.font = '600 13px "JetBrains Mono", monospace';
-  ctx.fillText(`${dateStr.toUpperCase()} · STUDIO PRINT`, canvasWidth - 50, canvasHeight - 34);
+    const dateStr = new Date().toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+    ctx.textAlign = 'right';
+    ctx.fillStyle = accentColor;
+    ctx.font = '600 13px "JetBrains Mono", monospace';
+    ctx.fillText(`${dateStr.toUpperCase()} · STUDIO PRINT`, canvasWidth - 50, canvasHeight - 34);
+  }
 
   return canvas.toDataURL('image/png', 0.95);
 }
