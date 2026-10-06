@@ -1,0 +1,8 @@
+{
+  "name": "SoreAja Photobox",
+  "description": "Effortlessly generate professional-quality photobox app experiences with a simple, intuitive design interface.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
