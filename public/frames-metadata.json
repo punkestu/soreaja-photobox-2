@@ -122,5 +122,68 @@
         "height": 300
       }
     ]
+  },
+  {
+    "id": "frame_005",
+    "name": "Pasar Sejati — Car Free Day",
+    "subtitle": "3-Cut Vintage Crimson & Stamp Edition",
+    "theme": "dark",
+    "canvasWidth": 480,
+    "canvasHeight": 1440,
+    "previewImg": "/assets/frames/preview_005.png",
+    "frameImg": "/assets/frames/frame_005.png",
+    "photoCount": 3,
+    "positions": [
+      {
+        "x": 50,
+        "y": 68,
+        "width": 380,
+        "height": 265
+      },
+      {
+        "x": 50,
+        "y": 360,
+        "width": 380,
+        "height": 265
+      },
+      {
+        "x": 50,
+        "y": 652,
+        "width": 380,
+        "height": 265
+      }
+    ],
+    "hideGenericStamps": true
+  },
+  {
+    "id": "sunday-3-photo",
+    "name": "Sunday",
+    "subtitle": "Sunday - Soreaja",
+    "theme": "Dark Minimalist",
+    "canvasWidth": 602,
+    "canvasHeight": 1794,
+    "previewImg": "/assets/frames/sunday-3-photo-preview.png",
+    "frameImg": "/assets/frames/sunday-3-photo.png",
+    "photoCount": 3,
+    "positions": [
+      {
+        "x": 51,
+        "y": 190,
+        "width": 500,
+        "height": 480
+      },
+      {
+        "x": 51,
+        "y": 680,
+        "width": 500,
+        "height": 480
+      },
+      {
+        "x": 51,
+        "y": 1170,
+        "width": 500,
+        "height": 480
+      }
+    ]
   }
 ]

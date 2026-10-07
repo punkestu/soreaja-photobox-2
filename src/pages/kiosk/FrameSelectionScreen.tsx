@@ -53,8 +53,8 @@ export const FrameSelectionScreen: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((n) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-6">
+          {[1, 2, 3, 4, 5].map((n) => (
             <div
               key={n}
               className="h-[440px] bg-zinc-900/60 rounded-2xl animate-pulse p-5"
@@ -62,7 +62,7 @@ export const FrameSelectionScreen: React.FC = () => {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-6">
           {frames.map((frame) => {
             const isSelected = selectedFrame?.id === frame.id;
             return (

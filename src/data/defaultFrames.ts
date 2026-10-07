@@ -95,6 +95,23 @@ export const DEFAULT_FRAMES: FrameMetadata[] = [
       { x: 50, y: 440, width: 400, height: 300 },
     ],
   },
+  {
+    id: 'frame_005',
+    name: 'Pasar Sejati — Car Free Day',
+    subtitle: '3-Cut Vintage Crimson & Stamp Edition',
+    theme: 'dark',
+    canvasWidth: 480,
+    canvasHeight: 1440,
+    previewImg: '/assets/frames/preview_005.png',
+    frameImg: '/assets/frames/frame_005.png',
+    photoCount: 3,
+    positions: [
+      { x: 50, y: 68, width: 380, height: 265 },
+      { x: 50, y: 360, width: 380, height: 265 },
+      { x: 50, y: 652, width: 380, height: 265 },
+    ],
+    hideGenericStamps: true,
+  },
 ];
 
 export async function fetchFramesMetadata(): Promise<FrameMetadata[]> {

@@ -16,6 +16,7 @@ export interface FrameMetadata {
   frameImg: string;
   photoCount: number;
   positions: FramePosition[];
+  hideGenericStamps?: boolean;
 }
 
 export type PhotoFilter = 'original' | 'warm-sore' | 'noir-bw' | 'vintage-film';
