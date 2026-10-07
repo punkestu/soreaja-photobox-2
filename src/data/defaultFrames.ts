@@ -112,6 +112,23 @@ export const DEFAULT_FRAMES: FrameMetadata[] = [
     ],
     hideGenericStamps: true,
   },
+  {
+    id: 'sunday-3-photo',
+    name: 'Sunday',
+    subtitle: 'Sunday - Soreaja',
+    theme: 'dark',
+    canvasWidth: 602,
+    canvasHeight: 1794,
+    previewImg: '/assets/frames/sunday-3-photo-preview.png',
+    frameImg: '/assets/frames/sunday-3-photo.png',
+    photoCount: 3,
+    positions: [
+      { x: 51, y: 190, width: 500, height: 480 },
+      { x: 51, y: 680, width: 500, height: 480 },
+      { x: 51, y: 1170, width: 500, height: 480 },
+    ],
+    hideGenericStamps: true,
+  },
 ];
 
 export async function fetchFramesMetadata(): Promise<FrameMetadata[]> {

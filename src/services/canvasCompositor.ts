@@ -44,7 +44,10 @@ export async function compositeFinalLayout(
   const ctx = canvas.getContext('2d');
   if (!ctx) return '';
 
-  const isDark = frame.theme === 'dark';
+  const isDark =
+    frame.theme === 'dark' ||
+    frame.theme === 'Dark Minimalist' ||
+    frame.id === 'sunday-3-photo';
   const isWarm = frame.theme === 'warm';
 
   // 1. Base background fill
@@ -100,7 +103,7 @@ export async function compositeFinalLayout(
   }
 
   // 4. Crisp Studio Typography Stamp (Top Header & Bottom Editorial Footer) - Only if showStamps is enabled and not a custom stamped/illustrated frame
-  if (showStamps && !frame.hideGenericStamps && frame.id !== 'frame_005') {
+  if (showStamps && !frame.hideGenericStamps && frame.id !== 'frame_005' && frame.id !== 'sunday-3-photo') {
     const textColor = isDark ? '#F4F4F0' : '#18181B';
     const mutedColor = isDark ? '#A1A1AA' : '#52525B';
     const accentColor = themeColor || (isWarm ? '#C2410C' : '#E11D48');

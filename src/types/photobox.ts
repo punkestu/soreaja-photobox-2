@@ -9,7 +9,7 @@ export interface FrameMetadata {
   id: string;
   name: string;
   subtitle?: string;
-  theme?: 'light' | 'dark' | 'warm';
+  theme?: 'light' | 'dark' | 'warm' | string;
   canvasWidth?: number;
   canvasHeight?: number;
   previewImg: string;
@@ -32,6 +32,7 @@ export interface AppSettings {
   autoDownload?: boolean;
   mirrorCamera?: boolean;
   cameraSourceMode?: 'auto' | 'simulator';
+  showCropGuide?: boolean; // Tampilkan batas panduan area crop kamera
   kioskBackground?: string; // Data URL Base64, preset ID, or external URL
   kioskBackgroundOverlayOpacity?: number; // 20 - 100 percent
   themeColor?: string; // Hex color e.g. '#E11D48'

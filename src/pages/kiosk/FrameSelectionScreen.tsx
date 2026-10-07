@@ -53,8 +53,8 @@ export const FrameSelectionScreen: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-6">
-          {[1, 2, 3, 4, 5].map((n) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((n) => (
             <div
               key={n}
               className="h-[440px] bg-zinc-900/60 rounded-2xl animate-pulse p-5"
@@ -62,9 +62,10 @@ export const FrameSelectionScreen: React.FC = () => {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {frames.map((frame) => {
             const isSelected = selectedFrame?.id === frame.id;
+            const primarySlot = frame.positions?.[0];
             return (
               <div
                 key={frame.id}
@@ -98,6 +99,14 @@ export const FrameSelectionScreen: React.FC = () => {
                     </h2>
                     {frame.subtitle && (
                       <p className="text-xs text-zinc-400">{frame.subtitle}</p>
+                    )}
+                    {primarySlot && (
+                      <p className="text-[11px] font-mono-tabular text-zinc-400 flex items-center gap-1.5 pt-0.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--theme-accent,#E11D48)]" />
+                        <span>
+                          Slot: {primarySlot.width}×{primarySlot.height}px (Rasio {(primarySlot.width / primarySlot.height).toFixed(2)}:1)
+                        </span>
+                      </p>
                     )}
                   </div>
                 </div>

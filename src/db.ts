@@ -45,6 +45,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   autoDownload: true,
   mirrorCamera: true,
   cameraSourceMode: 'auto',
+  showCropGuide: true,
   kioskBackground: '', // Empty means use default studio hero image
   kioskBackgroundOverlayOpacity: 60, // 60%
   themeColor: '#E11D48',

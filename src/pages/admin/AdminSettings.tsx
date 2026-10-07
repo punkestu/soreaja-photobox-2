@@ -20,6 +20,7 @@ export const AdminSettings: React.FC = () => {
   const [countdownSeconds, setCountdownSeconds] = useState<number>(3);
   const [autoDownload, setAutoDownload] = useState<boolean>(true);
   const [mirrorCamera, setMirrorCamera] = useState<boolean>(true);
+  const [showCropGuide, setShowCropGuide] = useState<boolean>(true);
   const [cameraSourceMode, setCameraSourceMode] = useState<'auto' | 'simulator'>('auto');
 
   // Tema & Background Kiosk
@@ -56,6 +57,9 @@ export const AdminSettings: React.FC = () => {
         }
         if (typeof data.mirrorCamera === 'boolean') {
           setMirrorCamera(data.mirrorCamera);
+        }
+        if (typeof data.showCropGuide === 'boolean') {
+          setShowCropGuide(data.showCropGuide);
         }
         if (data.cameraSourceMode) {
           setCameraSourceMode(data.cameraSourceMode);
@@ -183,6 +187,7 @@ export const AdminSettings: React.FC = () => {
       countdownSeconds,
       autoDownload,
       mirrorCamera,
+      showCropGuide,
       cameraSourceMode,
       themeColor,
       themePreset,
@@ -675,6 +680,19 @@ export const AdminSettings: React.FC = () => {
                   />
                   <span className="text-sm text-neutral-800">
                     Efek Cermin (Mirror Horizontal) pada pratinjau kamera pelanggan
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showCropGuide}
+                    onChange={(e) => setShowCropGuide(e.target.checked)}
+                    style={{ accentColor: themeColor }}
+                    className="w-4 h-4 rounded cursor-pointer"
+                  />
+                  <span className="text-sm text-neutral-800">
+                    Tampilkan Panduan Batas Crop Kamera secara default (menampilkan area yang terpotong saat ukuran foto bingkai berbeda dari rasio kamera)
                   </span>
                 </label>
               </div>

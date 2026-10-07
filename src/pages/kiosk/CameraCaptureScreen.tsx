@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
@@ -29,6 +29,8 @@ export const CameraCaptureScreen: React.FC = () => {
 
   const [useSimulator, setUseSimulator] = useState<boolean>(false);
   const [cameraReady, setCameraReady] = useState<boolean>(false);
+  const [showCropGuide, setShowCropGuide] = useState<boolean>(true);
+  const [showGridLines, setShowGridLines] = useState<boolean>(true);
   const [activePoseIdx, setActivePoseIdx] = useState<number>(
     isRetakeMode && retakeIndex !== null ? retakeIndex % STUDIO_PORTRAITS.length : 0
   );
@@ -39,6 +41,13 @@ export const CameraCaptureScreen: React.FC = () => {
   const [isFlashing, setIsFlashing] = useState<boolean>(false);
   const [isCapturingSequence, setIsCapturingSequence] = useState<boolean>(false);
   const [localShots, setLocalShots] = useState<string[]>(capturedPhotos);
+
+  // Sync crop guide setting from IndexedDB app settings
+  useEffect(() => {
+    if (typeof settings?.showCropGuide === 'boolean') {
+      setShowCropGuide(settings.showCropGuide);
+    }
+  }, [settings?.showCropGuide]);
 
   // Sync localShots when capturedPhotos are restored from IndexedDB
   useEffect(() => {
@@ -325,6 +334,73 @@ export const CameraCaptureScreen: React.FC = () => {
   const currentPortrait =
     STUDIO_PORTRAITS[activePoseIdx % STUDIO_PORTRAITS.length] || STUDIO_PORTRAITS[0];
 
+  const activeSlotIndex =
+    isRetakeMode && retakeIndex !== null
+      ? retakeIndex
+      : Math.min(localShots.length, totalShotsNeeded - 1);
+
+  const targetSlot =
+    activeFrame.positions[activeSlotIndex] ||
+    activeFrame.positions[0] || {
+      x: 0,
+      y: 0,
+      width: 400,
+      height: 300,
+    };
+
+  const cameraAspect = 4 / 3;
+  const slotAspect = targetSlot.width / targetSlot.height;
+
+  const cropInfo = useMemo(() => {
+    const diff = slotAspect - cameraAspect;
+    if (diff < -0.015) {
+      // Slot is narrower / more square than 4:3 (e.g. 500x480 = 1.04:1 vs 1.33:1)
+      const widthPercent = (slotAspect / cameraAspect) * 100;
+      const sidePercent = Math.max(0, (100 - widthPercent) / 2);
+      return {
+        isCropped: true,
+        type: 'sides' as const,
+        leftPercent: sidePercent,
+        topPercent: 0,
+        widthPercent: widthPercent,
+        heightPercent: 100,
+        croppedSidePercent: sidePercent,
+        slotAspect,
+        cameraAspect,
+        label: `Sisi kiri & kanan (${Math.round(sidePercent * 2)}% total) akan terpotong pada bingkai`,
+      };
+    } else if (diff > 0.015) {
+      // Slot is wider than 4:3 (e.g. 380x265 = 1.43:1 vs 1.33:1)
+      const heightPercent = (cameraAspect / slotAspect) * 100;
+      const topPercent = Math.max(0, (100 - heightPercent) / 2);
+      return {
+        isCropped: true,
+        type: 'topBottom' as const,
+        leftPercent: 0,
+        topPercent: topPercent,
+        widthPercent: 100,
+        heightPercent: heightPercent,
+        croppedSidePercent: topPercent,
+        slotAspect,
+        cameraAspect,
+        label: `Sisi atas & bawah (${Math.round(topPercent * 2)}% total) akan terpotong pada bingkai`,
+      };
+    } else {
+      return {
+        isCropped: false,
+        type: 'none' as const,
+        leftPercent: 0,
+        topPercent: 0,
+        widthPercent: 100,
+        heightPercent: 100,
+        croppedSidePercent: 0,
+        slotAspect,
+        cameraAspect,
+        label: 'Pas sempurna dengan rasio kamera (4:3)',
+      };
+    }
+  }, [slotAspect, cameraAspect]);
+
   return (
     <div className="flex-1 w-full max-w-7xl mx-auto px-6 md:px-10 py-6 flex flex-col justify-between gap-6">
       {/* Header Bar */}
@@ -403,34 +479,145 @@ export const CameraCaptureScreen: React.FC = () => {
               />
             )}
 
-            {/* Rule-of-Thirds Studio Viewfinder Grid */}
-            <div className="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3">
-              <div className="border-r border-b border-white/10" />
-              <div className="border-r border-b border-white/10" />
-              <div className="border-b border-white/10" />
-              <div className="border-r border-b border-white/10" />
-              <div className="border-r border-b border-white/10" />
-              <div className="border-b border-white/10" />
-              <div className="border-r border-white/10" />
-              <div className="border-r border-white/10" />
-              <div />
-            </div>
+            {/* Dynamic Crop Guide Mask & Framing Overlay */}
+            {showCropGuide ? (
+              <div className="absolute inset-0 pointer-events-none z-10">
+                {/* Left & Right Cropped Area Dark Masks */}
+                {cropInfo.type === 'sides' && (
+                  <>
+                    <div
+                      className="absolute top-0 bottom-0 left-0 bg-black/70 backdrop-blur-[1px] flex flex-col items-center justify-center border-r-2 border-dashed border-red-500/80 shadow-inner"
+                      style={{ width: `${cropInfo.leftPercent}%` }}
+                    >
+                      <div className="rotate-[-90deg] whitespace-nowrap text-[10px] font-mono tracking-widest text-red-300 font-bold uppercase select-none drop-shadow">
+                        ✂ Terpotong
+                      </div>
+                    </div>
+                    <div
+                      className="absolute top-0 bottom-0 right-0 bg-black/70 backdrop-blur-[1px] flex flex-col items-center justify-center border-l-2 border-dashed border-red-500/80 shadow-inner"
+                      style={{ width: `${cropInfo.leftPercent}%` }}
+                    >
+                      <div className="rotate-90 whitespace-nowrap text-[10px] font-mono tracking-widest text-red-300 font-bold uppercase select-none drop-shadow">
+                        ✂ Terpotong
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Top & Bottom Cropped Area Dark Masks */}
+                {cropInfo.type === 'topBottom' && (
+                  <>
+                    <div
+                      className="absolute top-0 left-0 right-0 bg-black/70 backdrop-blur-[1px] flex items-center justify-center border-b-2 border-dashed border-red-500/80 shadow-inner"
+                      style={{ height: `${cropInfo.topPercent}%` }}
+                    >
+                      <span className="text-[10px] font-mono tracking-widest text-red-300 font-bold uppercase select-none drop-shadow">
+                        ✂ Area Terpotong Bingkai
+                      </span>
+                    </div>
+                    <div
+                      className="absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-[1px] flex items-center justify-center border-t-2 border-dashed border-red-500/80 shadow-inner"
+                      style={{ height: `${cropInfo.topPercent}%` }}
+                    >
+                      <span className="text-[10px] font-mono tracking-widest text-red-300 font-bold uppercase select-none drop-shadow">
+                        ✂ Area Terpotong Bingkai
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {/* Active Photo Framing Boundary */}
+                <div
+                  className={`absolute transition-all duration-200 ${
+                    cropInfo.isCropped
+                      ? 'border-2 border-[var(--theme-accent,#E11D48)] shadow-[0_0_24px_rgba(225,29,72,0.45)]'
+                      : 'border-2 border-white/50'
+                  }`}
+                  style={{
+                    left: `${cropInfo.leftPercent}%`,
+                    top: `${cropInfo.topPercent}%`,
+                    width: `${cropInfo.widthPercent}%`,
+                    height: `${cropInfo.heightPercent}%`,
+                  }}
+                >
+                  {/* Studio Viewfinder Corner Brackets */}
+                  <div className="absolute -top-1 -left-1 w-6 h-6 border-t-[3px] border-l-[3px] border-[var(--theme-accent,#E11D48)] drop-shadow" />
+                  <div className="absolute -top-1 -right-1 w-6 h-6 border-t-[3px] border-r-[3px] border-[var(--theme-accent,#E11D48)] drop-shadow" />
+                  <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-[3px] border-l-[3px] border-[var(--theme-accent,#E11D48)] drop-shadow" />
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-[3px] border-r-[3px] border-[var(--theme-accent,#E11D48)] drop-shadow" />
+
+                  {/* Center Crosshair Alignment Mark */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="relative w-8 h-8 opacity-40">
+                      <div className="absolute top-1/2 left-0 right-0 h-px bg-white -translate-y-1/2" />
+                      <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white -translate-x-1/2" />
+                      <div className="absolute inset-1.5 border border-white rounded-full" />
+                    </div>
+                  </div>
+
+                  {/* Rule-of-Thirds Grid inside the Active Crop Area */}
+                  {showGridLines && (
+                    <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none opacity-20">
+                      <div className="border-r border-b border-white" />
+                      <div className="border-r border-b border-white" />
+                      <div className="border-b border-white" />
+                      <div className="border-r border-b border-white" />
+                      <div className="border-r border-b border-white" />
+                      <div className="border-b border-white" />
+                      <div className="border-r border-white" />
+                      <div className="border-r border-white" />
+                      <div />
+                    </div>
+                  )}
+
+                  {/* Floating Frame Slot Badge on Bottom */}
+                  <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-black/85 backdrop-blur-xs text-[11px] font-mono-tabular text-white rounded-full border border-white/20 whitespace-nowrap shadow-xl flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[var(--theme-accent,#E11D48)] animate-pulse" />
+                    <span>
+                      Area Masuk Bingkai: {targetSlot.width}×{targetSlot.height}px ({slotAspect.toFixed(2)}:1)
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Fallback Full Viewfinder Grid if Crop Guide is Toggled Off */
+              showGridLines && (
+                <div className="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3 opacity-20">
+                  <div className="border-r border-b border-white" />
+                  <div className="border-r border-b border-white" />
+                  <div className="border-b border-white" />
+                  <div className="border-r border-b border-white" />
+                  <div className="border-r border-b border-white" />
+                  <div className="border-b border-white" />
+                  <div className="border-r border-white" />
+                  <div className="border-r border-white" />
+                  <div />
+                </div>
+              )
+            )}
 
             {/* Top Viewfinder Status Overlay */}
-            <div className="absolute top-4 left-4 right-4 flex items-center justify-between text-xs font-mono-tabular text-white bg-black/60 backdrop-blur-xs px-3.5 py-2 rounded-lg">
-              <span>
-                {cameraReady ? '● REC · 800×600 RAW' : 'MEMUAT KAMERA...'}
+            <div className="absolute top-4 left-4 right-4 flex items-center justify-between text-xs font-mono-tabular text-white bg-black/65 backdrop-blur-xs px-3.5 py-2 rounded-lg z-20">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>{cameraReady ? '● LIVE · 800×600 RAW' : 'MEMUAT KAMERA...'}</span>
               </span>
-              <span>
-                {isRetakeMode
-                  ? `RETAKE SLOT #${(retakeIndex ?? 0) + 1}`
-                  : `POSE ${currentShotNumber} DARI ${totalShotsNeeded}`}
+              <span className="flex items-center gap-2">
+                <span className="text-zinc-300">
+                  SLOT #{activeSlotIndex + 1} ({targetSlot.width}×{targetSlot.height}px)
+                </span>
+                <span aria-hidden="true" className="text-zinc-500">·</span>
+                <span className="text-[var(--theme-accent,#E11D48)] font-bold">
+                  {isRetakeMode
+                    ? `RETAKE SLOT #${(retakeIndex ?? 0) + 1}`
+                    : `POSE ${currentShotNumber} DARI ${totalShotsNeeded}`}
+                </span>
               </span>
             </div>
 
             {/* Countdown Overlay */}
             {countdown !== null && (
-              <div className="absolute inset-0 bg-black/45 flex flex-col items-center justify-center pointer-events-none">
+              <div className="absolute inset-0 bg-black/45 flex flex-col items-center justify-center pointer-events-none z-30">
                 <span className="font-display text-8xl md:text-9xl font-extrabold text-white tabular-nums drop-shadow-lg">
                   {countdown}
                 </span>
@@ -442,7 +629,57 @@ export const CameraCaptureScreen: React.FC = () => {
 
             {/* Flash Burst Effect */}
             {isFlashing && (
-              <div className="absolute inset-0 bg-white animate-flash pointer-events-none" />
+              <div className="absolute inset-0 bg-white animate-flash pointer-events-none z-40" />
+            )}
+          </div>
+
+          {/* Crop Guide Toolbar & Informational Callout */}
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-zinc-900/80 border border-zinc-800 rounded-xl px-4 py-3">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCropGuide((prev) => !prev)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
+                    showCropGuide
+                      ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
+                      : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                  }`}
+                >
+                  <span>📐 Panduan Crop:</span>
+                  <span className="font-bold">{showCropGuide ? 'AKTIF' : 'NONAKTIF'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowGridLines((prev) => !prev)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
+                    showGridLines
+                      ? 'bg-zinc-800 text-white border border-zinc-600'
+                      : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  <span>⊞ Grid 3×3:</span>
+                  <span>{showGridLines ? 'ON' : 'OFF'}</span>
+                </button>
+              </div>
+
+              <div className="text-xs font-mono-tabular text-zinc-400 flex items-center gap-2">
+                <span>Rasio Bingkai: {targetSlot.width}×{targetSlot.height}px ({slotAspect.toFixed(2)}:1)</span>
+                <span aria-hidden="true">·</span>
+                <span>Kamera: 4:3 (1.33:1)</span>
+              </div>
+            </div>
+
+            {/* Dynamic Crop Warning Chip */}
+            {cropInfo.isCropped && showCropGuide && (
+              <div className="flex items-start gap-2.5 px-4 py-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-200">
+                <span className="text-amber-400 font-bold shrink-0">ℹ Panduan Komposisi:</span>
+                <span>
+                  Bingkai <strong>{activeFrame.name}</strong> memiliki ukuran slot <strong>{targetSlot.width} × {targetSlot.height} px</strong>.
+                  {" "}{cropInfo.label}. Pastikan seluruh pose dan wajah berada di dalam <strong>kotak garis panduan merah</strong> agar tidak terpotong saat digabungkan ke bingkai akhir.
+                </span>
+              </div>
             )}
           </div>
 
