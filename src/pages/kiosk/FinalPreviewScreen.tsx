@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../../db';
 import { usePhotobox } from '../../context/PhotoboxContext';
 import { DEFAULT_FRAMES, STUDIO_PORTRAITS } from '../../data/defaultFrames';
 import { compositeFinalLayout } from '../../services/canvasCompositor';
@@ -31,6 +33,7 @@ export const FinalPreviewScreen: React.FC = () => {
   } = usePhotobox();
 
   const [isCompositing, setIsCompositing] = useState<boolean>(!finalLayoutBase64);
+  const settings = useLiveQuery(() => db.settings.get('app_settings'), []);
   const activeFrame = selectedFrame || DEFAULT_FRAMES[0];
 
   // Ensure fallback photos only after hydration if opened directly without photos
@@ -61,7 +64,8 @@ export const FinalPreviewScreen: React.FC = () => {
       activeFrame,
       selectedFilter,
       customCaption,
-      showFrameStamps
+      showFrameStamps,
+      settings?.themeColor
     ).then((base64) => {
       if (active) {
         setFinalLayoutBase64(base64);
@@ -79,6 +83,7 @@ export const FinalPreviewScreen: React.FC = () => {
     isHydrated,
     selectedFilter,
     setFinalLayoutBase64,
+    settings?.themeColor,
     showFrameStamps,
   ]);
 
@@ -115,7 +120,7 @@ export const FinalPreviewScreen: React.FC = () => {
             type="button"
             disabled={isCompositing || !finalLayoutBase64}
             onClick={() => navigate('/app/print-result')}
-            className="px-7 py-2.5 text-sm font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] disabled:opacity-50 rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
+            className="px-7 py-2.5 text-sm font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] disabled:opacity-50 rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
           >
             Lanjut →
           </button>
@@ -164,7 +169,7 @@ export const FinalPreviewScreen: React.FC = () => {
                     onClick={() => setSelectedFilter(f.id)}
                     className={`p-3.5 rounded-xl text-left transition-all cursor-pointer ${
                       isActive
-                        ? 'bg-[#E11D48]/15 ring-2 ring-[#E11D48] text-white'
+                        ? 'bg-[var(--theme-accent,#E11D48)]/15 ring-2 ring-[var(--theme-accent,#E11D48)] text-white'
                         : 'bg-zinc-950/80 text-zinc-300 hover:bg-zinc-800'
                     }`}
                   >
@@ -192,7 +197,7 @@ export const FinalPreviewScreen: React.FC = () => {
                   type="checkbox"
                   checked={showFrameStamps}
                   onChange={(e) => setShowFrameStamps(e.target.checked)}
-                  className="w-4 h-4 accent-[#E11D48] rounded cursor-pointer"
+                  className="w-4 h-4 accent-[var(--theme-accent,#E11D48)] rounded cursor-pointer"
                 />
                 <span className="text-xs font-mono-tabular text-zinc-300">
                   {showFrameStamps ? 'Tampil' : 'Sembunyi'}
@@ -214,7 +219,7 @@ export const FinalPreviewScreen: React.FC = () => {
                   maxLength={32}
                   value={customCaption}
                   onChange={(e) => setCustomCaption(e.target.value)}
-                  className="w-full px-3.5 py-2 text-sm bg-zinc-950 rounded-xl text-white focus:outline-none ring-1 ring-zinc-700 focus:ring-[#E11D48] font-mono-tabular"
+                  className="w-full px-3.5 py-2 text-sm bg-zinc-950 rounded-xl text-white focus:outline-none ring-1 ring-zinc-700 focus:ring-[var(--theme-accent,#E11D48)] font-mono-tabular"
                 />
               </div>
             ) : (
@@ -229,7 +234,7 @@ export const FinalPreviewScreen: React.FC = () => {
               type="button"
               disabled={isCompositing || !finalLayoutBase64}
               onClick={() => navigate('/app/print-result')}
-              className="w-full py-4 px-5 text-sm font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] disabled:opacity-50 rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
+              className="w-full py-4 px-5 text-sm font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] disabled:opacity-50 rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
             >
               Lanjut ke Cetak & QR Code →
             </button>

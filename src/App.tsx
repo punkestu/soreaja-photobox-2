@@ -24,8 +24,21 @@ import { CameraCaptureScreen } from './pages/kiosk/CameraCaptureScreen';
 import { ReviewPhotosScreen } from './pages/kiosk/ReviewPhotosScreen';
 import { FinalPreviewScreen } from './pages/kiosk/FinalPreviewScreen';
 import { PrintResultScreen } from './pages/kiosk/PrintResultScreen';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from './db';
+import { applyThemeColor } from './data/themeConfig';
 
 const LAST_ROUTE_KEY = 'soreaja_last_active_route';
+
+const ThemeWatcher: React.FC = () => {
+  const settings = useLiveQuery(() => db.settings.get('app_settings'), []);
+
+  useEffect(() => {
+    applyThemeColor(settings?.themeColor || '#E11D48');
+  }, [settings?.themeColor]);
+
+  return null;
+};
 
 const getSavedRoute = (): string | null => {
   try {
@@ -85,6 +98,7 @@ const FallbackRedirect: React.FC = () => {
 export default function App() {
   return (
     <PhotoboxProvider>
+      <ThemeWatcher />
       <BrowserRouter>
         <RouteTracker />
         <Routes>

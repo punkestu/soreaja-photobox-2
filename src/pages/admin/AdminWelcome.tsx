@@ -66,7 +66,7 @@ export const AdminWelcome: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate('/app/idle')}
-                className="px-5 py-2.5 text-sm font-semibold text-white bg-[#E11D48] rounded-lg hover:bg-[#BE123C] transition-colors whitespace-nowrap cursor-pointer"
+                className="px-5 py-2.5 text-sm font-semibold text-white bg-[var(--theme-accent,#E11D48)] rounded-lg hover:bg-[var(--theme-accent-hover,#BE123C)] transition-colors whitespace-nowrap cursor-pointer shadow-xs"
               >
                 Mulai Sesi Pelanggan
               </button>

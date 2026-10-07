@@ -6,6 +6,8 @@
     --font-serif: 'Instrument Serif', serif;
     --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
+    --theme-accent: #E11D48;
+    --theme-accent-hover: #BE123C;
   }
 
   html, body {

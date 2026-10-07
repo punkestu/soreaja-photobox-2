@@ -32,7 +32,7 @@ export const AdminLayout: React.FC = () => {
             className={({ isActive }) =>
               `py-1 transition-colors whitespace-nowrap ${
                 isActive
-                  ? 'text-neutral-900 font-semibold border-b-2 border-[#E11D48]'
+                  ? 'text-neutral-900 font-semibold border-b-2 border-[var(--theme-accent,#E11D48)]'
                   : 'hover:text-neutral-900'
               }`
             }
@@ -44,7 +44,7 @@ export const AdminLayout: React.FC = () => {
             className={({ isActive }) =>
               `py-1 transition-colors whitespace-nowrap ${
                 isActive
-                  ? 'text-neutral-900 font-semibold border-b-2 border-[#E11D48]'
+                  ? 'text-neutral-900 font-semibold border-b-2 border-[var(--theme-accent,#E11D48)]'
                   : 'hover:text-neutral-900'
               }`
             }
@@ -56,7 +56,7 @@ export const AdminLayout: React.FC = () => {
             className={({ isActive }) =>
               `py-1 transition-colors whitespace-nowrap ${
                 isActive
-                  ? 'text-neutral-900 font-semibold border-b-2 border-[#E11D48]'
+                  ? 'text-neutral-900 font-semibold border-b-2 border-[var(--theme-accent,#E11D48)]'
                   : 'hover:text-neutral-900'
               }`
             }
@@ -70,7 +70,7 @@ export const AdminLayout: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/app/idle')}
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#E11D48] rounded-lg hover:bg-[#BE123C] transition-colors whitespace-nowrap cursor-pointer"
+            className="px-4 py-2 text-xs font-semibold text-white bg-[var(--theme-accent,#E11D48)] rounded-lg hover:bg-[var(--theme-accent-hover,#BE123C)] transition-colors whitespace-nowrap cursor-pointer shadow-xs"
           >
             Buka Sesi Photobox
           </button>

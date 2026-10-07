@@ -29,7 +29,8 @@ export async function compositeFinalLayout(
   frame: FrameMetadata,
   filter: PhotoFilter = 'original',
   customCaption = 'SOREAJA — PHOTOBOX 2',
-  showStamps = true
+  showStamps = true,
+  themeColor?: string
 ): Promise<string> {
   const maxRight = Math.max(...frame.positions.map((p) => p.x + p.width));
   const maxBottom = Math.max(...frame.positions.map((p) => p.y + p.height));
@@ -102,7 +103,7 @@ export async function compositeFinalLayout(
   if (showStamps) {
     const textColor = isDark ? '#F4F4F0' : '#18181B';
     const mutedColor = isDark ? '#A1A1AA' : '#52525B';
-    const accentColor = isWarm ? '#C2410C' : '#E11D48';
+    const accentColor = themeColor || (isWarm ? '#C2410C' : '#E11D48');
 
     // Top Header Metadata
     ctx.fillStyle = textColor;

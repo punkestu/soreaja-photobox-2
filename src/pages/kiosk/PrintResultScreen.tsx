@@ -54,6 +54,7 @@ export const PrintResultScreen: React.FC = () => {
       // 1. Ambil URL G-Drive dari Dexie.js
       let currentDriveUrl = DEFAULT_DRIVE_URL;
       let shouldAutoDownload = true;
+      let themeAccent = '#E11D48';
       try {
         const data = await db.settings.get('app_settings');
         if (data && data.driveUrl) {
@@ -62,6 +63,9 @@ export const PrintResultScreen: React.FC = () => {
         }
         if (data && typeof data.autoDownload === 'boolean') {
           shouldAutoDownload = data.autoDownload;
+        }
+        if (data && data.themeColor) {
+          themeAccent = data.themeColor;
         }
       } catch {
         // Fallback default URL
@@ -82,7 +86,8 @@ export const PrintResultScreen: React.FC = () => {
           activeFrame,
           selectedFilter,
           customCaption,
-          showFrameStamps
+          showFrameStamps,
+          themeAccent
         );
         setFinalLayoutBase64(layoutToUse);
       }
@@ -207,7 +212,7 @@ export const PrintResultScreen: React.FC = () => {
           <button
             type="button"
             onClick={handleNewSession}
-            className="px-6 py-2.5 text-sm font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
+            className="px-6 py-2.5 text-sm font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
           >
             Sesi Baru
           </button>
@@ -349,7 +354,7 @@ export const PrintResultScreen: React.FC = () => {
             <button
               type="button"
               onClick={handleNewSession}
-              className="w-full py-3.5 px-4 text-xs font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
+              className="w-full py-3.5 px-4 text-xs font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
             >
               Mulai Sesi Baru
             </button>

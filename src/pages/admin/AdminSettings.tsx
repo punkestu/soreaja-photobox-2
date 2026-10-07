@@ -1,19 +1,42 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { db, DEFAULT_DRIVE_URL, DEFAULT_APP_SETTINGS } from '../../db';
+import {
+  THEME_COLOR_PRESETS,
+  BACKDROP_PRESETS,
+  applyThemeColor,
+  calculateHoverColor,
+} from '../../data/themeConfig';
+import { KIOSK_HERO_BACKDROP } from '../../data/defaultFrames';
 
 export const AdminSettings: React.FC = () => {
   const [driveUrl, setDriveUrl] = useState(DEFAULT_DRIVE_URL);
   const [studioName, setStudioName] = useState(DEFAULT_APP_SETTINGS.studioName || '');
   const [eventName, setEventName] = useState(DEFAULT_APP_SETTINGS.eventName || '');
-  const [defaultCaption, setDefaultCaption] = useState(DEFAULT_APP_SETTINGS.defaultCaption || 'SOREAJA — PHOTOBOX 2');
+  const [defaultCaption, setDefaultCaption] = useState(
+    DEFAULT_APP_SETTINGS.defaultCaption || 'SOREAJA — PHOTOBOX 2'
+  );
   const [showFrameStamps, setShowFrameStamps] = useState<boolean>(true);
   const [countdownSeconds, setCountdownSeconds] = useState<number>(3);
   const [autoDownload, setAutoDownload] = useState<boolean>(true);
   const [mirrorCamera, setMirrorCamera] = useState<boolean>(true);
   const [cameraSourceMode, setCameraSourceMode] = useState<'auto' | 'simulator'>('auto');
+
+  // Tema & Background Kiosk
+  const [themeColor, setThemeColor] = useState<string>(DEFAULT_APP_SETTINGS.themeColor || '#E11D48');
+  const [themePreset, setThemePreset] = useState<string>(DEFAULT_APP_SETTINGS.themePreset || 'crimson');
+  const [kioskBackground, setKioskBackground] = useState<string>(DEFAULT_APP_SETTINGS.kioskBackground || '');
+  const [kioskBackgroundOverlayOpacity, setKioskBackgroundOverlayOpacity] = useState<number>(
+    DEFAULT_APP_SETTINGS.kioskBackgroundOverlayOpacity || 60
+  );
+  const [customBackdropUrl, setCustomBackdropUrl] = useState<string>('');
+  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
+
+  const [activeTab, setActiveTab] = useState<'appearance' | 'session' | 'hardware'>('appearance');
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     db.settings.get('app_settings').then((data) => {
@@ -37,9 +60,111 @@ export const AdminSettings: React.FC = () => {
         if (data.cameraSourceMode) {
           setCameraSourceMode(data.cameraSourceMode);
         }
+        if (data.themeColor) {
+          setThemeColor(data.themeColor);
+        }
+        if (data.themePreset) {
+          setThemePreset(data.themePreset);
+        }
+        if (data.kioskBackground !== undefined) {
+          setKioskBackground(data.kioskBackground);
+          if (data.kioskBackground && !BACKDROP_PRESETS.some((p) => p.id === data.kioskBackground) && !data.kioskBackground.startsWith('data:')) {
+            setCustomBackdropUrl(data.kioskBackground);
+          }
+        }
+        if (typeof data.kioskBackgroundOverlayOpacity === 'number') {
+          setKioskBackgroundOverlayOpacity(data.kioskBackgroundOverlayOpacity);
+        }
       }
     });
   }, []);
+
+  const handleSelectColorPreset = (presetId: string, colorHex: string) => {
+    setThemePreset(presetId);
+    setThemeColor(colorHex);
+    applyThemeColor(colorHex);
+  };
+
+  const handleCustomColorChange = (newColor: string) => {
+    setThemeColor(newColor);
+    setThemePreset('custom');
+    applyThemeColor(newColor);
+  };
+
+  const handleSelectBackdropPreset = (presetId: string) => {
+    setKioskBackground(presetId);
+    setUploadNotice(null);
+  };
+
+  const handleUseDefaultBackdrop = () => {
+    setKioskBackground('');
+    setCustomBackdropUrl('');
+    setUploadNotice('Menggunakan foto latar default studio.');
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setUploadNotice('Harap pilih file gambar (JPG, PNG, atau WebP).');
+      return;
+    }
+
+    setUploadNotice('Memproses dan mengoptimalkan gambar latar...');
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (!dataUrl) return;
+
+      const img = new Image();
+      img.onload = () => {
+        const maxWidth = 1920;
+        const maxHeight = 1080;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const optimizedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+          setKioskBackground(optimizedBase64);
+          setUploadNotice(`Foto berhasil dimuat (${file.name} · ${width}×${height}px).`);
+        } else {
+          setKioskBackground(dataUrl);
+          setUploadNotice(`Foto berhasil dimuat (${file.name}).`);
+        }
+      };
+      img.onerror = () => {
+        setUploadNotice('Gagal memproses file gambar.');
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleApplyCustomUrl = () => {
+    if (customBackdropUrl.trim()) {
+      setKioskBackground(customBackdropUrl.trim());
+      setUploadNotice('Tautan gambar kustom diterapkan.');
+    }
+  };
+
+  const previewBackdropSrc = useMemo(() => {
+    if (!kioskBackground) return KIOSK_HERO_BACKDROP;
+    const match = BACKDROP_PRESETS.find((p) => p.id === kioskBackground);
+    if (match) return match.src;
+    return kioskBackground;
+  }, [kioskBackground]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +173,6 @@ export const AdminSettings: React.FC = () => {
 
     const cleanUrl = driveUrl.trim() || DEFAULT_DRIVE_URL;
 
-    // Sesuai TSD 4.1.2: menyimpan data ke IndexedDB via db.settings.put({id: 'app_settings', driveUrl: '...'})
     await db.settings.put({
       id: 'app_settings',
       driveUrl: cleanUrl,
@@ -60,13 +184,18 @@ export const AdminSettings: React.FC = () => {
       autoDownload,
       mirrorCamera,
       cameraSourceMode,
+      themeColor,
+      themePreset,
+      kioskBackground,
+      kioskBackgroundOverlayOpacity,
       updatedAt: new Date().toISOString(),
     });
 
+    applyThemeColor(themeColor);
     setDriveUrl(cleanUrl);
     setIsSaving(false);
     setSaveMessage(
-      `Pengaturan berhasil disimpan ke IndexedDB (PhotoboxDB · id: app_settings) pada ${new Date().toLocaleTimeString('id-ID')}.`
+      `Pengaturan & warna tema berhasil disimpan ke IndexedDB pada ${new Date().toLocaleTimeString('id-ID')}.`
     );
   };
 
@@ -84,13 +213,20 @@ export const AdminSettings: React.FC = () => {
     setAutoDownload(true);
     setMirrorCamera(true);
     setCameraSourceMode('auto');
-    setSaveMessage('Pengaturan dikembalikan ke konfigurasi bawaan pabrik.');
+    setThemeColor(DEFAULT_APP_SETTINGS.themeColor || '#E11D48');
+    setThemePreset(DEFAULT_APP_SETTINGS.themePreset || 'crimson');
+    setKioskBackground('');
+    setKioskBackgroundOverlayOpacity(60);
+    setCustomBackdropUrl('');
+    setUploadNotice(null);
+    applyThemeColor('#E11D48');
+    setSaveMessage('Pengaturan & tema dikembalikan ke konfigurasi bawaan pabrik.');
   };
 
   return (
-    <div className="space-y-8 max-w-4xl">
+    <div className="space-y-8 max-w-5xl">
       <div>
-        <div className="text-xs text-neutral-500 flex items-center gap-2 mb-2">
+        <div className="text-xs text-neutral-500 flex items-center gap-2 mb-2 font-mono-tabular">
           <span>Konfigurasi Lokal</span>
           <span aria-hidden="true">·</span>
           <span>Dexie.js (PhotoboxDB)</span>
@@ -98,182 +234,452 @@ export const AdminSettings: React.FC = () => {
           <span>Tabel: settings</span>
         </div>
         <h1 className="font-display text-2xl md:text-3xl font-bold text-neutral-900">
-          Pengaturan Google Drive & Parameter Sesi
+          Pengaturan Studio, Tema & Latar Kiosk
         </h1>
         <p className="text-sm text-neutral-600 mt-1">
-          Tautan Google Drive di bawah ini akan dikodekan menjadi QR Code pada layar
-          akhir pelanggan agar mereka dapat mengunduh foto di masa mendatang.
+          Kustomisasi identitas visual booth: tentukan warna tema aksen aplikasi, foto latar belakang
+          halaman awal kiosk, stempel cetakan bingkai, serta integrasi Google Drive.
         </p>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="flex items-center gap-2 border-b border-neutral-200 pb-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab('appearance')}
+          style={activeTab === 'appearance' ? { borderColor: themeColor, color: themeColor } : {}}
+          className={`px-4 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer border-b-2 ${
+            activeTab === 'appearance'
+              ? 'border-b-2 bg-white text-neutral-900 shadow-xs'
+              : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+          }`}
+        >
+          🎨 Warna Tema & Background Start Kiosk
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('session')}
+          style={activeTab === 'session' ? { borderColor: themeColor, color: themeColor } : {}}
+          className={`px-4 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer border-b-2 ${
+            activeTab === 'session'
+              ? 'border-b-2 bg-white text-neutral-900 shadow-xs'
+              : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+          }`}
+        >
+          ☁️ Google Drive & Teks Stempel
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('hardware')}
+          style={activeTab === 'hardware' ? { borderColor: themeColor, color: themeColor } : {}}
+          className={`px-4 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer border-b-2 ${
+            activeTab === 'hardware'
+              ? 'border-b-2 bg-white text-neutral-900 shadow-xs'
+              : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+          }`}
+        >
+          📷 Kamera & Cetak Otomatis
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         <form
           onSubmit={handleSubmit}
-          className="lg:col-span-7 bg-white border border-neutral-200 rounded-xl p-6 space-y-6"
+          className="lg:col-span-7 bg-white border border-neutral-200 rounded-2xl p-6 space-y-6 shadow-xs"
         >
-          <div className="space-y-2">
-            <label
-              htmlFor="driveUrlInput"
-              className="block text-sm font-semibold text-neutral-900"
-            >
-              Google Drive URL (Tautan Folder Acara)
-            </label>
-            <input
-              id="driveUrlInput"
-              name="driveUrl"
-              type="url"
-              required
-              value={driveUrl}
-              onChange={(e) => setDriveUrl(e.target.value)}
-              placeholder="https://drive.google.com/drive/folders/..."
-              className="w-full px-3.5 py-2.5 text-sm bg-[#F4F4F0] border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900 font-mono-tabular"
-            />
-            <p className="text-xs text-neutral-500">
-              Disimpan secara reaktif dengan primary key{' '}
-              <code className="font-mono-tabular text-neutral-800">app_settings</code>.
-            </p>
-          </div>
+          {/* TAB 1: WARNA TEMA & BACKGROUND KIOSK */}
+          {activeTab === 'appearance' && (
+            <div className="space-y-6">
+              {/* Bagian 1: Warna Tema */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-sm font-bold text-neutral-900">
+                      1. Pilihan Warna Tema Aplikasi (Theme Accent Color)
+                    </h2>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      Warna ini diterapkan pada tombol aksi, navigasi aktif, seleksi bingkai, dan stempel studio.
+                    </p>
+                  </div>
+                  <div
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono-tabular font-semibold text-white shadow-xs"
+                    style={{ backgroundColor: themeColor }}
+                  >
+                    <span>{themeColor.toUpperCase()}</span>
+                  </div>
+                </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-neutral-200">
-            <div className="space-y-1.5">
-              <label
-                htmlFor="studioNameInput"
-                className="block text-xs font-semibold text-neutral-700"
-              >
-                Nama Unit Booth
-              </label>
-              <input
-                id="studioNameInput"
-                type="text"
-                value={studioName}
-                onChange={(e) => setStudioName(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-[#F4F4F0] border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900"
-              />
+                {/* Preset Palettes */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
+                  {THEME_COLOR_PRESETS.map((preset) => {
+                    const isSelected = themePreset === preset.id && themeColor.toLowerCase() === preset.color.toLowerCase();
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => handleSelectColorPreset(preset.id, preset.color)}
+                        className={`p-2.5 rounded-xl border text-left flex items-start gap-2.5 transition-all cursor-pointer ${
+                          isSelected
+                            ? 'border-neutral-900 bg-neutral-50 ring-2 ring-neutral-900 shadow-xs'
+                            : 'border-neutral-200 bg-white hover:bg-neutral-50'
+                        }`}
+                      >
+                        <span
+                          className="w-5 h-5 rounded-full shrink-0 mt-0.5 shadow-xs border border-white"
+                          style={{ backgroundColor: preset.color }}
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-neutral-800 truncate">{preset.name}</p>
+                          <p className="text-[10px] text-neutral-500 truncate">{preset.color}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Custom Color Picker */}
+                <div className="pt-2 flex items-center gap-3 bg-[#F4F4F0] p-3 rounded-xl border border-neutral-200">
+                  <label htmlFor="customColorPicker" className="text-xs font-semibold text-neutral-700 shrink-0">
+                    Kustom Warna Bebas:
+                  </label>
+                  <input
+                    id="customColorPicker"
+                    type="color"
+                    value={themeColor}
+                    onChange={(e) => handleCustomColorChange(e.target.value)}
+                    className="w-8 h-8 rounded-lg cursor-pointer border border-neutral-300 p-0.5 bg-white"
+                  />
+                  <input
+                    type="text"
+                    value={themeColor}
+                    maxLength={7}
+                    onChange={(e) => handleCustomColorChange(e.target.value)}
+                    placeholder="#E11D48"
+                    className="px-2.5 py-1 text-xs font-mono-tabular bg-white border border-neutral-300 rounded-lg w-28 uppercase focus:outline-none focus:border-neutral-900"
+                  />
+                  <span className="text-[11px] text-neutral-500 hidden sm:inline">
+                    Pilih warna apa pun sesuai identitas acara / brand.
+                  </span>
+                </div>
+              </div>
+
+              {/* Bagian 2: Background Foto Start Kiosk */}
+              <div className="space-y-4 pt-4 border-t border-neutral-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-sm font-bold text-neutral-900">
+                      2. Foto Background Layar Mulai Kiosk (/app/idle)
+                    </h2>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      Pilih dari preset potret studio SoreAja atau unggah foto/gambar kustom sendiri.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleUseDefaultBackdrop}
+                    className="text-xs font-medium text-neutral-600 hover:text-neutral-900 underline cursor-pointer"
+                  >
+                    Gunakan Foto Bawaan
+                  </button>
+                </div>
+
+                {/* Preset Galeri Foto Studio */}
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-neutral-700">Pilih dari Galeri Studio Siap Pakai:</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    {BACKDROP_PRESETS.map((p) => {
+                      const isSelected = kioskBackground === p.id || (!kioskBackground && p.id === 'default_sunset');
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => handleSelectBackdropPreset(p.id)}
+                          className={`group relative rounded-xl overflow-hidden border text-left p-1.5 transition-all cursor-pointer ${
+                            isSelected
+                              ? 'border-neutral-900 ring-2 ring-neutral-900 shadow-md bg-neutral-900 text-white'
+                              : 'border-neutral-200 bg-white hover:border-neutral-400'
+                          }`}
+                        >
+                          <div className="aspect-video w-full rounded-lg overflow-hidden bg-neutral-100 relative">
+                            <img
+                              src={p.src}
+                              alt={p.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            />
+                            {isSelected && (
+                              <div className="absolute top-1.5 right-1.5 bg-black/70 text-white px-1.5 py-0.5 rounded text-[10px] font-mono-tabular">
+                                Aktif
+                              </div>
+                            )}
+                          </div>
+                          <p className={`text-[11px] font-semibold mt-1 px-1 truncate ${isSelected ? 'text-white' : 'text-neutral-800'}`}>
+                            {p.name}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Unggah Foto Kustom Sendiri */}
+                <div className="space-y-2 pt-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-neutral-700">Atau Unggah Foto Kustom Anda Sendiri (Offline):</p>
+                    <span className="text-[11px] text-neutral-500">JPG, PNG, WebP</span>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-4 py-2.5 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl transition-colors whitespace-nowrap cursor-pointer flex items-center justify-center gap-2 shadow-xs"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span>Pilih File Foto dari Perangkat</span>
+                    </button>
+
+                    <div className="flex-1 flex gap-2">
+                      <input
+                        type="url"
+                        value={customBackdropUrl}
+                        onChange={(e) => setCustomBackdropUrl(e.target.value)}
+                        placeholder="Atau tempel URL gambar eksternal..."
+                        className="flex-1 px-3 py-2 text-xs bg-[#F4F4F0] border border-neutral-300 rounded-xl focus:outline-none focus:border-neutral-900"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyCustomUrl}
+                        className="px-3 py-2 text-xs font-medium bg-neutral-200 hover:bg-neutral-300 text-neutral-800 rounded-xl transition-colors cursor-pointer"
+                      >
+                        Pasang
+                      </button>
+                    </div>
+                  </div>
+
+                  {uploadNotice && (
+                    <p className="text-xs font-mono-tabular text-emerald-700 bg-emerald-50 border border-emerald-200 p-2 rounded-lg">
+                      {uploadNotice}
+                    </p>
+                  )}
+                </div>
+
+                {/* Pengatur Opasitas / Kecerahan Latar */}
+                <div className="space-y-1.5 pt-2 bg-[#F4F4F0] p-4 rounded-xl border border-neutral-200">
+                  <div className="flex items-center justify-between text-xs">
+                    <label htmlFor="opacitySlider" className="font-semibold text-neutral-800">
+                      Kecerahan / Opasitas Foto Latar:
+                    </label>
+                    <span className="font-mono-tabular font-bold text-neutral-900">
+                      {kioskBackgroundOverlayOpacity}%
+                    </span>
+                  </div>
+                  <input
+                    id="opacitySlider"
+                    type="range"
+                    min="20"
+                    max="100"
+                    step="5"
+                    value={kioskBackgroundOverlayOpacity}
+                    onChange={(e) => setKioskBackgroundOverlayOpacity(Number(e.target.value))}
+                    className="w-full accent-neutral-900 cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-neutral-500 font-mono-tabular">
+                    <span>20% (Lebih Gelap / Teks Sangat Kontras)</span>
+                    <span>60% (Standar Studio)</span>
+                    <span>100% (Terang Maksimal)</span>
+                  </div>
+                </div>
+              </div>
             </div>
+          )}
 
-            <div className="space-y-1.5">
-              <label
-                htmlFor="eventNameInput"
-                className="block text-xs font-semibold text-neutral-700"
-              >
-                Nama Acara / Klien
-              </label>
-              <input
-                id="eventNameInput"
-                type="text"
-                value={eventName}
-                onChange={(e) => setEventName(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-[#F4F4F0] border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5 pt-2 border-t border-neutral-200">
-            <label
-              htmlFor="defaultCaptionInput"
-              className="block text-xs font-semibold text-neutral-700"
-            >
-              Default Teks Stempel Bawah Bingkai (Caption Cetakan)
-            </label>
-            <input
-              id="defaultCaptionInput"
-              type="text"
-              maxLength={32}
-              value={defaultCaption}
-              onChange={(e) => setDefaultCaption(e.target.value)}
-              placeholder="SOREAJA — PHOTOBOX 2"
-              className="w-full px-3.5 py-2.5 text-sm bg-[#F4F4F0] border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900 font-mono-tabular"
-            />
-            <p className="text-xs text-neutral-500">
-              Teks ini menjadi nilai default stempel di bagian bawah bingkai foto pada setiap sesi photobox baru.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-neutral-200">
-            <div className="space-y-1.5">
-              <label
-                htmlFor="countdownSelect"
-                className="block text-xs font-semibold text-neutral-700"
-              >
-                Durasi Countdown Kamera
-              </label>
-              <select
-                id="countdownSelect"
-                value={countdownSeconds}
-                onChange={(e) => setCountdownSeconds(Number(e.target.value))}
-                className="w-full px-3 py-2 text-sm bg-[#F4F4F0] border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900 font-mono-tabular"
-              >
-                <option value={1}>1 Detik (Cepat / Uji Coba)</option>
-                <option value={2}>2 Detik</option>
-                <option value={3}>3 Detik (Standar Studio)</option>
-                <option value={5}>5 Detik (Grup Besar)</option>
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label
-                htmlFor="cameraSourceSelect"
-                className="block text-xs font-semibold text-neutral-700"
-              >
-                Sumber Kamera
-              </label>
-              <select
-                id="cameraSourceSelect"
-                value={cameraSourceMode}
-                onChange={(e) =>
-                  setCameraSourceMode(e.target.value as 'auto' | 'simulator')
-                }
-                className="w-full px-3 py-2 text-sm bg-[#F4F4F0] border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900"
-              >
-                <option value="auto">Otomatis (WebRTC + Fallback Simulator)</option>
-                <option value="simulator">Paksa Mode Simulator Studio</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="space-y-3 pt-2 border-t border-neutral-200">
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showFrameStamps}
-                onChange={(e) => setShowFrameStamps(e.target.checked)}
-                className="w-4 h-4 mt-0.5 accent-[#E11D48] rounded"
-              />
-              <div>
-                <span className="text-sm font-medium text-neutral-800">
-                  Tampilkan stempel teks pada bingkai (Header & Footer Stamp)
-                </span>
-                <p className="text-xs text-neutral-500 mt-0.5">
-                  Hilangkan centang jika Anda menggunakan desain custom frame yang tidak kompatibel dengan teks stempel atau sudah memiliki logo/branding tersendiri.
+          {/* TAB 2: GOOGLE DRIVE & STEMPEL BINGKAI */}
+          {activeTab === 'session' && (
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label
+                  htmlFor="driveUrlInput"
+                  className="block text-sm font-semibold text-neutral-900"
+                >
+                  Google Drive URL (Tautan Folder Acara)
+                </label>
+                <input
+                  id="driveUrlInput"
+                  name="driveUrl"
+                  type="url"
+                  required
+                  value={driveUrl}
+                  onChange={(e) => setDriveUrl(e.target.value)}
+                  placeholder="https://drive.google.com/drive/folders/..."
+                  className="w-full px-3.5 py-2.5 text-sm bg-[#F4F4F0] border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900 font-mono-tabular"
+                />
+                <p className="text-xs text-neutral-500">
+                  Disimpan secara reaktif dengan primary key{' '}
+                  <code className="font-mono-tabular text-neutral-800">app_settings</code>.
                 </p>
               </div>
-            </label>
 
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={autoDownload}
-                onChange={(e) => setAutoDownload(e.target.checked)}
-                className="w-4 h-4 accent-[#E11D48] rounded"
-              />
-              <span className="text-sm text-neutral-800">
-                Unduh otomatis seluruh file sesi (Raw PNG, Final Frame, dan Animasi GIF)
-                saat layar cetak terbuka
-              </span>
-            </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-neutral-200">
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="studioNameInput"
+                    className="block text-xs font-semibold text-neutral-700"
+                  >
+                    Nama Unit Booth
+                  </label>
+                  <input
+                    id="studioNameInput"
+                    type="text"
+                    value={studioName}
+                    onChange={(e) => setStudioName(e.target.value)}
+                    className="w-full px-3 py-2 text-sm bg-[#F4F4F0] border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900"
+                  />
+                </div>
 
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={mirrorCamera}
-                onChange={(e) => setMirrorCamera(e.target.checked)}
-                className="w-4 h-4 accent-[#E11D48] rounded"
-              />
-              <span className="text-sm text-neutral-800">
-                Efek Cermin (Mirror Horizontal) pada pratinjau kamera pelanggan
-              </span>
-            </label>
-          </div>
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="eventNameInput"
+                    className="block text-xs font-semibold text-neutral-700"
+                  >
+                    Nama Acara / Klien
+                  </label>
+                  <input
+                    id="eventNameInput"
+                    type="text"
+                    value={eventName}
+                    onChange={(e) => setEventName(e.target.value)}
+                    className="w-full px-3 py-2 text-sm bg-[#F4F4F0] border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5 pt-2 border-t border-neutral-200">
+                <label
+                  htmlFor="defaultCaptionInput"
+                  className="block text-xs font-semibold text-neutral-700"
+                >
+                  Default Teks Stempel Bawah Bingkai (Caption Cetakan)
+                </label>
+                <input
+                  id="defaultCaptionInput"
+                  type="text"
+                  maxLength={32}
+                  value={defaultCaption}
+                  onChange={(e) => setDefaultCaption(e.target.value)}
+                  placeholder="SOREAJA — PHOTOBOX 2"
+                  className="w-full px-3.5 py-2.5 text-sm bg-[#F4F4F0] border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900 font-mono-tabular"
+                />
+                <p className="text-xs text-neutral-500">
+                  Teks ini menjadi nilai default stempel di bagian bawah bingkai foto pada setiap sesi photobox baru.
+                </p>
+              </div>
+
+              <div className="space-y-3 pt-2 border-t border-neutral-200">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showFrameStamps}
+                    onChange={(e) => setShowFrameStamps(e.target.checked)}
+                    style={{ accentColor: themeColor }}
+                    className="w-4 h-4 mt-0.5 rounded cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-neutral-800">
+                      Tampilkan stempel teks pada bingkai (Header & Footer Stamp)
+                    </span>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      Hilangkan centang jika Anda menggunakan desain custom frame yang tidak kompatibel dengan teks stempel atau sudah memiliki logo/branding tersendiri.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: KAMERA & CETAK OTOMATIS */}
+          {activeTab === 'hardware' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="countdownSelect"
+                    className="block text-xs font-semibold text-neutral-700"
+                  >
+                    Durasi Countdown Kamera
+                  </label>
+                  <select
+                    id="countdownSelect"
+                    value={countdownSeconds}
+                    onChange={(e) => setCountdownSeconds(Number(e.target.value))}
+                    className="w-full px-3 py-2 text-sm bg-[#F4F4F0] border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900 font-mono-tabular"
+                  >
+                    <option value={1}>1 Detik (Cepat / Uji Coba)</option>
+                    <option value={2}>2 Detik</option>
+                    <option value={3}>3 Detik (Standar Studio)</option>
+                    <option value={5}>5 Detik (Grup Besar)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="cameraSourceSelect"
+                    className="block text-xs font-semibold text-neutral-700"
+                  >
+                    Sumber Kamera
+                  </label>
+                  <select
+                    id="cameraSourceSelect"
+                    value={cameraSourceMode}
+                    onChange={(e) =>
+                      setCameraSourceMode(e.target.value as 'auto' | 'simulator')
+                    }
+                    className="w-full px-3 py-2 text-sm bg-[#F4F4F0] border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900"
+                  >
+                    <option value="auto">Otomatis (WebRTC + Fallback Simulator)</option>
+                    <option value="simulator">Paksa Mode Simulator Studio</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-2 border-t border-neutral-200">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={autoDownload}
+                    onChange={(e) => setAutoDownload(e.target.checked)}
+                    style={{ accentColor: themeColor }}
+                    className="w-4 h-4 rounded cursor-pointer"
+                  />
+                  <span className="text-sm text-neutral-800">
+                    Unduh otomatis seluruh file sesi (Raw PNG, Final Frame, dan Animasi GIF)
+                    saat layar cetak terbuka
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={mirrorCamera}
+                    onChange={(e) => setMirrorCamera(e.target.checked)}
+                    style={{ accentColor: themeColor }}
+                    className="w-4 h-4 rounded cursor-pointer"
+                  />
+                  <span className="text-sm text-neutral-800">
+                    Efek Cermin (Mirror Horizontal) pada pratinjau kamera pelanggan
+                  </span>
+                </label>
+              </div>
+            </div>
+          )}
 
           {saveMessage && (
             <div
@@ -284,59 +690,108 @@ export const AdminSettings: React.FC = () => {
             </div>
           )}
 
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-neutral-200">
             <button
               type="submit"
               disabled={isSaving}
-              className="px-5 py-2.5 text-sm font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+              style={{ backgroundColor: themeColor }}
+              className="px-6 py-2.5 text-sm font-semibold text-white rounded-xl transition-all shadow-md hover:brightness-90 whitespace-nowrap cursor-pointer disabled:opacity-50"
             >
-              {isSaving ? 'Menyimpan...' : 'Simpan Pengaturan'}
+              {isSaving ? 'Menyimpan...' : 'Simpan Semua Pengaturan'}
             </button>
 
             <button
               type="button"
               onClick={handleResetDefaults}
-              className="px-4 py-2.5 text-xs font-medium text-neutral-600 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+              className="px-4 py-2.5 text-xs font-medium text-neutral-600 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors whitespace-nowrap cursor-pointer"
             >
-              Reset ke Default
+              Reset ke Default Pabrik
             </button>
           </div>
         </form>
 
-        {/* Live QR Code Verification Panel */}
-        <div className="lg:col-span-5 bg-white border border-neutral-200 rounded-xl p-6 space-y-4">
-          <h2 className="text-base font-semibold text-neutral-900">
-            Pratinjau Langsung QR Code
-          </h2>
-          <p className="text-xs text-neutral-500">
-            Setiap perubahan pada kolom Google Drive URL langsung memperbarui kode QR di
-            bawah ini.
-          </p>
-
-          <div className="p-6 bg-[#F4F4F0] rounded-lg border border-neutral-200 flex flex-col items-center justify-center">
-            <div className="bg-white p-4 rounded-lg border border-neutral-200">
-              <QRCodeSVG
-                value={driveUrl.trim() || DEFAULT_DRIVE_URL}
-                size={180}
-                level="M"
-              />
+        {/* Live Simulation Panels */}
+        <div className="lg:col-span-5 space-y-6">
+          {/* Live Start Kiosk Screen Mockup */}
+          <div className="bg-neutral-950 text-white rounded-2xl p-5 border border-neutral-800 shadow-xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                  Pratinjau Layar Awal Kiosk
+                </h3>
+                <p className="text-[11px] text-zinc-500">Simulasi langsung tampilan (/app/idle)</p>
+              </div>
+              <span className="text-[10px] font-mono-tabular bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded">
+                Live Preview
+              </span>
             </div>
-            <p className="mt-3 text-xs font-mono-tabular text-neutral-700 break-all text-center">
-              {driveUrl.trim() || DEFAULT_DRIVE_URL}
-            </p>
+
+            {/* Mock Screen 16:9 */}
+            <div className="relative aspect-[16/10] w-full rounded-xl overflow-hidden border border-zinc-800 flex items-center justify-center p-4 text-center select-none shadow-2xl">
+              <img
+                src={previewBackdropSrc}
+                alt="Pratinjau Backdrop"
+                className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
+                style={{ opacity: kioskBackgroundOverlayOpacity / 100 }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/30" />
+
+              <div className="relative z-10 space-y-2 w-full px-2">
+                <p className="text-[9px] font-mono-tabular text-zinc-300 truncate">
+                  {studioName || 'SoreAja Studio — Booth 02'} · {eventName || 'SoreAja Sunset Session 2026'}
+                </p>
+                <h4 className="font-display text-base sm:text-lg font-extrabold text-[#F4F4F0] tracking-tight">
+                  SoreAja — Photobox
+                </h4>
+                <p className="font-serif-editorial italic text-xs text-zinc-300">
+                  Abadikan momen sore terbaikmu
+                </p>
+                <div className="pt-1">
+                  <span
+                    style={{ backgroundColor: themeColor }}
+                    className="inline-block px-4 py-1.5 rounded-lg text-[11px] font-bold text-white shadow-lg transition-transform"
+                  >
+                    Sentuh untuk Memulai
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-[11px] text-zinc-400 space-y-1 bg-zinc-900/60 p-3 rounded-xl border border-zinc-800/80">
+              <p className="font-semibold text-zinc-200">Status Visual Saat Ini:</p>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: themeColor }} />
+                <span>Aksen: <strong className="text-zinc-200">{themeColor}</strong> ({themePreset})</span>
+              </div>
+              <p>Opasitas latar: <strong className="text-zinc-200">{kioskBackgroundOverlayOpacity}%</strong></p>
+            </div>
           </div>
 
-          <div className="text-xs text-neutral-500 space-y-1 pt-2 border-t border-neutral-200">
-            <p className="font-semibold text-neutral-800">Catatan Operasional Offline:</p>
-            <p>
-              Operator dapat mengunggah folder hasil unduhan otomatis (
-              <code className="font-mono-tabular">PB_*_final.png</code> &{' '}
-              <code className="font-mono-tabular">PB_*_anim.gif</code>) ke folder Google
-              Drive di atas setelah acara selesai atau saat koneksi tersedia.
+          {/* Live QR Code Verification Panel */}
+          <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-3 shadow-xs">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-800">
+              Pratinjau QR Code Google Drive
+            </h3>
+            <p className="text-[11px] text-neutral-500">
+              Mengarahkan pelanggan ke folder penyimpanan foto sesi.
             </p>
+
+            <div className="p-4 bg-[#F4F4F0] rounded-xl border border-neutral-200 flex flex-col items-center justify-center">
+              <div className="bg-white p-3 rounded-lg border border-neutral-200 shadow-xs">
+                <QRCodeSVG
+                  value={driveUrl.trim() || DEFAULT_DRIVE_URL}
+                  size={140}
+                  level="M"
+                />
+              </div>
+              <p className="mt-2 text-[10px] font-mono-tabular text-neutral-700 break-all text-center max-w-[240px]">
+                {driveUrl.trim() || DEFAULT_DRIVE_URL}
+              </p>
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
 };
+

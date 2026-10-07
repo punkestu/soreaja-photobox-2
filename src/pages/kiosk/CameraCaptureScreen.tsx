@@ -494,7 +494,7 @@ export const CameraCaptureScreen: React.FC = () => {
               type="button"
               disabled={isCapturingSequence}
               onClick={startCountdownSequence}
-              className="w-full py-4 px-5 text-sm font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] disabled:opacity-50 rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
+              className="w-full py-4 px-5 text-sm font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] disabled:opacity-50 rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
             >
               {isCapturingSequence
                 ? `Mengambil Foto (${countdown ?? '...'})`
@@ -532,7 +532,7 @@ export const CameraCaptureScreen: React.FC = () => {
                     key={idx}
                     className={`aspect-[4/3] rounded-xl overflow-hidden relative bg-zinc-950 flex items-center justify-center ${
                       isTargetRetake
-                        ? 'ring-2 ring-[#E11D48]'
+                        ? 'ring-2 ring-[var(--theme-accent,#E11D48)]'
                         : ''
                     }`}
                   >

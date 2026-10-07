@@ -31,6 +31,10 @@ export interface AppSettings {
   autoDownload?: boolean;
   mirrorCamera?: boolean;
   cameraSourceMode?: 'auto' | 'simulator';
+  kioskBackground?: string; // Data URL Base64, preset ID, or external URL
+  kioskBackgroundOverlayOpacity?: number; // 20 - 100 percent
+  themeColor?: string; // Hex color e.g. '#E11D48'
+  themePreset?: string; // 'crimson' | 'amber' | etc.
   updatedAt?: string;
 }
 

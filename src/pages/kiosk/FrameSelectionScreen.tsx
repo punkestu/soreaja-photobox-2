@@ -70,7 +70,7 @@ export const FrameSelectionScreen: React.FC = () => {
                 key={frame.id}
                 className={`bg-zinc-900/70 hover:bg-zinc-900 rounded-2xl p-5 flex flex-col justify-between gap-5 transition-all ${
                   isSelected
-                    ? 'ring-2 ring-[#E11D48] bg-zinc-900'
+                    ? 'ring-2 ring-[var(--theme-accent,#E11D48)] bg-zinc-900'
                     : 'hover:shadow-2xl'
                 }`}
               >
@@ -105,7 +105,7 @@ export const FrameSelectionScreen: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleSelectFrame(frame)}
-                  className="w-full py-3.5 px-4 text-xs font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] rounded-xl transition-colors whitespace-nowrap cursor-pointer"
+                  className="w-full py-3.5 px-4 text-xs font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-md"
                 >
                   Pilih {frame.name} ({frame.photoCount} Foto)
                 </button>

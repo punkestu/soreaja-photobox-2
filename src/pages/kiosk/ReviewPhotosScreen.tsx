@@ -79,7 +79,7 @@ export const ReviewPhotosScreen: React.FC = () => {
           <button
             type="button"
             onClick={handleFinishReview}
-            className="px-6 py-2.5 text-sm font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
+            className="px-6 py-2.5 text-sm font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
           >
             Selesai & Gabungkan Frame →
           </button>
@@ -146,7 +146,7 @@ export const ReviewPhotosScreen: React.FC = () => {
         <button
           type="button"
           onClick={handleFinishReview}
-          className="px-8 py-3.5 text-sm font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
+          className="px-8 py-3.5 text-sm font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
         >
           Selesai
         </button>

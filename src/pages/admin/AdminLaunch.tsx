@@ -71,7 +71,7 @@ export const AdminLaunch: React.FC = () => {
           <button
             type="button"
             onClick={() => handleLaunchKiosk(true)}
-            className="px-6 py-3.5 text-sm font-semibold text-white bg-[#E11D48] hover:bg-[#BE123C] rounded-lg transition-colors whitespace-nowrap text-center cursor-pointer"
+            className="px-6 py-3.5 text-sm font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] rounded-lg transition-colors whitespace-nowrap text-center cursor-pointer shadow-md"
           >
             Luncurkan Photobox Fullscreen
           </button>

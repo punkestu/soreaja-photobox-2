@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { usePhotobox } from '../../context/PhotoboxContext';
 import { KIOSK_HERO_BACKDROP } from '../../data/defaultFrames';
+import { BACKDROP_PRESETS } from '../../data/themeConfig';
 
 export const IdleScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -23,6 +24,18 @@ export const IdleScreen: React.FC = () => {
     navigate('/app/frame-selection');
   };
 
+  // Resolve background photo from custom uploaded base64, URL, preset, or default hero backdrop
+  const backdropSrc = React.useMemo(() => {
+    const customBg = settings?.kioskBackground;
+    if (!customBg) return KIOSK_HERO_BACKDROP;
+    const matchedPreset = BACKDROP_PRESETS.find((p) => p.id === customBg);
+    if (matchedPreset) return matchedPreset.src;
+    return customBg;
+  }, [settings?.kioskBackground]);
+
+  const opacityValue = (settings?.kioskBackgroundOverlayOpacity ?? 60) / 100;
+  const themeColor = settings?.themeColor || '#E11D48';
+
   return (
     <div
       onClick={handleStart}
@@ -30,12 +43,13 @@ export const IdleScreen: React.FC = () => {
       aria-label="Layar Mulai Sesi Photobox"
       className="flex-1 w-full min-h-screen relative flex items-center justify-center overflow-hidden cursor-pointer select-none"
     >
-      {/* Editorial Studio Backdrop Image with Measured Contrast Scrim */}
+      {/* Editorial Studio Backdrop Image with Configurable Overlay */}
       <img
-        src={KIOSK_HERO_BACKDROP}
+        src={backdropSrc}
         alt="Studio Photobox SoreAja"
         referrerPolicy="no-referrer"
-        className="absolute inset-0 w-full h-full object-cover opacity-60 scale-105 transition-transform duration-700"
+        className="absolute inset-0 w-full h-full object-cover scale-105 transition-all duration-700"
+        style={{ opacity: opacityValue }}
       />
       <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0B] via-[#0A0A0B]/70 to-[#0A0A0B]/30" />
 
@@ -56,7 +70,7 @@ export const IdleScreen: React.FC = () => {
             SoreAja — Photobox
           </h1>
           <p className="font-serif-editorial italic text-2xl sm:text-3xl text-zinc-300">
-            Abadikan momen sore terbaikmu dalam cetakan strip analog klasik & animasi GIF.
+            Abadikan momenmu sekarang juga.
           </p>
         </div>
 
@@ -67,7 +81,10 @@ export const IdleScreen: React.FC = () => {
               e.stopPropagation();
               handleStart();
             }}
-            className="px-12 py-5 text-base sm:text-lg font-display font-bold text-white bg-[#E11D48] hover:bg-[#BE123C] rounded-2xl shadow-2xl transition-transform active:scale-95 whitespace-nowrap cursor-pointer"
+            style={{
+              backgroundColor: themeColor,
+            }}
+            className="px-12 py-5 text-base sm:text-lg font-display font-bold text-white rounded-2xl shadow-2xl transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer hover:brightness-95 hover:shadow-[0_0_35px_rgba(255,255,255,0.2)]"
           >
             Sentuh untuk Memulai
           </button>

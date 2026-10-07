@@ -49,7 +49,7 @@ export const KioskLayout: React.FC = () => {
   const isIdleScreen = location.pathname === '/app/idle';
 
   return (
-    <div className="min-h-screen w-full bg-[#0A0A0B] text-[#F4F4F0] flex flex-col overflow-x-hidden selection:bg-[#E11D48] selection:text-white">
+    <div className="min-h-screen w-full bg-[#0A0A0B] text-[#F4F4F0] flex flex-col overflow-x-hidden selection:bg-[var(--theme-accent,#E11D48)] selection:text-white">
       <OfflineIndicator />
 
       {/* Top Bar: Seamless borderless studio navigation */}
@@ -79,7 +79,7 @@ export const KioskLayout: React.FC = () => {
                   key={step.path}
                   className={`whitespace-nowrap transition-colors ${
                     isCurrent
-                      ? 'text-[#F4F4F0] font-semibold border-b-2 border-[#E11D48] pb-0.5'
+                      ? 'text-[#F4F4F0] font-semibold border-b-2 border-[var(--theme-accent,#E11D48)] pb-0.5'
                       : 'text-zinc-500'
                   }`}
                 >
