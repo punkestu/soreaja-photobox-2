@@ -1,4 +1,126 @@
-import type { FrameMetadata, PhotoFilter } from '../types/photobox';
+import type { FrameMetadata, PhotoFilter, StripRatioInfo } from '../types/photobox';
+
+export { type StripRatioInfo };
+
+export function checkStripRatio(width: number, height: number): StripRatioInfo {
+  const safeW = width || 480;
+  const safeH = height || 1440;
+  const ratio = safeW / safeH;
+
+  // A vertical long strip is typically 1:3 or 1:2.5 (ratio <= 0.65).
+  // Standard 4R portrait is 2:3 (ratio ~0.667). 3:4 is 0.75. Square is 1.0. Landscape > 1.0.
+  const isVerticalLongStrip = ratio <= 0.65;
+
+  let type: StripRatioInfo['type'] = 'standard-portrait';
+  if (isVerticalLongStrip) {
+    type = 'vertical-long-strip';
+  } else if (Math.abs(ratio - 1) < 0.08) {
+    type = 'square';
+  } else if (ratio > 1.08) {
+    type = 'landscape';
+  }
+
+  // Format readable ratio approximation
+  let ratioFormatted = `${safeW}×${safeH} (${ratio.toFixed(2)})`;
+  if (Math.abs(ratio - 1 / 3) < 0.05) {
+    ratioFormatted = '1:3 (Photo Strip)';
+  } else if (Math.abs(ratio - 1 / 2) < 0.06) {
+    ratioFormatted = '1:2 (Tall Vertical Strip)';
+  } else if (Math.abs(ratio - 2 / 3) < 0.05) {
+    ratioFormatted = '2:3 (4R Standard Portrait)';
+  } else if (Math.abs(ratio - 3 / 4) < 0.05) {
+    ratioFormatted = '3:4 (Portrait)';
+  } else if (Math.abs(ratio - 1) < 0.08) {
+    ratioFormatted = '1:1 (Square)';
+  } else if (Math.abs(ratio - 4 / 3) < 0.08) {
+    ratioFormatted = '4:3 (Landscape)';
+  } else if (Math.abs(ratio - 3 / 2) < 0.08) {
+    ratioFormatted = '3:2 (Landscape 4R)';
+  }
+
+  return {
+    width: safeW,
+    height: safeH,
+    ratio,
+    ratioFormatted,
+    isVerticalLongStrip,
+    type,
+  };
+}
+
+export function isVerticalLongStrip(width: number, height: number): boolean {
+  return checkStripRatio(width, height).isVerticalLongStrip;
+}
+
+export interface DoubleStripOptions {
+  includeCutLine?: boolean;
+  cutLineColor?: string;
+  spacing?: number;
+  showScissorIcon?: boolean;
+}
+
+export async function generateSideBySideStrip(
+  singleStripBase64: string,
+  options: DoubleStripOptions = {}
+): Promise<string> {
+  const {
+    includeCutLine = true,
+    cutLineColor = 'rgba(160, 160, 160, 0.45)',
+    spacing = 0,
+    showScissorIcon = true,
+  } = options;
+
+  const img = await loadImage(singleStripBase64);
+  const singleW = img.width;
+  const singleH = img.height;
+  const totalW = singleW * 2 + spacing;
+  const totalH = singleH;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = totalW;
+  canvas.height = totalH;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return singleStripBase64;
+
+  ctx.clearRect(0, 0, totalW, totalH);
+
+  // 1. Draw Left Strip
+  ctx.drawImage(img, 0, 0, singleW, singleH);
+
+  // 2. Draw Right Strip (Duplicate side-by-side)
+  ctx.drawImage(img, singleW + spacing, 0, singleW, singleH);
+
+  // 3. Center Cutting Guide (Dashed line with scissor glyphs)
+  if (includeCutLine) {
+    const dividerX = singleW + Math.floor(spacing / 2);
+    ctx.save();
+
+    ctx.beginPath();
+    ctx.setLineDash([10, 8]);
+    ctx.strokeStyle = cutLineColor;
+    ctx.lineWidth = 1.5;
+    ctx.moveTo(dividerX, 0);
+    ctx.lineTo(dividerX, totalH);
+    ctx.stroke();
+
+    if (showScissorIcon) {
+      ctx.fillStyle = cutLineColor;
+      ctx.font = '16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      // Top icon
+      ctx.fillText('✂', dividerX, 26);
+      // Center icon
+      ctx.fillText('✂', dividerX, Math.floor(totalH / 2));
+      // Bottom icon
+      ctx.fillText('✂', dividerX, totalH - 26);
+    }
+
+    ctx.restore();
+  }
+
+  return canvas.toDataURL('image/png', 0.95);
+}
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -137,4 +259,53 @@ export async function compositeFinalLayout(
   }
 
   return canvas.toDataURL('image/png', 0.95);
+}
+
+export interface CompositeLayoutBundle {
+  singleStrip: string;
+  doubleStrip: string | null;
+  ratioInfo: StripRatioInfo;
+}
+
+export async function compositeFinalLayoutBundle(
+  capturedPhotos: string[],
+  frame: FrameMetadata,
+  filter: PhotoFilter = 'original',
+  customCaption = 'SOREAJA — PHOTOBOX 2',
+  showStamps = true,
+  themeColor?: string,
+  doubleStripOptions?: DoubleStripOptions
+): Promise<CompositeLayoutBundle> {
+  const maxRight = Math.max(...frame.positions.map((p) => p.x + p.width));
+  const maxBottom = Math.max(...frame.positions.map((p) => p.y + p.height));
+  const canvasWidth = frame.canvasWidth || maxRight + 50;
+  const canvasHeight = frame.canvasHeight || maxBottom + 120;
+
+  const ratioInfo = checkStripRatio(canvasWidth, canvasHeight);
+
+  // 1. Generate Single Strip Base64
+  const singleStrip = await compositeFinalLayout(
+    capturedPhotos,
+    frame,
+    filter,
+    customCaption,
+    showStamps,
+    themeColor
+  );
+
+  // 2. If it is a vertical long strip, generate image with side by side of 2 strip
+  let doubleStrip: string | null = null;
+  if (ratioInfo.isVerticalLongStrip && singleStrip) {
+    try {
+      doubleStrip = await generateSideBySideStrip(singleStrip, doubleStripOptions);
+    } catch (err) {
+      console.warn('Failed to generate side-by-side double strip:', err);
+    }
+  }
+
+  return {
+    singleStrip,
+    doubleStrip,
+    ratioInfo,
+  };
 }

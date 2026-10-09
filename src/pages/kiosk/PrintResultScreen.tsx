@@ -11,7 +11,11 @@ import {
   type DownloadedFileManifest,
 } from '../../services/downloadService';
 import { printThermal, printColor } from '../../services/printServices';
-import { compositeFinalLayout } from '../../services/canvasCompositor';
+import {
+  compositeFinalLayoutBundle,
+  generateSideBySideStrip,
+  isVerticalLongStrip,
+} from '../../services/canvasCompositor';
 
 export const PrintResultScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -20,6 +24,8 @@ export const PrintResultScreen: React.FC = () => {
     capturedPhotos,
     finalLayoutBase64,
     setFinalLayoutBase64,
+    doubleStripBase64,
+    setDoubleStripBase64,
     gifBlobUrl,
     setGifBlobUrl,
     selectedFilter,
@@ -40,6 +46,7 @@ export const PrintResultScreen: React.FC = () => {
   const [downloadedManifest, setDownloadedManifest] = useState<
     DownloadedFileManifest[]
   >([]);
+  const [stripDisplayMode, setStripDisplayMode] = useState<'single' | 'double'>('double');
 
   const hasInitializedRef = useRef<boolean>(false);
   const activeFrame = selectedFrame || DEFAULT_FRAMES[0];
@@ -80,16 +87,37 @@ export const PrintResultScreen: React.FC = () => {
             );
 
       let layoutToUse = finalLayoutBase64;
+      let doubleStripToUse = doubleStripBase64;
+
       if (!layoutToUse) {
-        layoutToUse = await compositeFinalLayout(
+        const bundle = await compositeFinalLayoutBundle(
           photosToUse,
           activeFrame,
           selectedFilter,
           customCaption,
           showFrameStamps,
-          themeAccent
+          themeAccent,
+          { includeCutLine: true }
         );
+        layoutToUse = bundle.singleStrip;
+        doubleStripToUse = bundle.doubleStrip;
         setFinalLayoutBase64(layoutToUse);
+        setDoubleStripBase64(doubleStripToUse);
+      } else if (!doubleStripToUse) {
+        const maxRight = Math.max(...activeFrame.positions.map((p) => p.x + p.width));
+        const maxBottom = Math.max(...activeFrame.positions.map((p) => p.y + p.height));
+        const cWidth = activeFrame.canvasWidth || maxRight + 50;
+        const cHeight = activeFrame.canvasHeight || maxBottom + 120;
+        if (isVerticalLongStrip(cWidth, cHeight)) {
+          try {
+            doubleStripToUse = await generateSideBySideStrip(layoutToUse, {
+              includeCutLine: true,
+            });
+            setDoubleStripBase64(doubleStripToUse);
+          } catch {
+            // fallback
+          }
+        }
       }
 
       // 2. Jalankan gif.js untuk merender animasi dari capturedPhotos
@@ -100,12 +128,13 @@ export const PrintResultScreen: React.FC = () => {
       setGifBlobUrl(renderedGifUrl);
       setIsGeneratingGif(false);
 
-      // 3. Unduh semua file (Raw, Final Frame, GIF) ke PC lokal secara otomatis
+      // 3. Unduh semua file (Raw, Final Frame, 2-Strip Side-by-Side jika ada, GIF) ke PC lokal secara otomatis
       const files = autoDownloadSessionFiles(
         photosToUse,
         layoutToUse,
         renderedGifUrl,
-        shouldAutoDownload
+        shouldAutoDownload,
+        doubleStripToUse
       );
       setDownloadedManifest(files);
 
@@ -124,6 +153,7 @@ export const PrintResultScreen: React.FC = () => {
           frameName: activeFrame.name,
           photoCount: photosToUse.length,
           finalLayoutBase64: layoutToUse,
+          doubleStripBase64: doubleStripToUse,
           driveUrl: currentDriveUrl,
           printedThermal: true,
           printedColor: false,
@@ -138,9 +168,11 @@ export const PrintResultScreen: React.FC = () => {
     activeFrame,
     capturedPhotos,
     customCaption,
+    doubleStripBase64,
     finalLayoutBase64,
     isHydrated,
     selectedFilter,
+    setDoubleStripBase64,
     setFinalLayoutBase64,
     setGifBlobUrl,
     showFrameStamps,
@@ -148,18 +180,27 @@ export const PrintResultScreen: React.FC = () => {
 
   const handleReprintThermal = async () => {
     setIsPrintingThermal(true);
-    setPrintStatus('Menghubungkan ke Printer Thermal...');
+    setPrintStatus('Menghubungkan ke Printer Thermal (80mm)...');
     const res = await printThermal(finalLayoutBase64);
     setIsPrintingThermal(false);
-    setPrintStatus(`✅ Cetak Ulang Thermal Berhasil (${res.jobId})`);
+    setPrintStatus(`✅ Cetak Ulang Thermal Berhasil (${res.jobId}) · Strip Tunggal 80mm`);
   };
 
   const handlePrintColor = async () => {
     setIsPrintingColor(true);
-    setPrintStatus('Menghubungkan ke Printer Warna...');
-    const res = await printColor(finalLayoutBase64);
+    const imageToPrint = doubleStripBase64 || finalLayoutBase64;
+    setPrintStatus(
+      doubleStripBase64
+        ? 'Menghubungkan ke Printer Warna (Dye-Sub 4R - 2 Strip Side-by-Side)...'
+        : 'Menghubungkan ke Printer Warna...'
+    );
+    const res = await printColor(imageToPrint);
     setIsPrintingColor(false);
-    setPrintStatus(`✅ Cetak Warna Selesai (${res.jobId})`);
+    setPrintStatus(
+      `✅ Cetak Warna Selesai (${res.jobId}) · ${
+        doubleStripBase64 ? 'Format 2-Strip Side-by-Side (4R)' : 'Format Standar'
+      }`
+    );
   };
 
   const handleNewSession = () => {
@@ -223,36 +264,97 @@ export const PrintResultScreen: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Column 1: Final Framed Photo Strip */}
         <div className="lg:col-span-5 bg-zinc-900/80 rounded-2xl p-6 space-y-4 shadow-xl">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <div>
               <h2 className="font-display text-base font-bold text-[#F4F4F0]">
                 01. Hasil Cetak Berbingkai
               </h2>
               <p className="text-xs text-zinc-400">{activeFrame.name}</p>
             </div>
-            {finalLayoutBase64 && (
-              <button
-                type="button"
-                onClick={() =>
-                  downloadSingleFile(
-                    finalLayoutBase64,
-                    `PB_${Date.now()}_final.png`
-                  )
-                }
-                className="px-3 py-1.5 text-xs font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
-              >
-                Unduh PNG
-              </button>
-            )}
+
+            <div className="flex items-center gap-1.5">
+              {doubleStripBase64 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    downloadSingleFile(
+                      doubleStripBase64,
+                      `PB_${Date.now()}_side_by_side_2strip.png`
+                    )
+                  }
+                  className="px-2.5 py-1.5 text-[11px] font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] rounded-lg transition-colors whitespace-nowrap cursor-pointer shadow-sm"
+                  title="Unduh 2 strip berdampingan untuk cetak kertas 4R"
+                >
+                  Unduh 2-Strip (4R)
+                </button>
+              )}
+              {finalLayoutBase64 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    downloadSingleFile(
+                      finalLayoutBase64,
+                      `PB_${Date.now()}_strip_single.png`
+                    )
+                  }
+                  className="px-2.5 py-1.5 text-[11px] font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+                  title="Unduh 1 strip tunggal"
+                >
+                  {doubleStripBase64 ? 'Unduh 1-Strip' : 'Unduh PNG'}
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="bg-zinc-950 rounded-xl p-4 flex items-center justify-center min-h-[420px]">
+          {/* Toggle View jika 2-strip tersedia */}
+          {doubleStripBase64 && (
+            <div className="flex items-center justify-between bg-zinc-950/80 p-1.5 rounded-xl border border-zinc-800/80 text-xs">
+              <span className="text-[11px] text-zinc-400 pl-2">Pratinjau:</span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setStripDisplayMode('single')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    stripDisplayMode === 'single'
+                      ? 'bg-zinc-700 text-white'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  📱 Strip Tunggal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStripDisplayMode('double')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    stripDisplayMode === 'double'
+                      ? 'bg-[var(--theme-accent,#E11D48)] text-white'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  👥 2-Strip Side-by-Side (4R)
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-zinc-950 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px] gap-2">
             {finalLayoutBase64 ? (
-              <img
-                src={finalLayoutBase64}
-                alt="Hasil akhir strip foto berbingkai"
-                className="max-h-[480px] w-auto object-contain rounded shadow-2xl"
-              />
+              <>
+                <img
+                  src={
+                    stripDisplayMode === 'double' && doubleStripBase64
+                      ? doubleStripBase64
+                      : finalLayoutBase64
+                  }
+                  alt="Hasil akhir strip foto berbingkai"
+                  className="max-h-[460px] w-auto object-contain rounded shadow-2xl"
+                />
+                <p className="text-[11px] font-mono-tabular text-zinc-400 text-center">
+                  {stripDisplayMode === 'double' && doubleStripBase64
+                    ? '👥 Mode 2-Strip Side-by-Side · Cetak ganda untuk kertas 4R (4×6")'
+                    : '📱 Mode Strip Tunggal · 80mm Roll / Thermal'}
+                </p>
+              </>
             ) : (
               <span className="text-xs font-mono-tabular text-zinc-500">
                 Memuat gambar akhir...

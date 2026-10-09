@@ -4,7 +4,11 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { usePhotobox } from '../../context/PhotoboxContext';
 import { DEFAULT_FRAMES, STUDIO_PORTRAITS } from '../../data/defaultFrames';
-import { compositeFinalLayout } from '../../services/canvasCompositor';
+import {
+  compositeFinalLayoutBundle,
+  checkStripRatio,
+  type StripRatioInfo,
+} from '../../services/canvasCompositor';
 import type { PhotoFilter } from '../../types/photobox';
 
 const FILTERS: { id: PhotoFilter; label: string; desc: string }[] = [
@@ -23,6 +27,8 @@ export const FinalPreviewScreen: React.FC = () => {
     setCapturedPhotos,
     finalLayoutBase64,
     setFinalLayoutBase64,
+    doubleStripBase64,
+    setDoubleStripBase64,
     selectedFilter,
     setSelectedFilter,
     customCaption,
@@ -33,8 +39,19 @@ export const FinalPreviewScreen: React.FC = () => {
   } = usePhotobox();
 
   const [isCompositing, setIsCompositing] = useState<boolean>(!finalLayoutBase64);
+  const [previewMode, setPreviewMode] = useState<'single' | 'double'>('double');
+  const [showCutLine, setShowCutLine] = useState<boolean>(true);
   const settings = useLiveQuery(() => db.settings.get('app_settings'), []);
   const activeFrame = selectedFrame || DEFAULT_FRAMES[0];
+
+  const [ratioInfo, setRatioInfo] = useState<StripRatioInfo>(() => {
+    const maxRight = Math.max(...activeFrame.positions.map((p) => p.x + p.width));
+    const maxBottom = Math.max(...activeFrame.positions.map((p) => p.y + p.height));
+    return checkStripRatio(
+      activeFrame.canvasWidth || maxRight + 50,
+      activeFrame.canvasHeight || maxBottom + 120
+    );
+  });
 
   // Ensure fallback photos only after hydration if opened directly without photos
   useEffect(() => {
@@ -53,22 +70,26 @@ export const FinalPreviewScreen: React.FC = () => {
     }
   }, [capturedPhotos.length, isHydrated, selectedFrame, setCapturedPhotos, setSelectedFrame]);
 
-  // Sesuai TSD 4.2.5: Gabungkan capturedPhotos + selectedFrame.frameImg menggunakan HTML Canvas
+  // Gabungkan capturedPhotos + selectedFrame.frameImg menggunakan HTML Canvas
+  // Otomatis cek rasio W/H strip: Jika vertical long strip, buat juga 2-strip side-by-side
   useEffect(() => {
     if (!isHydrated || capturedPhotos.length === 0) return;
     let active = true;
     setIsCompositing(true);
 
-    compositeFinalLayout(
+    compositeFinalLayoutBundle(
       capturedPhotos,
       activeFrame,
       selectedFilter,
       customCaption,
       showFrameStamps,
-      settings?.themeColor
-    ).then((base64) => {
+      settings?.themeColor,
+      { includeCutLine: showCutLine }
+    ).then((bundle) => {
       if (active) {
-        setFinalLayoutBase64(base64);
+        setFinalLayoutBase64(bundle.singleStrip);
+        setDoubleStripBase64(bundle.doubleStrip);
+        setRatioInfo(bundle.ratioInfo);
         setIsCompositing(false);
       }
     });
@@ -82,10 +103,18 @@ export const FinalPreviewScreen: React.FC = () => {
     customCaption,
     isHydrated,
     selectedFilter,
+    setDoubleStripBase64,
     setFinalLayoutBase64,
     settings?.themeColor,
+    showCutLine,
     showFrameStamps,
   ]);
+
+  const isVertical = ratioInfo.isVerticalLongStrip;
+  const activeDisplayImage =
+    isVertical && previewMode === 'double' && doubleStripBase64
+      ? doubleStripBase64
+      : finalLayoutBase64;
 
   return (
     <div className="flex-1 w-full max-w-7xl mx-auto px-6 md:px-10 py-8 space-y-8">
@@ -129,7 +158,61 @@ export const FinalPreviewScreen: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Final Composite Preview */}
-        <div className="lg:col-span-7 bg-zinc-900/80 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[540px] shadow-2xl">
+        <div className="lg:col-span-7 bg-zinc-900/80 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[540px] shadow-2xl space-y-4">
+          {/* Ratio detection & layout tabs if it is vertical long strip */}
+          {isVertical && (
+            <div className="w-full space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 bg-zinc-950/70 p-2 rounded-xl border border-zinc-800">
+                <div className="flex items-center gap-1.5 p-1 bg-zinc-900 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMode('single')}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                      previewMode === 'single'
+                        ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    📱 Strip Tunggal (1x)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMode('double')}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
+                      previewMode === 'double'
+                        ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <span>👥 2-Strip Berdampingan (Side-by-Side)</span>
+                    <span className="text-[10px] px-1.5 py-0.2 bg-white/20 text-white rounded font-mono">
+                      4R
+                    </span>
+                  </button>
+                </div>
+
+                {previewMode === 'double' && (
+                  <label className="flex items-center gap-1.5 text-xs text-zinc-300 pr-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={showCutLine}
+                      onChange={(e) => setShowCutLine(e.target.checked)}
+                      className="w-3.5 h-3.5 accent-[var(--theme-accent,#E11D48)] rounded cursor-pointer"
+                    />
+                    <span>✂️ Garis Potong Tengah</span>
+                  </label>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 text-[11px] font-mono-tabular text-emerald-400/90 bg-emerald-950/40 border border-emerald-800/40 px-3 py-1.5 rounded-lg">
+                <span>📐</span>
+                <span>
+                  <strong>Rasio Strip Vertikal ({ratioInfo.ratioFormatted}):</strong> Otomatis digandakan 2 strip berdampingan untuk cetak kertas 4R (4×6").
+                </span>
+              </div>
+            </div>
+          )}
+
           {isCompositing || !finalLayoutBase64 ? (
             <div className="text-center space-y-3 py-16">
               <p className="text-sm font-mono-tabular text-zinc-300">
@@ -140,12 +223,19 @@ export const FinalPreviewScreen: React.FC = () => {
               </p>
             </div>
           ) : (
-            <img
-              data-testid="final-composite-image"
-              src={finalLayoutBase64}
-              alt={`Hasil Akhir Bingkai ${activeFrame.name}`}
-              className="max-h-[640px] w-auto object-contain rounded-xl shadow-2xl"
-            />
+            <div className="flex flex-col items-center gap-2 w-full">
+              <img
+                data-testid="final-composite-image"
+                src={activeDisplayImage || finalLayoutBase64}
+                alt={`Hasil Akhir Bingkai ${activeFrame.name}`}
+                className="max-h-[580px] w-auto object-contain rounded-xl shadow-2xl"
+              />
+              <p className="text-[11px] font-mono-tabular text-zinc-400 text-center">
+                {isVertical && previewMode === 'double'
+                  ? `Format Cetak: 2-Strip Side-by-Side (${activeFrame.canvasWidth ? activeFrame.canvasWidth * 2 : 960}×${activeFrame.canvasHeight || 1440}px) · Standar 4R`
+                  : `Format Cetak: Strip Tunggal (${activeFrame.canvasWidth || 480}×${activeFrame.canvasHeight || 1440}px)`}
+              </p>
+            </div>
           )}
         </div>
 

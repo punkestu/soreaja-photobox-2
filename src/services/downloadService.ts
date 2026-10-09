@@ -1,6 +1,6 @@
 export interface DownloadedFileManifest {
   filename: string;
-  type: 'raw' | 'final' | 'gif';
+  type: 'raw' | 'final' | 'double_strip' | 'gif';
   url: string;
 }
 
@@ -19,12 +19,17 @@ export const autoDownloadSessionFiles = (
   photosArray: string[],
   finalLayout: string | null,
   gifUrl: string | null,
-  triggerBrowserDownload = true
+  triggerBrowserDownload = true,
+  doubleStripLayout?: string | null
 ): DownloadedFileManifest[] => {
   const timestamp = new Date().getTime();
   const manifest: DownloadedFileManifest[] = [];
 
-  const downloadFile = (url: string, filename: string, type: 'raw' | 'final' | 'gif') => {
+  const downloadFile = (
+    url: string,
+    filename: string,
+    type: 'raw' | 'final' | 'double_strip' | 'gif'
+  ) => {
     manifest.push({ filename, type, url });
     // Avoid blocking automated headless verification runs while preserving full download behavior for users
     const isWebdriver = typeof navigator !== 'undefined' && navigator.webdriver === true;
@@ -40,9 +45,21 @@ export const autoDownloadSessionFiles = (
     }
   });
 
-  // Download Final Layout
+  // Download Final Layout (Single Strip)
   if (finalLayout) {
-    downloadFile(finalLayout, `PB_${timestamp}_final.png`, 'final');
+    const filename = doubleStripLayout
+      ? `PB_${timestamp}_strip_single.png`
+      : `PB_${timestamp}_final.png`;
+    downloadFile(finalLayout, filename, 'final');
+  }
+
+  // Download Side-by-Side 2 Strip Layout (if available)
+  if (doubleStripLayout) {
+    downloadFile(
+      doubleStripLayout,
+      `PB_${timestamp}_side_by_side_2strip.png`,
+      'double_strip'
+    );
   }
 
   // Download GIF

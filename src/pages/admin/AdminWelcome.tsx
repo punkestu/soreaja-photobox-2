@@ -335,18 +335,34 @@ export const AdminWelcome: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    downloadSingleFile(
-                      session.finalLayoutBase64,
-                      `SoreAja_${session.timestamp}_final.png`
-                    )
-                  }
-                  className="w-full py-2 text-xs font-semibold text-neutral-900 bg-neutral-100 hover:bg-neutral-200 rounded-md transition-colors cursor-pointer"
-                >
-                  Unduh Ulang Strip PNG
-                </button>
+                <div className="flex flex-col gap-1.5 w-full">
+                  {session.doubleStripBase64 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        downloadSingleFile(
+                          session.doubleStripBase64!,
+                          `SoreAja_${session.timestamp}_side_by_side_2strip.png`
+                        )
+                      }
+                      className="w-full py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md transition-colors cursor-pointer"
+                    >
+                      Unduh 2-Strip Side-by-Side (4R)
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      downloadSingleFile(
+                        session.finalLayoutBase64,
+                        `SoreAja_${session.timestamp}_final.png`
+                      )
+                    }
+                    className="w-full py-1.5 text-xs font-semibold text-neutral-900 bg-neutral-100 hover:bg-neutral-200 rounded-md transition-colors cursor-pointer"
+                  >
+                    Unduh Strip Tunggal
+                  </button>
+                </div>
               </div>
             ))}
           </div>

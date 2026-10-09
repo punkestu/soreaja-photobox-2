@@ -9,6 +9,7 @@ interface PhotoboxContextValue extends PhotoboxState {
   updatePhotoAtIndex: (index: number, photoBase64: string) => void;
   setRetakeIndex: (index: number | null) => void;
   setFinalLayoutBase64: (base64: string | null) => void;
+  setDoubleStripBase64: (base64: string | null) => void;
   setGifBlobUrl: (url: string | null) => void;
   setSelectedFilter: (filter: PhotoFilter) => void;
   setCustomCaption: (caption: string) => void;
@@ -22,6 +23,7 @@ const initialState: PhotoboxState = {
   capturedPhotos: [],
   retakeIndex: null,
   finalLayoutBase64: null,
+  doubleStripBase64: null,
   gifBlobUrl: null,
   selectedFilter: 'original',
   customCaption: 'SOREAJA — PHOTOBOX 2',
@@ -36,6 +38,7 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>(initialState.capturedPhotos);
   const [retakeIndex, setRetakeIndex] = useState<number | null>(initialState.retakeIndex);
   const [finalLayoutBase64, setFinalLayoutBase64] = useState<string | null>(initialState.finalLayoutBase64);
+  const [doubleStripBase64, setDoubleStripBase64] = useState<string | null>(initialState.doubleStripBase64);
   const [gifBlobUrl, setGifBlobUrl] = useState<string | null>(initialState.gifBlobUrl);
   const [selectedFilter, setSelectedFilter] = useState<PhotoFilter>(initialState.selectedFilter);
   const [customCaption, setCustomCaption] = useState<string>(initialState.customCaption);
@@ -74,6 +77,8 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
           if (savedSession.finalLayoutBase64)
             setFinalLayoutBase64(savedSession.finalLayoutBase64);
+          if (savedSession.doubleStripBase64)
+            setDoubleStripBase64(savedSession.doubleStripBase64);
           if (savedSession.selectedFilter)
             setSelectedFilter(savedSession.selectedFilter);
           if (savedSession.customCaption) {
@@ -112,7 +117,7 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
 
     saveTimeoutRef.current = window.setTimeout(() => {
-      if (capturedPhotos.length === 0 && !selectedFrame && !finalLayoutBase64) {
+      if (capturedPhotos.length === 0 && !selectedFrame && !finalLayoutBase64 && !doubleStripBase64) {
         // Empty state
         db.activeSession.delete('current_active_session').catch(() => {});
       } else {
@@ -123,6 +128,7 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             capturedPhotos,
             retakeIndex,
             finalLayoutBase64,
+            doubleStripBase64,
             selectedFilter,
             customCaption,
             showFrameStamps,
@@ -145,6 +151,7 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     capturedPhotos,
     retakeIndex,
     finalLayoutBase64,
+    doubleStripBase64,
     selectedFilter,
     customCaption,
     showFrameStamps,
@@ -163,6 +170,7 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setCapturedPhotos([]);
     setRetakeIndex(null);
     setFinalLayoutBase64(null);
+    setDoubleStripBase64(null);
     setGifBlobUrl((prevUrl) => {
       if (prevUrl && prevUrl.startsWith('blob:')) {
         URL.revokeObjectURL(prevUrl);
@@ -199,6 +207,7 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         capturedPhotos,
         retakeIndex,
         finalLayoutBase64,
+        doubleStripBase64,
         gifBlobUrl,
         selectedFilter,
         customCaption,
@@ -209,6 +218,7 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         updatePhotoAtIndex,
         setRetakeIndex,
         setFinalLayoutBase64,
+        setDoubleStripBase64,
         setGifBlobUrl,
         setSelectedFilter,
         setCustomCaption,

@@ -19,6 +19,15 @@ export interface FrameMetadata {
   hideGenericStamps?: boolean;
 }
 
+export interface StripRatioInfo {
+  width: number;
+  height: number;
+  ratio: number; // width / height
+  ratioFormatted: string; // e.g. "1:3 (Photo Strip)"
+  isVerticalLongStrip: boolean;
+  type: 'vertical-long-strip' | 'standard-portrait' | 'square' | 'landscape';
+}
+
 export type PhotoFilter = 'original' | 'warm-sore' | 'noir-bw' | 'vintage-film';
 
 export interface AppSettings {
@@ -47,6 +56,7 @@ export interface SessionRecord {
   frameName: string;
   photoCount: number;
   finalLayoutBase64: string;
+  doubleStripBase64?: string | null;
   driveUrl: string;
   printedThermal: boolean;
   printedColor: boolean;
@@ -58,6 +68,7 @@ export interface ActiveSessionRecord {
   capturedPhotos: string[];
   retakeIndex: number | null;
   finalLayoutBase64: string | null;
+  doubleStripBase64?: string | null;
   gifBlobUrl?: string | null;
   selectedFilter: PhotoFilter;
   customCaption: string;
@@ -70,6 +81,7 @@ export interface PhotoboxState {
   capturedPhotos: string[];
   retakeIndex: number | null;
   finalLayoutBase64: string | null;
+  doubleStripBase64: string | null;
   gifBlobUrl: string | null;
   selectedFilter: PhotoFilter;
   customCaption: string;
