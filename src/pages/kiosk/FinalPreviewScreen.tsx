@@ -117,30 +117,29 @@ export const FinalPreviewScreen: React.FC = () => {
       : finalLayoutBase64;
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto px-6 md:px-10 py-8 space-y-8">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4">
+    <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-8 space-y-6 md:space-y-8 select-none">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-white/5">
         <div>
-          <div className="text-xs font-mono-tabular text-zinc-400 flex items-center gap-2 mb-2">
-            <span>Tahap 05 dari 06</span>
+          <div className="text-xs sm:text-sm font-mono-tabular text-zinc-400 flex items-center gap-2 mb-1.5">
+            <span className="text-[var(--theme-accent,#E11D48)] font-bold">Tahap 05/06</span>
             <span aria-hidden="true">·</span>
             <span>HTML5 Canvas Compositor</span>
             <span aria-hidden="true">·</span>
             <span>Bingkai: {activeFrame.name}</span>
           </div>
-          <h1 className="font-display text-2xl md:text-4xl font-bold text-[#F4F4F0]">
+          <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#F4F4F0]">
             Pratinjau Layout Akhir Berbingkai
           </h1>
-          <p className="text-sm text-zinc-400 mt-1">
-            Periksa penggabungan foto dengan bingkai studio dan pilih tone warna sebelum
-            mencetak.
+          <p className="text-xs sm:text-sm md:text-base text-zinc-400 mt-1">
+            Periksa penggabungan foto dengan bingkai studio dan pilih tone warna sebelum mencetak.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3">
           <button
             type="button"
             onClick={() => navigate('/app/review-photos')}
-            className="px-5 py-2.5 text-xs font-semibold text-zinc-200 bg-zinc-900/80 hover:bg-zinc-800 rounded-xl transition-colors whitespace-nowrap cursor-pointer"
+            className="min-h-[48px] sm:min-h-[52px] px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-sm"
           >
             ← Retake
           </button>
@@ -149,16 +148,17 @@ export const FinalPreviewScreen: React.FC = () => {
             type="button"
             disabled={isCompositing || !finalLayoutBase64}
             onClick={() => navigate('/app/print-result')}
-            className="px-7 py-2.5 text-sm font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] disabled:opacity-50 rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
+            className="min-h-[48px] sm:min-h-[52px] px-7 sm:px-8 py-2.5 text-xs sm:text-sm md:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center gap-2"
           >
-            Lanjut →
+            <span>Lanjut ke Cetak</span>
+            <span>→</span>
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Final Composite Preview */}
-        <div className="lg:col-span-7 bg-zinc-900/80 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[540px] shadow-2xl space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 items-start">
+        {/* Final Composite Preview - Tablet 7 Cols */}
+        <div className="md:col-span-7 bg-zinc-900/80 rounded-2xl p-5 sm:p-6 flex flex-col items-center justify-center min-h-[480px] shadow-2xl space-y-4 border border-zinc-800/70">
           {/* Ratio detection & layout tabs if it is vertical long strip */}
           {isVertical && (
             <div className="w-full space-y-3">
@@ -239,13 +239,13 @@ export const FinalPreviewScreen: React.FC = () => {
           )}
         </div>
 
-        {/* Tone Filter & Caption Controls */}
-        <div className="lg:col-span-5 bg-zinc-900/80 rounded-2xl p-6 space-y-6 shadow-xl">
+        {/* Tone Filter & Caption Controls - Tablet 5 Cols */}
+        <div className="md:col-span-5 bg-zinc-900/80 rounded-2xl p-5 sm:p-6 space-y-5 sm:space-y-6 shadow-xl border border-zinc-800/70">
           <div className="space-y-3">
             <h2 className="font-display text-lg font-bold text-[#F4F4F0]">
               Tone Warna Studio (Filter Kanvas)
             </h2>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs sm:text-sm text-zinc-400">
               Pilih karakter warna untuk diterapkan secara langsung pada hasil cetakan.
             </p>
 
@@ -257,13 +257,13 @@ export const FinalPreviewScreen: React.FC = () => {
                     key={f.id}
                     type="button"
                     onClick={() => setSelectedFilter(f.id)}
-                    className={`p-3.5 rounded-xl text-left transition-all cursor-pointer ${
+                    className={`min-h-[52px] p-3.5 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer ${
                       isActive
-                        ? 'bg-[var(--theme-accent,#E11D48)]/15 ring-2 ring-[var(--theme-accent,#E11D48)] text-white'
-                        : 'bg-zinc-950/80 text-zinc-300 hover:bg-zinc-800'
+                        ? 'bg-[var(--theme-accent,#E11D48)]/15 ring-2 ring-[var(--theme-accent,#E11D48)] text-white shadow-md'
+                        : 'bg-zinc-950/80 text-zinc-300 hover:bg-zinc-800 border border-zinc-800/60'
                     }`}
                   >
-                    <p className="text-xs font-semibold">{f.label}</p>
+                    <p className="text-xs sm:text-sm font-bold">{f.label}</p>
                     <p className="text-[11px] text-zinc-400 mt-0.5">{f.desc}</p>
                   </button>
                 );
@@ -272,24 +272,24 @@ export const FinalPreviewScreen: React.FC = () => {
           </div>
 
           {/* Stempel Teks Bingkai Toggle & Caption */}
-          <div className="pt-4 space-y-3">
+          <div className="pt-2 space-y-3 border-t border-zinc-800/60">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold text-zinc-200">
+                <p className="text-xs sm:text-sm font-semibold text-zinc-200">
                   Stempel Teks Bingkai
                 </p>
                 <p className="text-[11px] text-zinc-400">
                   Header identitas studio & stempel bawah
                 </p>
               </div>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="min-h-[44px] flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={showFrameStamps}
                   onChange={(e) => setShowFrameStamps(e.target.checked)}
                   className="w-4 h-4 accent-[var(--theme-accent,#E11D48)] rounded cursor-pointer"
                 />
-                <span className="text-xs font-mono-tabular text-zinc-300">
+                <span className="text-xs sm:text-sm font-mono-tabular text-zinc-300">
                   {showFrameStamps ? 'Tampil' : 'Sembunyi'}
                 </span>
               </label>
@@ -299,7 +299,7 @@ export const FinalPreviewScreen: React.FC = () => {
               <div className="space-y-1.5 pt-1">
                 <label
                   htmlFor="captionInput"
-                  className="block text-xs font-semibold text-zinc-300"
+                  className="block text-xs sm:text-sm font-semibold text-zinc-300"
                 >
                   Teks Stempel Bawah Bingkai
                 </label>
@@ -309,7 +309,7 @@ export const FinalPreviewScreen: React.FC = () => {
                   maxLength={32}
                   value={customCaption}
                   onChange={(e) => setCustomCaption(e.target.value)}
-                  className="w-full px-3.5 py-2 text-sm bg-zinc-950 rounded-xl text-white focus:outline-none ring-1 ring-zinc-700 focus:ring-[var(--theme-accent,#E11D48)] font-mono-tabular"
+                  className="w-full px-4 py-2.5 text-sm sm:text-base bg-zinc-950 rounded-xl text-white focus:outline-none ring-1 ring-zinc-700 focus:ring-[var(--theme-accent,#E11D48)] font-mono-tabular"
                 />
               </div>
             ) : (
@@ -319,22 +319,24 @@ export const FinalPreviewScreen: React.FC = () => {
             )}
           </div>
 
-          <div className="pt-4 space-y-3">
+          <div className="pt-2 space-y-3">
             <button
               type="button"
               disabled={isCompositing || !finalLayoutBase64}
               onClick={() => navigate('/app/print-result')}
-              className="w-full py-4 px-5 text-sm font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] disabled:opacity-50 rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
+              className="w-full min-h-[54px] sm:min-h-[58px] py-4 px-6 text-sm sm:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center justify-center gap-2"
             >
-              Lanjut ke Cetak & QR Code →
+              <span>Lanjut ke Cetak & QR Code</span>
+              <span>→</span>
             </button>
 
             <button
               type="button"
               onClick={() => navigate('/app/review-photos')}
-              className="w-full py-3 px-4 text-xs font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors whitespace-nowrap cursor-pointer"
+              className="w-full min-h-[48px] py-3 px-4 text-xs sm:text-sm font-semibold text-zinc-300 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer flex items-center justify-center gap-2"
             >
-              Retake (Kembali ke Evaluasi Foto)
+              <span>←</span>
+              <span>Retake (Kembali ke Evaluasi Foto)</span>
             </button>
           </div>
         </div>

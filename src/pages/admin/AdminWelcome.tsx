@@ -66,16 +66,18 @@ export const AdminWelcome: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate('/app/idle')}
-                className="px-5 py-2.5 text-sm font-semibold text-white bg-[var(--theme-accent,#E11D48)] rounded-lg hover:bg-[var(--theme-accent-hover,#BE123C)] transition-colors whitespace-nowrap cursor-pointer shadow-xs"
+                className="min-h-[48px] px-6 py-2.5 text-sm font-bold text-white bg-[var(--theme-accent,#E11D48)] rounded-xl hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 transition-all whitespace-nowrap cursor-pointer shadow-sm flex items-center gap-2"
               >
-                Mulai Sesi Pelanggan
+                <span>🚀</span>
+                <span>Mulai Sesi Pelanggan</span>
               </button>
               <button
                 type="button"
                 onClick={() => navigate('/admin/settings')}
-                className="px-4 py-2.5 text-sm font-medium text-neutral-800 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors whitespace-nowrap cursor-pointer"
+                className="min-h-[48px] px-5 py-2.5 text-sm font-semibold text-neutral-800 bg-neutral-100 rounded-xl hover:bg-neutral-200 active:scale-95 transition-all whitespace-nowrap cursor-pointer flex items-center gap-2"
               >
-                Ubah Tautan Google Drive
+                <span>⚙️</span>
+                <span>Ubah Pengaturan Studio</span>
               </button>
             </div>
           </div>

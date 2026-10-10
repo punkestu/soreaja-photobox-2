@@ -413,13 +413,13 @@ export const CameraCaptureScreen: React.FC = () => {
   }, [slotAspect, cameraAspect]);
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto px-2 sm:px-4 md:px-6 py-2 sm:py-3 flex flex-col justify-between gap-3">
+    <div className="flex-1 w-full max-w-7xl mx-auto px-2 sm:px-4 md:px-6 py-2 flex flex-col justify-between gap-2.5 min-h-[calc(100dvh-4.5rem)] select-none">
       {/* Top Breadcrumb & Minimalist Status */}
-      <div className="flex items-center justify-between text-xs font-mono-tabular text-zinc-400 pb-0.5 px-1">
+      <div className="flex items-center justify-between text-xs sm:text-sm font-mono-tabular text-zinc-400 pb-0.5 px-1">
         <div className="flex items-center gap-2">
-          <span className="text-[var(--theme-accent,#E11D48)] font-semibold">Tahap 03/06</span>
+          <span className="text-[var(--theme-accent,#E11D48)] font-bold">Tahap 03/06</span>
           <span aria-hidden="true">·</span>
-          <span className="text-zinc-200">Bingkai: {activeFrame.name}</span>
+          <span className="text-zinc-200 font-semibold">Bingkai: {activeFrame.name}</span>
           <span aria-hidden="true">·</span>
           <span className="hidden sm:inline">
             {isRetakeMode
@@ -432,9 +432,9 @@ export const CameraCaptureScreen: React.FC = () => {
           <button
             type="button"
             onClick={() => setUseSimulator((prev) => !prev)}
-            className="px-2.5 py-1 text-xs font-medium text-zinc-300 bg-zinc-900/90 border border-zinc-700/80 hover:border-zinc-500 rounded-lg transition-colors cursor-pointer"
+            className="min-h-[44px] px-3.5 py-2 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-900/90 border border-zinc-700/80 active:scale-95 hover:border-zinc-500 rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
           >
-            {useSimulator ? '🖥️ Simulator' : '📷 WebRTC'}
+            <span>{useSimulator ? '🖥️ Simulator' : '📷 WebRTC'}</span>
           </button>
           <button
             type="button"
@@ -446,9 +446,9 @@ export const CameraCaptureScreen: React.FC = () => {
                 navigate('/app/frame-selection');
               }
             }}
-            className="px-2.5 py-1 text-xs font-medium text-zinc-400 hover:text-white border border-zinc-800 rounded-lg transition-colors cursor-pointer"
+            className="min-h-[44px] px-3.5 py-2 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white bg-zinc-900/80 active:scale-95 border border-zinc-800 rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1"
           >
-            {isRetakeMode ? 'Batal Retake' : '← Ganti Bingkai'}
+            <span>{isRetakeMode ? 'Batal Retake' : '← Ganti Bingkai'}</span>
           </button>
         </div>
       </div>
@@ -458,7 +458,7 @@ export const CameraCaptureScreen: React.FC = () => {
         {/* Spotlight Stage Viewport */}
         <div
           data-testid="camera-viewfinder"
-          className="relative aspect-[4/3] w-full max-h-[76vh] md:max-h-[82vh] bg-black rounded-3xl overflow-hidden shadow-[0_0_120px_rgba(0,0,0,0.98),0_0_60px_rgba(225,29,72,0.22)] ring-1 ring-white/20 border border-zinc-800/80 flex items-center justify-center group"
+          className="relative aspect-[4/3] w-full max-h-[66vh] md:max-h-[70vh] lg:max-h-[74vh] bg-black rounded-3xl overflow-hidden shadow-[0_0_120px_rgba(0,0,0,0.98),0_0_60px_rgba(225,29,72,0.22)] ring-1 ring-white/20 border border-zinc-800/80 flex items-center justify-center group"
         >
           {/* WebRTC Video Element */}
           <video
@@ -623,11 +623,11 @@ export const CameraCaptureScreen: React.FC = () => {
 
           {/* Countdown Big Center Overlay (z-30) */}
           {countdown !== null && (
-            <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px] flex flex-col items-center justify-center pointer-events-none z-30">
-              <span className="font-display text-9xl md:text-[160px] font-extrabold text-white tabular-nums drop-shadow-[0_10px_30px_rgba(0,0,0,0.9)] animate-pulse">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center pointer-events-none z-30">
+              <span className="font-display text-9xl sm:text-[140px] md:text-[180px] font-extrabold text-white tabular-nums drop-shadow-[0_10px_35px_rgba(0,0,0,0.95)] animate-pulse">
                 {countdown}
               </span>
-              <p className="mt-2 text-sm font-mono-tabular text-zinc-200 uppercase tracking-widest drop-shadow">
+              <p className="mt-2 text-base sm:text-lg font-mono-tabular text-zinc-200 uppercase tracking-widest drop-shadow font-bold">
                 Siapkan Pose Terbaikmu
               </p>
             </div>
@@ -639,9 +639,9 @@ export const CameraCaptureScreen: React.FC = () => {
           )}
 
           {/* Floating Minimalist Bottom Control Center (z-20) */}
-          <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 right-3 sm:right-4 z-20 flex flex-col sm:flex-row items-center justify-between gap-3 pointer-events-auto">
+          <div className="absolute bottom-3 sm:bottom-4 md:bottom-5 left-3 sm:left-4 md:left-5 right-3 sm:right-4 md:right-5 z-20 flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3 pointer-events-auto">
             {/* Captured Photos Floating Mini Tray */}
-            <div className="flex items-center gap-1.5 p-1.5 bg-black/75 backdrop-blur-md border border-white/15 rounded-2xl shadow-xl">
+            <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 bg-black/85 backdrop-blur-md border border-white/15 rounded-2xl shadow-2xl">
               {Array.from({ length: totalShotsNeeded }).map((_, idx) => {
                 const shotSrc = localShots[idx];
                 const isCurrent = !isRetakeMode && idx === currentShotNumber - 1;
@@ -649,9 +649,9 @@ export const CameraCaptureScreen: React.FC = () => {
                 return (
                   <div
                     key={idx}
-                    className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl overflow-hidden relative bg-zinc-900/90 flex items-center justify-center transition-all ${
+                    className={`w-11 h-11 sm:w-13 sm:h-13 md:w-16 md:h-16 rounded-xl overflow-hidden relative bg-zinc-900/90 flex items-center justify-center transition-all ${
                       isTargetRetake || isCurrent
-                        ? 'ring-2 ring-[var(--theme-accent,#E11D48)] shadow-[0_0_12px_rgba(225,29,72,0.5)]'
+                        ? 'ring-2 ring-[var(--theme-accent,#E11D48)] shadow-[0_0_15px_rgba(225,29,72,0.6)] scale-105'
                         : 'opacity-70 hover:opacity-100'
                     }`}
                   >
@@ -662,7 +662,7 @@ export const CameraCaptureScreen: React.FC = () => {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <span className="text-[10px] font-mono-tabular text-zinc-400 font-bold">
+                      <span className="text-[11px] sm:text-xs font-mono-tabular text-zinc-400 font-bold">
                         #{idx + 1}
                       </span>
                     )}
@@ -671,15 +671,15 @@ export const CameraCaptureScreen: React.FC = () => {
               })}
             </div>
 
-            {/* Spotlight Shutter Action Buttons */}
-            <div className="flex items-center gap-2">
+            {/* Spotlight Shutter Action Buttons - Tablet Optimized */}
+            <div className="flex items-center gap-2.5 sm:gap-3">
               <button
                 type="button"
                 disabled={isCapturingSequence}
                 onClick={startCountdownSequence}
-                className="px-6 sm:px-8 py-3 sm:py-3.5 text-xs sm:text-sm font-bold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-2xl transition-all whitespace-nowrap cursor-pointer shadow-[0_0_25px_rgba(225,29,72,0.6)] flex items-center gap-2"
+                className="min-h-[58px] sm:min-h-[66px] md:min-h-[72px] px-8 sm:px-12 py-3.5 sm:py-4 text-base sm:text-lg md:text-xl font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-2xl transition-all whitespace-nowrap cursor-pointer shadow-[0_0_35px_rgba(225,29,72,0.75)] flex items-center gap-3 ring-2 ring-white/20"
               >
-                <span className="text-base sm:text-lg">📸</span>
+                <span className="text-xl sm:text-2xl">📸</span>
                 <span>
                   {isCapturingSequence
                     ? `Hitung Mundur (${countdown ?? '...'})`
@@ -692,7 +692,7 @@ export const CameraCaptureScreen: React.FC = () => {
               <button
                 type="button"
                 onClick={handleInstantCapture}
-                className="px-3.5 sm:px-4 py-3 sm:py-3.5 text-xs font-semibold text-zinc-200 bg-black/75 hover:bg-zinc-800/90 active:scale-95 backdrop-blur-md border border-white/15 rounded-2xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center gap-1.5"
+                className="min-h-[58px] sm:min-h-[66px] md:min-h-[72px] px-4 sm:px-6 py-3.5 text-xs sm:text-sm md:text-base font-bold text-zinc-200 bg-black/85 hover:bg-zinc-800 active:scale-95 backdrop-blur-md border border-white/15 rounded-2xl transition-all whitespace-nowrap cursor-pointer shadow-xl flex items-center gap-2"
                 title="Ambil foto instan tanpa hitung mundur"
               >
                 <span>⚡</span>
@@ -700,12 +700,12 @@ export const CameraCaptureScreen: React.FC = () => {
               </button>
             </div>
 
-            {/* Quick Floating Toggles */}
-            <div className="flex items-center gap-1.5 p-1.5 bg-black/75 backdrop-blur-md border border-white/15 rounded-2xl shadow-xl">
+            {/* Quick Floating Toggles - Tablet 48px Touch Targets */}
+            <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 bg-black/85 backdrop-blur-md border border-white/15 rounded-2xl shadow-2xl">
               <button
                 type="button"
                 onClick={() => setShowCropGuide((prev) => !prev)}
-                className={`px-2.5 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1 ${
+                className={`min-h-[48px] min-w-[48px] px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 ${
                   showCropGuide
                     ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
                     : 'text-zinc-400 hover:text-white'
@@ -719,7 +719,7 @@ export const CameraCaptureScreen: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowGridLines((prev) => !prev)}
-                className={`px-2.5 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1 ${
+                className={`min-h-[48px] min-w-[48px] px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 ${
                   showGridLines
                     ? 'bg-zinc-700 text-white shadow-sm'
                     : 'text-zinc-400 hover:text-white'

@@ -385,25 +385,25 @@ export const AdminSettings: React.FC = () => {
         </p>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-neutral-200 pb-2">
+      {/* Navigation Tabs - Tablet Touch Friendly */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-neutral-200 pb-2">
         <button
           type="button"
           onClick={() => setActiveTab('appearance')}
           style={activeTab === 'appearance' ? { borderColor: themeColor, color: themeColor } : {}}
-          className={`px-4 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer border-b-2 ${
+          className={`min-h-[44px] px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer border-b-2 active:scale-95 ${
             activeTab === 'appearance'
               ? 'border-b-2 bg-white text-neutral-900 shadow-xs'
               : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
           }`}
         >
-          🎨 Warna Tema & Background Start Kiosk
+          🎨 Warna Tema & Background
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('session')}
           style={activeTab === 'session' ? { borderColor: themeColor, color: themeColor } : {}}
-          className={`px-4 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer border-b-2 ${
+          className={`min-h-[44px] px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer border-b-2 active:scale-95 ${
             activeTab === 'session'
               ? 'border-b-2 bg-white text-neutral-900 shadow-xs'
               : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
@@ -415,7 +415,7 @@ export const AdminSettings: React.FC = () => {
           type="button"
           onClick={() => setActiveTab('hardware')}
           style={activeTab === 'hardware' ? { borderColor: themeColor, color: themeColor } : {}}
-          className={`px-4 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer border-b-2 ${
+          className={`min-h-[44px] px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer border-b-2 active:scale-95 ${
             activeTab === 'hardware'
               ? 'border-b-2 bg-white text-neutral-900 shadow-xs'
               : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
@@ -1097,15 +1097,16 @@ export const AdminSettings: React.FC = () => {
               type="submit"
               disabled={isSaving}
               style={{ backgroundColor: themeColor }}
-              className="px-6 py-2.5 text-sm font-semibold text-white rounded-xl transition-all shadow-md hover:brightness-90 whitespace-nowrap cursor-pointer disabled:opacity-50"
+              className="min-h-[48px] px-7 py-3 text-sm sm:text-base font-extrabold text-white rounded-xl transition-all shadow-md active:scale-95 hover:brightness-90 whitespace-nowrap cursor-pointer disabled:opacity-50 flex items-center gap-2"
             >
-              {isSaving ? 'Menyimpan...' : 'Simpan Semua Pengaturan'}
+              <span>💾</span>
+              <span>{isSaving ? 'Menyimpan...' : 'Simpan Semua Pengaturan'}</span>
             </button>
 
             <button
               type="button"
               onClick={handleResetDefaults}
-              className="px-4 py-2.5 text-xs font-medium text-neutral-600 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors whitespace-nowrap cursor-pointer"
+              className="min-h-[48px] px-5 py-3 text-xs sm:text-sm font-semibold text-neutral-600 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer"
             >
               Reset ke Default Pabrik
             </button>

@@ -288,53 +288,56 @@ export const PrintResultScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto px-6 md:px-10 py-8 space-y-8">
+    <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-8 space-y-6 md:space-y-8 select-none">
       {/* Header & Live Hardware Status */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-white/5">
         <div>
-          <div className="text-xs font-mono-tabular text-zinc-400 flex items-center gap-2 mb-2">
-            <span>Tahap 06 dari 06</span>
+          <div className="text-xs sm:text-sm font-mono-tabular text-zinc-400 flex items-center gap-2 mb-1.5">
+            <span className="text-[var(--theme-accent,#E11D48)] font-bold">Tahap 06/06</span>
             <span aria-hidden="true">·</span>
             <span>Sesi Selesai</span>
             <span aria-hidden="true">·</span>
             <span>Auto-Download & Cetak</span>
           </div>
-          <h1 className="font-display text-2xl md:text-4xl font-bold text-[#F4F4F0]">
+          <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#F4F4F0]">
             Hasil Akhir Photobox & QR Code
           </h1>
           <p
             role="status"
-            className="text-xs font-mono-tabular text-emerald-400 mt-1.5"
+            className="text-xs sm:text-sm font-mono-tabular text-emerald-400 font-semibold mt-1.5"
           >
             {printStatus}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
           <button
             type="button"
             disabled={isPrintingThermal}
             onClick={handleReprintThermal}
-            className="px-4 py-2.5 text-xs font-semibold text-zinc-100 bg-zinc-900/80 hover:bg-zinc-800 disabled:opacity-50 rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-md"
+            className="min-h-[50px] sm:min-h-[54px] px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-bold text-zinc-100 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-md flex items-center gap-2"
           >
-            {isPrintingThermal ? 'Mencetak Thermal...' : 'Print Ulang Thermal'}
+            <span>🖨️</span>
+            <span>{isPrintingThermal ? 'Mencetak Thermal...' : 'Print Ulang Thermal'}</span>
           </button>
 
           <button
             type="button"
             disabled={isPrintingColor}
             onClick={handlePrintColor}
-            className="px-4 py-2.5 text-xs font-semibold text-zinc-100 bg-zinc-900/80 hover:bg-zinc-800 disabled:opacity-50 rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-md"
+            className="min-h-[50px] sm:min-h-[54px] px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-bold text-zinc-100 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-md flex items-center gap-2"
           >
-            {isPrintingColor ? 'Mencetak Warna (3d)...' : 'Print Warna'}
+            <span>🎨</span>
+            <span>{isPrintingColor ? 'Mencetak Warna (3d)...' : 'Print Warna'}</span>
           </button>
 
           <button
             type="button"
             onClick={handleNewSession}
-            className="px-6 py-2.5 text-sm font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
+            className="min-h-[50px] sm:min-h-[54px] px-8 sm:px-10 py-2.5 text-sm sm:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center gap-2"
           >
-            Sesi Baru
+            <span>Sesi Baru</span>
+            <span>✨</span>
           </button>
         </div>
       </div>
@@ -382,11 +385,11 @@ export const PrintResultScreen: React.FC = () => {
         </div>
       )}
 
-      {/* 3-Column Result Showcase: Final Framed Strip | Animated GIF | QR Code Google Drive */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Column 1: Final Framed Photo Strip */}
-        <div className="lg:col-span-5 bg-zinc-900/80 rounded-2xl p-6 space-y-4 shadow-xl">
-          <div className="flex items-center justify-between gap-2">
+      {/* 3-Column Result Showcase: Tablet-First Balanced Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 md:gap-8 items-start">
+        {/* Column 1: Final Framed Photo Strip - Tablet Left Col */}
+        <div className="md:col-span-1 lg:col-span-5 bg-zinc-900/80 rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl border border-zinc-800/70">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div>
               <h2 className="font-display text-base font-bold text-[#F4F4F0]">
                 01. Hasil Cetak Berbingkai
@@ -394,7 +397,7 @@ export const PrintResultScreen: React.FC = () => {
               <p className="text-xs text-zinc-400">{activeFrame.name}</p>
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               {doubleStripBase64 && (
                 <button
                   type="button"
@@ -404,7 +407,7 @@ export const PrintResultScreen: React.FC = () => {
                       `PB_${Date.now()}_side_by_side_2strip.png`
                     )
                   }
-                  className="px-2.5 py-1.5 text-[11px] font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] rounded-lg transition-colors whitespace-nowrap cursor-pointer shadow-sm"
+                  className="min-h-[44px] px-3.5 py-2 text-xs sm:text-sm font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-sm"
                   title="Unduh 2 strip berdampingan untuk cetak kertas 4R"
                 >
                   Unduh 2-Strip (4R)
@@ -419,7 +422,7 @@ export const PrintResultScreen: React.FC = () => {
                       `PB_${Date.now()}_strip_single.png`
                     )
                   }
-                  className="px-2.5 py-1.5 text-[11px] font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+                  className="min-h-[44px] px-3.5 py-2 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer"
                   title="Unduh 1 strip tunggal"
                 >
                   {doubleStripBase64 ? 'Unduh 1-Strip' : 'Unduh PNG'}
@@ -430,13 +433,13 @@ export const PrintResultScreen: React.FC = () => {
 
           {/* Toggle View jika 2-strip tersedia */}
           {doubleStripBase64 && (
-            <div className="flex items-center justify-between bg-zinc-950/80 p-1.5 rounded-xl border border-zinc-800/80 text-xs">
-              <span className="text-[11px] text-zinc-400 pl-2">Pratinjau:</span>
-              <div className="flex items-center gap-1">
+            <div className="flex items-center justify-between bg-zinc-950/80 p-2 rounded-xl border border-zinc-800/80 text-xs">
+              <span className="text-xs text-zinc-400 pl-2">Pratinjau:</span>
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => setStripDisplayMode('single')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
                     stripDisplayMode === 'single'
                       ? 'bg-zinc-700 text-white'
                       : 'text-zinc-400 hover:text-white'
@@ -447,7 +450,7 @@ export const PrintResultScreen: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setStripDisplayMode('double')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
                     stripDisplayMode === 'double'
                       ? 'bg-[var(--theme-accent,#E11D48)] text-white'
                       : 'text-zinc-400 hover:text-white'
@@ -459,7 +462,7 @@ export const PrintResultScreen: React.FC = () => {
             </div>
           )}
 
-          <div className="bg-zinc-950 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px] gap-2">
+          <div className="bg-zinc-950 rounded-xl p-4 flex flex-col items-center justify-center min-h-[400px] gap-2 border border-zinc-800/60">
             {finalLayoutBase64 ? (
               <>
                 <img
@@ -469,7 +472,7 @@ export const PrintResultScreen: React.FC = () => {
                       : finalLayoutBase64
                   }
                   alt="Hasil akhir strip foto berbingkai"
-                  className="max-h-[460px] w-auto object-contain rounded shadow-2xl"
+                  className="max-h-[440px] w-auto object-contain rounded shadow-2xl"
                 />
                 <p className="text-[11px] font-mono-tabular text-zinc-400 text-center">
                   {stripDisplayMode === 'double' && doubleStripBase64
@@ -485,8 +488,8 @@ export const PrintResultScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Column 2: Animated GIF (gif.js) */}
-        <div className="lg:col-span-4 bg-zinc-900/80 rounded-2xl p-6 space-y-4 shadow-xl">
+        {/* Column 2: Animated GIF (gif.js) - Tablet Right Col */}
+        <div className="md:col-span-1 lg:col-span-4 bg-zinc-900/80 rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl border border-zinc-800/70">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display text-base font-bold text-[#F4F4F0]">
@@ -500,14 +503,14 @@ export const PrintResultScreen: React.FC = () => {
                 onClick={() =>
                   downloadSingleFile(gifBlobUrl, `PB_${Date.now()}_anim.gif`)
                 }
-                className="px-3 py-1.5 text-xs font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+                className="min-h-[44px] px-3.5 py-2 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer"
               >
                 Unduh GIF
               </button>
             )}
           </div>
 
-          <div className="aspect-[3/2] bg-zinc-950 rounded-xl overflow-hidden flex items-center justify-center">
+          <div className="aspect-[3/2] bg-zinc-950 rounded-xl overflow-hidden flex items-center justify-center border border-zinc-800/60">
             {isGeneratingGif ? (
               <div className="text-center space-y-2 p-4">
                 <p className="text-xs font-mono-tabular text-zinc-300">
@@ -552,15 +555,14 @@ export const PrintResultScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Column 3: QR Code Google Drive (qrcode.react) */}
-        <div className="lg:col-span-3 bg-zinc-900/80 rounded-2xl p-6 space-y-5 flex flex-col justify-between shadow-xl">
+        {/* Column 3: QR Code Google Drive - Tablet Full Width Banner / Desktop Col 3 */}
+        <div className="md:col-span-2 lg:col-span-3 bg-zinc-900/80 rounded-2xl p-5 sm:p-6 space-y-5 shadow-xl border border-zinc-800/70">
           <div className="space-y-2">
             <h2 className="font-display text-base font-bold text-[#F4F4F0]">
               03. Scan untuk Mengunduh
             </h2>
             <p className="text-xs text-zinc-400 leading-relaxed">
-              Pindai QR Code ini menggunakan kamera ponsel untuk membuka tautan Google
-              Drive acara.
+              Pindai QR Code ini menggunakan kamera ponsel untuk membuka tautan Google Drive acara.
             </p>
           </div>
 
@@ -571,16 +573,17 @@ export const PrintResultScreen: React.FC = () => {
             <QRCodeSVG value={driveUrl} size={196} level="M" className="max-w-full" />
           </div>
 
-          <div className="space-y-2 pt-2">
-            <p className="text-[11px] font-mono-tabular text-zinc-400 break-all">
+          <div className="space-y-2.5 pt-2">
+            <p className="text-[11px] font-mono-tabular text-zinc-400 break-all text-center">
               {driveUrl}
             </p>
             <button
               type="button"
               onClick={handleNewSession}
-              className="w-full py-3.5 px-4 text-xs font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
+              className="w-full min-h-[50px] sm:min-h-[54px] py-3.5 px-4 text-sm font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center justify-center gap-2"
             >
-              Mulai Sesi Baru
+              <span>Mulai Sesi Baru</span>
+              <span>✨</span>
             </button>
           </div>
         </div>

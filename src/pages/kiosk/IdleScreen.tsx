@@ -53,28 +53,29 @@ export const IdleScreen: React.FC = () => {
       />
       <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0B] via-[#0A0A0B]/70 to-[#0A0A0B]/30" />
 
-      <div className="relative z-10 w-full max-w-5xl mx-auto px-6 py-16 text-center space-y-8">
-        <div className="flex items-center justify-center gap-3 text-xs font-mono-tabular text-zinc-300 tracking-wide">
-          <span>{settings?.studioName || 'SoreAja Studio — Booth 02'}</span>
+      <div className="relative z-10 w-full max-w-5xl mx-auto px-6 py-12 sm:py-16 md:py-20 text-center space-y-8 md:space-y-10 select-none">
+        <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-4 text-xs sm:text-sm md:text-base font-mono-tabular text-zinc-300 tracking-wide">
+          <span className="font-semibold text-white">{settings?.studioName || 'SoreAja Studio — Booth 02'}</span>
           <span aria-hidden="true">·</span>
           <span>{settings?.eventName || 'SoreAja Sunset Session 2026'}</span>
           <span aria-hidden="true">·</span>
-          <span>Mode Offline Mandiri</span>
+          <span className="text-emerald-400 font-bold">100% Offline Ready</span>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4 md:space-y-6">
           <h1
-            className="font-display text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-[#F4F4F0]"
+            className="font-display text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold tracking-tight text-[#F4F4F0]"
             style={{ textWrap: 'balance' }}
           >
             SoreAja — Photobox
           </h1>
-          <p className="font-serif-editorial italic text-2xl sm:text-3xl text-zinc-300">
+          <p className="font-serif-editorial italic text-2xl sm:text-3xl md:text-5xl text-zinc-200">
             Abadikan momenmu sekarang juga.
           </p>
         </div>
 
-        <div className="pt-4 flex flex-col items-center gap-4">
+        <div className="pt-4 sm:pt-8 flex flex-col items-center gap-6">
+          {/* Tablet First Commanding Primary Touch Action */}
           <button
             type="button"
             onClick={(e) => {
@@ -84,12 +85,13 @@ export const IdleScreen: React.FC = () => {
             style={{
               backgroundColor: themeColor,
             }}
-            className="px-12 py-5 text-base sm:text-lg font-display font-bold text-white rounded-2xl shadow-2xl transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer hover:brightness-95 hover:shadow-[0_0_35px_rgba(255,255,255,0.2)]"
+            className="min-h-[76px] sm:min-h-[86px] md:min-h-[96px] px-10 sm:px-16 md:px-20 py-5 sm:py-6 text-xl sm:text-2xl md:text-3xl font-display font-extrabold text-white rounded-3xl shadow-[0_0_60px_rgba(225,29,72,0.65)] transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer hover:brightness-105 flex items-center gap-4 animate-pulse ring-2 ring-white/30"
           >
-            Sentuh untuk Memulai
+            <span className="text-2xl sm:text-3xl md:text-4xl">👉</span>
+            <span>Sentuh Layar untuk Memulai</span>
           </button>
 
-          <p className="text-xs font-mono-tabular text-zinc-400">
+          <p className="text-xs sm:text-sm md:text-base font-mono-tabular text-zinc-300 max-w-xl">
             Pilih Bingkai · Pose Otomatis · Cetak Instan & Scan QR Google Drive
           </p>
         </div>

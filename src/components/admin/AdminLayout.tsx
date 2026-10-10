@@ -65,14 +65,15 @@ export const AdminLayout: React.FC = () => {
           </NavLink>
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3">
           <PWAInstallButton variant="admin" />
           <button
             type="button"
             onClick={() => navigate('/app/idle')}
-            className="px-4 py-2 text-xs font-semibold text-white bg-[var(--theme-accent,#E11D48)] rounded-lg hover:bg-[var(--theme-accent-hover,#BE123C)] transition-colors whitespace-nowrap cursor-pointer shadow-xs"
+            className="min-h-[44px] px-4 py-2 text-xs sm:text-sm font-bold text-white bg-[var(--theme-accent,#E11D48)] rounded-xl hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 transition-all whitespace-nowrap cursor-pointer shadow-sm flex items-center gap-1.5"
           >
-            Buka Sesi Photobox
+            <span>🚀</span>
+            <span>Buka Sesi Photobox</span>
           </button>
         </div>
       </header>
@@ -81,20 +82,20 @@ export const AdminLayout: React.FC = () => {
       <div className="flex-1 flex flex-col lg:flex-row max-w-[1440px] w-full mx-auto">
         <aside
           aria-label="Sidebar Manajemen Photobox"
-          className="w-full lg:w-[260px] shrink-0 bg-[#F4F4F0] border-b lg:border-b-0 lg:border-r border-neutral-200 p-6 flex flex-col justify-between gap-6"
+          className="w-full lg:w-[260px] shrink-0 bg-[#F4F4F0] border-b lg:border-b-0 lg:border-r border-neutral-200 p-4 sm:p-6 flex flex-col justify-between gap-6"
         >
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <div>
-              <p className="text-xs font-medium text-neutral-500 mb-3">
+              <p className="text-xs font-semibold text-neutral-500 mb-2.5">
                 Manajemen Sistem
               </p>
-              <div className="flex lg:flex-col gap-1 overflow-x-auto">
+              <div className="flex lg:flex-col gap-1.5 overflow-x-auto pb-1">
                 <NavLink
                   to="/admin/welcome"
                   className={({ isActive }) =>
-                    `px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                    `min-h-[44px] flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap active:scale-95 ${
                       isActive
-                        ? 'bg-neutral-900 text-white'
+                        ? 'bg-neutral-900 text-white shadow-sm'
                         : 'text-neutral-700 hover:bg-neutral-200/70'
                     }`
                   }
@@ -104,9 +105,9 @@ export const AdminLayout: React.FC = () => {
                 <NavLink
                   to="/admin/settings"
                   className={({ isActive }) =>
-                    `px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                    `min-h-[44px] flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap active:scale-95 ${
                       isActive
-                        ? 'bg-neutral-900 text-white'
+                        ? 'bg-neutral-900 text-white shadow-sm'
                         : 'text-neutral-700 hover:bg-neutral-200/70'
                     }`
                   }

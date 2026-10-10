@@ -71,17 +71,19 @@ export const AdminLaunch: React.FC = () => {
           <button
             type="button"
             onClick={() => handleLaunchKiosk(true)}
-            className="px-6 py-3.5 text-sm font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] rounded-lg transition-colors whitespace-nowrap text-center cursor-pointer shadow-md"
+            className="min-h-[50px] px-7 py-3 text-sm font-bold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap text-center cursor-pointer shadow-md flex items-center justify-center gap-2"
           >
-            Luncurkan Photobox Fullscreen
+            <span>🖥️</span>
+            <span>Luncurkan Photobox Fullscreen</span>
           </button>
           <Link
             to="/app/idle"
             target="_blank"
             rel="noopener noreferrer"
-            className="px-6 py-2.5 text-xs font-medium text-neutral-200 bg-neutral-800 hover:bg-neutral-700 rounded-lg transition-colors whitespace-nowrap text-center"
+            className="min-h-[46px] px-6 py-2.5 text-xs sm:text-sm font-semibold text-neutral-200 bg-neutral-800 hover:bg-neutral-700 active:scale-95 rounded-xl transition-all whitespace-nowrap text-center flex items-center justify-center gap-2"
           >
-            Buka di Tab Baru
+            <span>↗</span>
+            <span>Buka di Tab Baru</span>
           </Link>
         </div>
       </section>

@@ -17,6 +17,10 @@
     min-height: 100%;
     border: 0;
     outline: 0;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    overscroll-behavior: none;
   }
 
   #root {
@@ -27,6 +31,7 @@
     margin: 0;
     padding: 0;
     border: 0;
+    touch-action: manipulation;
   }
 
   body {
@@ -34,7 +39,15 @@
     background-color: #F4F4F0;
     color: #111111;
     overflow-x: hidden;
+    user-select: none;
+    -webkit-user-select: none;
   }
+}
+
+/* Tablet & Kiosk Touch Optimization */
+button, a, input, select, textarea {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .font-display {

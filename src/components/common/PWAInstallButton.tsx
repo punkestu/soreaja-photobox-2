@@ -22,16 +22,16 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ variant = 'a
       <button
         type="button"
         onClick={install}
-        className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
+        className={`flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all active:scale-95 cursor-pointer whitespace-nowrap ${
           isKiosk
-            ? 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700'
-            : 'bg-neutral-900 text-white hover:bg-neutral-800'
+            ? 'min-h-[48px] bg-zinc-900/90 text-zinc-100 hover:bg-zinc-800 border border-zinc-800/80 shadow-sm'
+            : 'min-h-[40px] bg-neutral-900 text-white hover:bg-neutral-800'
         }`}
       >
-        <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
         </svg>
-        <span>Install App Offline</span>
+        <span className="hidden sm:inline">Pasang PWA</span>
       </button>
     );
   }
@@ -43,13 +43,14 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ variant = 'a
         <button
           type="button"
           onClick={() => setShowIOSGuide(true)}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
+          className={`flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all active:scale-95 cursor-pointer whitespace-nowrap ${
             isKiosk
-              ? 'bg-zinc-900 text-zinc-300 hover:text-white border border-zinc-800'
-              : 'border border-neutral-300 text-neutral-700 hover:bg-neutral-100'
+              ? 'min-h-[48px] bg-zinc-900/90 text-zinc-300 hover:text-white border border-zinc-800/80 shadow-sm'
+              : 'min-h-[40px] border border-neutral-300 text-neutral-700 hover:bg-neutral-100'
           }`}
         >
-          <span>Install PWA (iOS)</span>
+          <span className="hidden sm:inline">PWA iPad</span>
+          <span className="sm:hidden">PWA</span>
         </button>
 
         {showIOSGuide && (

@@ -45,84 +45,83 @@ export const ReviewPhotosScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto px-6 md:px-10 py-8 space-y-8">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4">
+    <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-8 space-y-6 md:space-y-8 select-none">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-white/5">
         <div>
-          <div className="text-xs font-mono-tabular text-zinc-400 flex items-center gap-2 mb-2">
-            <span>Tahap 04 dari 06</span>
+          <div className="text-xs sm:text-sm font-mono-tabular text-zinc-400 flex items-center gap-2 mb-1.5">
+            <span className="text-[var(--theme-accent,#E11D48)] font-bold">Tahap 04/06</span>
             <span aria-hidden="true">·</span>
             <span>Evaluasi Pose Individual</span>
             <span aria-hidden="true">·</span>
             <span>{capturedPhotos.length} Foto Siap</span>
           </div>
-          <h1 className="font-display text-2xl md:text-4xl font-bold text-[#F4F4F0]">
+          <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#F4F4F0]">
             Periksa Hasil Foto Individual
           </h1>
-          <p className="text-sm text-zinc-400 mt-1">
-            Klik pada salah satu foto di bawah ini jika ingin mengulang pose tersebut,
-            atau klik <strong className="text-white">Selesai</strong> untuk menggabungkan
-            ke dalam bingkai.
+          <p className="text-xs sm:text-sm md:text-base text-zinc-400 mt-1">
+            Sentuh foto yang ingin kamu ulang pose, atau ketuk tombol <strong className="text-white">Selesai</strong> untuk menggabungkan ke bingkai.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3">
           <button
             type="button"
             onClick={() => {
               setRetakeIndex(null);
               navigate('/app/camera');
             }}
-            className="px-4 py-2.5 text-xs font-medium text-zinc-300 bg-zinc-900/80 hover:bg-zinc-800 rounded-xl transition-colors whitespace-nowrap cursor-pointer"
+            className="min-h-[48px] sm:min-h-[52px] px-4 sm:px-6 py-2.5 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-sm"
           >
-            Ulangi Semua Foto
+            Ulangi Semua
           </button>
 
           <button
             type="button"
             onClick={handleFinishReview}
-            className="px-6 py-2.5 text-sm font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
+            className="min-h-[48px] sm:min-h-[52px] px-6 sm:px-8 py-2.5 text-xs sm:text-sm md:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center gap-2"
           >
-            Selesai & Gabungkan Frame →
+            <span>Selesai & Gabungkan</span>
+            <span>→</span>
           </button>
         </div>
       </div>
 
-      {/* View Mode Toggle Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-zinc-900/80 border border-zinc-800 rounded-xl px-5 py-3">
+      {/* View Mode Toggle Bar - Tablet Optimized */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-zinc-900/80 border border-zinc-800/80 rounded-2xl p-3 sm:p-4">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-zinc-400 font-medium mr-1">Mode Tampilan:</span>
+          <span className="text-xs sm:text-sm text-zinc-400 font-medium mr-1">Tampilan:</span>
           <button
             type="button"
             onClick={() => setViewMode('cropped')}
-            className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
+            className={`min-h-[44px] px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-2 active:scale-95 ${
               viewMode === 'cropped'
                 ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
                 : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
             }`}
           >
-            <span>📐 Sesuai Potongan Bingkai ({activeFrame.name})</span>
+            <span>📐 Potongan Bingkai ({activeFrame.name})</span>
           </button>
           <button
             type="button"
             onClick={() => setViewMode('full')}
-            className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
+            className={`min-h-[44px] px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-2 active:scale-95 ${
               viewMode === 'full'
                 ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
                 : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
             }`}
           >
-            <span>📷 Foto Kamera Utuh + Garis Batas Crop</span>
+            <span>📷 Kamera Utuh + Garis Crop</span>
           </button>
         </div>
-        <p className="text-xs text-zinc-400 font-mono-tabular">
+        <p className="text-xs font-mono-tabular text-zinc-400">
           {viewMode === 'cropped'
-            ? 'Menampilkan hasil potong presisi untuk cetak'
-            : 'Menampilkan foto asli dengan batas crop'}
+            ? 'Hasil potong presisi sesuai slot bingkai'
+            : 'Foto asli dengan batas crop'}
         </p>
       </div>
 
-      {/* Grid of Captured Photos */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Grid of Captured Photos - 2 Cols Tablet Portrait, 3 Cols Tablet Landscape */}
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {capturedPhotos.map((photoSrc, index) => {
           const slot =
             activeFrame.positions[index] ||
@@ -227,9 +226,10 @@ export const ReviewPhotosScreen: React.FC = () => {
                     </div>
                   )}
 
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 z-10">
-                    <span className="px-4 py-2 bg-white text-zinc-950 text-xs font-semibold rounded-lg shadow-lg">
-                      Klik untuk Retake Foto #{index + 1}
+                  {/* Persistent touch hint overlay for tablet / hover overlay for desktop */}
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity bg-black/50 z-10">
+                    <span className="px-4 py-2 bg-white text-zinc-950 text-xs sm:text-sm font-bold rounded-xl shadow-lg">
+                      Sentuh untuk Retake Pose #{index + 1}
                     </span>
                   </div>
                 </button>
@@ -240,25 +240,27 @@ export const ReviewPhotosScreen: React.FC = () => {
                 </div>
               </div>
 
+              {/* Tablet Touch Friendly Retake Button */}
               <button
                 type="button"
                 onClick={() => handleRetakeSinglePhoto(index)}
-                className="w-full py-2.5 px-4 text-xs font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors whitespace-nowrap cursor-pointer"
+                className="w-full min-h-[48px] sm:min-h-[50px] py-3 px-4 text-xs sm:text-sm font-bold text-zinc-100 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-sm flex items-center justify-center gap-2"
               >
-                Ulangi Foto #{index + 1}
+                <span>🔄</span>
+                <span>Ulangi Pose #{index + 1}</span>
               </button>
             </div>
           );
         })}
       </div>
 
-      {/* Bottom Action Bar */}
-      <div className="bg-zinc-900/80 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
+      {/* Bottom Action Bar - Tablet First Touch Area */}
+      <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
         <div className="space-y-1">
-          <p className="text-sm font-semibold text-[#F4F4F0]">
+          <p className="text-sm sm:text-base font-bold text-[#F4F4F0]">
             Sudah puas dengan semua ekspresi dan pose?
           </p>
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs sm:text-sm text-zinc-400">
             Tahap berikutnya akan menggabungkan {capturedPhotos.length} foto di atas
             dengan bingkai <strong className="text-zinc-200">{activeFrame.name}</strong>{' '}
             menggunakan HTML5 Canvas.
@@ -268,9 +270,10 @@ export const ReviewPhotosScreen: React.FC = () => {
         <button
           type="button"
           onClick={handleFinishReview}
-          className="px-8 py-3.5 text-sm font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
+          className="min-h-[52px] sm:min-h-[56px] px-8 sm:px-10 py-3.5 text-sm sm:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center justify-center gap-2 self-stretch sm:self-auto"
         >
-          Selesai
+          <span>Selesai & Lanjut ke Frame</span>
+          <span>→</span>
         </button>
       </div>
     </div>
