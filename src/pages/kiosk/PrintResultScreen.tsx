@@ -67,6 +67,8 @@ export const PrintResultScreen: React.FC = () => {
       let themeAccent = '#E11D48';
       let targetApiEndpoint = '';
       let targetPrinterName = '';
+      let targetThermalPrinter = '';
+      let targetColorPrinter = '';
       try {
         const data = await db.settings.get('app_settings');
         if (data && data.driveUrl) {
@@ -82,8 +84,15 @@ export const PrintResultScreen: React.FC = () => {
         if (data && data.printApiEndpoint) {
           targetApiEndpoint = data.printApiEndpoint;
         }
-        if (data && data.printerName) {
-          targetPrinterName = data.printerName;
+        if (data && data.thermalPrinterName) {
+          targetThermalPrinter = data.thermalPrinterName;
+        } else if (data && data.printerName) {
+          targetThermalPrinter = data.printerName;
+        }
+        if (data && data.colorPrinterName) {
+          targetColorPrinter = data.colorPrinterName;
+        } else if (data && data.printerName) {
+          targetColorPrinter = data.printerName;
         }
       } catch {
         // Fallback default URL
@@ -149,26 +158,26 @@ export const PrintResultScreen: React.FC = () => {
       );
       setDownloadedManifest(files);
 
-      // 4. Jalankan fungsi Cetak (Print API atau Mock)
+      // 4. Jalankan fungsi Cetak (Thermal: Selalu 1-Strip ke thermalPrinterName)
       setIsPrintingThermal(true);
       setPrintError(null);
       setPrintStatus(
         targetApiEndpoint
-          ? `Mengirim file ke Print API (${targetApiEndpoint})...`
-          : 'Menghubungkan ke Printer Thermal...'
+          ? `Mengirim 1-strip ke Print API (${targetThermalPrinter || 'Thermal'})...`
+          : 'Menghubungkan ke Printer Thermal (Simulasi)...'
       );
       try {
         const thermalRes = await printThermal(
-          layoutToUse,
+          layoutToUse, // Selalu kirim 1 strip untuk thermal
           targetApiEndpoint,
-          targetPrinterName
+          targetThermalPrinter
         );
         setIsPrintingThermal(false);
         setPrintStatus(`✅ ${thermalRes.message} · ID: ${thermalRes.jobId}`);
       } catch (err) {
         setIsPrintingThermal(false);
         const errMsg = err instanceof Error ? err.message : String(err);
-        setPrintStatus(`⚠️ Gagal Print API: ${errMsg}`);
+        setPrintStatus(`⚠️ Gagal Print Thermal: ${errMsg}`);
         setPrintError(errMsg);
       }
 
@@ -208,21 +217,22 @@ export const PrintResultScreen: React.FC = () => {
   const handleReprintThermal = async () => {
     setIsPrintingThermal(true);
     setPrintError(null);
+    const targetPrinter = settings?.thermalPrinterName || settings?.printerName;
     setPrintStatus(
       settings?.printApiEndpoint
-        ? `Mengirim ke Print API (${settings.printApiEndpoint})...`
+        ? `Mengirim 1-strip ke Printer Thermal (${targetPrinter || 'Thermal'})...`
         : 'Menghubungkan ke Printer Thermal (80mm)...'
     );
     try {
       const res = await printThermal(
-        finalLayoutBase64,
+        finalLayoutBase64, // Selalu kirim 1-strip untuk thermal
         settings?.printApiEndpoint,
-        settings?.printerName
+        targetPrinter
       );
       setPrintStatus(`✅ Cetak Thermal Berhasil (${res.jobId}) · ${res.message}`);
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
-      setPrintStatus(`⚠️ Gagal Print API: ${errMsg}`);
+      setPrintStatus(`⚠️ Gagal Print Thermal: ${errMsg}`);
       setPrintError(errMsg);
     } finally {
       setIsPrintingThermal(false);
@@ -232,26 +242,30 @@ export const PrintResultScreen: React.FC = () => {
   const handlePrintColor = async () => {
     setIsPrintingColor(true);
     setPrintError(null);
+    // Aturan rasio: Jika strip vertikal panjang, kirim 2-strip berdampingan; jika format 4R / bukan strip vertikal, kirim single image
     const imageToPrint = doubleStripBase64 || finalLayoutBase64;
+    const isDouble = !!doubleStripBase64;
+    const targetPrinter = settings?.colorPrinterName || settings?.printerName;
+
     setPrintStatus(
       settings?.printApiEndpoint
-        ? `Mengirim file gambar ke Print API (${settings.printApiEndpoint})...`
-        : doubleStripBase64
+        ? `Mengirim ${isDouble ? '2-strip (berdampingan)' : '1-foto 4R'} ke Printer Warna (${targetPrinter || 'Color'})...`
+        : isDouble
         ? 'Menghubungkan ke Printer Warna (Dye-Sub 4R - 2 Strip Side-by-Side)...'
-        : 'Menghubungkan ke Printer Warna...'
+        : 'Menghubungkan ke Printer Warna (Dye-Sub 4R - Full Card)...'
     );
     try {
       const res = await printColor(
         imageToPrint,
         settings?.printApiEndpoint,
-        settings?.printerName
+        targetPrinter
       );
       setPrintStatus(
         `✅ Cetak Warna Selesai (${res.jobId}) · ${res.message}`
       );
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
-      setPrintStatus(`⚠️ Gagal Print API: ${errMsg}`);
+      setPrintStatus(`⚠️ Gagal Print Warna: ${errMsg}`);
       setPrintError(errMsg);
     } finally {
       setIsPrintingColor(false);
@@ -356,6 +370,13 @@ export const PrintResultScreen: React.FC = () => {
               className="px-3.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium rounded-xl transition-colors cursor-pointer text-xs"
             >
               Simulasi Offline
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/settings')}
+              className="px-3.5 py-1.5 bg-amber-900/60 hover:bg-amber-900 text-amber-200 border border-amber-600/50 font-medium rounded-xl transition-colors cursor-pointer text-xs"
+            >
+              ⚙️ Buka Pengaturan
             </button>
           </div>
         </div>

@@ -56,16 +56,42 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
+          maximumFileSizeToCacheInBytes: 25 * 1024 * 1024,
           navigateFallback: '/index.html',
+          navigateFallbackDenylist: [/^\/api\/.*/, /^\/print\/.*/],
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,json,jpg,jpeg,webp}'],
           runtimeCaching: [
+            {
+              urlPattern: /\.(?:png|jpg|jpeg|svg|webp|gif)$/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'images-cache',
+                expiration: {
+                  maxEntries: 120,
+                  maxAgeSeconds: 60 * 60 * 24 * 365,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+            {
+              urlPattern: /\/frames-metadata\.json$/i,
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'frames-metadata-cache',
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
               handler: 'CacheFirst',
               options: {
                 cacheName: 'google-fonts-cache',
                 expiration: {
-                  maxEntries: 10,
+                  maxEntries: 20,
                   maxAgeSeconds: 60 * 60 * 24 * 365,
                 },
                 cacheableResponse: {
@@ -79,7 +105,7 @@ export default defineConfig(() => {
               options: {
                 cacheName: 'gstatic-fonts-cache',
                 expiration: {
-                  maxEntries: 10,
+                  maxEntries: 30,
                   maxAgeSeconds: 60 * 60 * 24 * 365,
                 },
                 cacheableResponse: {

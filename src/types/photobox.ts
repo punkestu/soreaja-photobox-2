@@ -43,7 +43,9 @@ export interface AppSettings {
   cameraSourceMode?: 'auto' | 'simulator';
   showCropGuide?: boolean; // Tampilkan batas panduan area crop kamera
   printApiEndpoint?: string; // Endpoint URL for multipart/form-data printing API
-  printerName?: string; // Optional printer name string parameter
+  printerName?: string; // Legacy fallback printer name parameter
+  thermalPrinterName?: string; // Nama printer thermal (misal Epson TM-T82 roll 80mm)
+  colorPrinterName?: string; // Nama printer warna (misal DNP DS-RX1HS kertas 4R)
   enableShutterSound?: boolean; // Suara kamera saat capture foto
   kioskBackground?: string; // Data URL Base64, preset ID, or external URL
   kioskBackgroundOverlayOpacity?: number; // 20 - 100 percent

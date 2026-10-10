@@ -48,6 +48,8 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   showCropGuide: true,
   printApiEndpoint: '', // URL e.g. http://localhost:5000/print
   printerName: '',
+  thermalPrinterName: '', // Nama printer thermal bawaan
+  colorPrinterName: '', // Nama printer warna bawaan
   enableShutterSound: true,
   kioskBackground: '', // Empty means use default studio hero image
   kioskBackgroundOverlayOpacity: 60, // 60%

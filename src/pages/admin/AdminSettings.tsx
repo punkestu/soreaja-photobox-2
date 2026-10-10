@@ -9,7 +9,7 @@ import {
 } from '../../data/themeConfig';
 import { KIOSK_HERO_BACKDROP } from '../../data/defaultFrames';
 import { playShutterSound } from '../../services/shutterAudio';
-import { testPrintApi } from '../../services/printServices';
+import { testPrintApi, precacheAllFrameAssets } from '../../services/printServices';
 
 export const AdminSettings: React.FC = () => {
   const [driveUrl, setDriveUrl] = useState(DEFAULT_DRIVE_URL);
@@ -32,6 +32,12 @@ export const AdminSettings: React.FC = () => {
   const [printerName, setPrinterName] = useState<string>(
     DEFAULT_APP_SETTINGS.printerName || ''
   );
+  const [thermalPrinterName, setThermalPrinterName] = useState<string>(
+    DEFAULT_APP_SETTINGS.thermalPrinterName || ''
+  );
+  const [colorPrinterName, setColorPrinterName] = useState<string>(
+    DEFAULT_APP_SETTINGS.colorPrinterName || ''
+  );
   const [enableShutterSound, setEnableShutterSound] = useState<boolean>(
     DEFAULT_APP_SETTINGS.enableShutterSound ?? true
   );
@@ -41,6 +47,8 @@ export const AdminSettings: React.FC = () => {
     message: string;
     jobId?: string;
   } | null>(null);
+  const [cachingOffline, setCachingOffline] = useState<boolean>(false);
+  const [offlineCacheStatus, setOfflineCacheStatus] = useState<string | null>(null);
 
   // Tema & Background Kiosk
   const [themeColor, setThemeColor] = useState<string>(DEFAULT_APP_SETTINGS.themeColor || '#E11D48');
@@ -88,6 +96,16 @@ export const AdminSettings: React.FC = () => {
         }
         if (data.printerName !== undefined) {
           setPrinterName(data.printerName);
+        }
+        if (data.thermalPrinterName !== undefined) {
+          setThermalPrinterName(data.thermalPrinterName);
+        } else if (data.printerName) {
+          setThermalPrinterName(data.printerName);
+        }
+        if (data.colorPrinterName !== undefined) {
+          setColorPrinterName(data.colorPrinterName);
+        } else if (data.printerName) {
+          setColorPrinterName(data.printerName);
         }
         if (typeof data.enableShutterSound === 'boolean') {
           setEnableShutterSound(data.enableShutterSound);
@@ -202,7 +220,7 @@ export const AdminSettings: React.FC = () => {
     playShutterSound();
   };
 
-  const handleTestPrintApi = async () => {
+  const handleTestPrintThermal = async () => {
     if (!printApiEndpoint.trim()) {
       setTestApiResult({
         success: false,
@@ -210,10 +228,17 @@ export const AdminSettings: React.FC = () => {
       });
       return;
     }
+    if (!thermalPrinterName.trim()) {
+      setTestApiResult({
+        success: false,
+        message: 'Harap isi Nama Printer Thermal terlebih dahulu.',
+      });
+      return;
+    }
     setTestingApi(true);
     setTestApiResult(null);
     try {
-      const res = await testPrintApi(printApiEndpoint.trim(), printerName.trim());
+      const res = await testPrintApi(printApiEndpoint.trim(), thermalPrinterName.trim(), 'thermal');
       setTestApiResult(res);
     } catch (err) {
       setTestApiResult({
@@ -222,6 +247,53 @@ export const AdminSettings: React.FC = () => {
       });
     } finally {
       setTestingApi(false);
+    }
+  };
+
+  const handleTestPrintColor = async () => {
+    if (!printApiEndpoint.trim()) {
+      setTestApiResult({
+        success: false,
+        message: 'Harap isi URL Print API Endpoint terlebih dahulu untuk melakukan uji coba.',
+      });
+      return;
+    }
+    if (!colorPrinterName.trim()) {
+      setTestApiResult({
+        success: false,
+        message: 'Harap isi Nama Printer Warna terlebih dahulu.',
+      });
+      return;
+    }
+    setTestingApi(true);
+    setTestApiResult(null);
+    try {
+      const res = await testPrintApi(printApiEndpoint.trim(), colorPrinterName.trim(), 'color');
+      setTestApiResult(res);
+    } catch (err) {
+      setTestApiResult({
+        success: false,
+        message: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setTestingApi(false);
+    }
+  };
+
+  const handleWarmOfflineCache = async () => {
+    setCachingOffline(true);
+    setOfflineCacheStatus('Memeriksa dan menyimpan seluruh aset ke CacheStorage browser...');
+    try {
+      const res = await precacheAllFrameAssets();
+      setOfflineCacheStatus(
+        `✅ Berhasil meng-cache ${res.cachedCount} dari ${res.totalAssets} file bingkai & metadata secara offline.`
+      );
+    } catch (err) {
+      setOfflineCacheStatus(
+        `⚠️ Gagal meng-cache aset: ${err instanceof Error ? err.message : String(err)}`
+      );
+    } finally {
+      setCachingOffline(false);
     }
   };
 
@@ -245,7 +317,9 @@ export const AdminSettings: React.FC = () => {
       showCropGuide,
       cameraSourceMode,
       printApiEndpoint: printApiEndpoint.trim(),
-      printerName: printerName.trim(),
+      printerName: thermalPrinterName.trim() || colorPrinterName.trim() || printerName.trim(),
+      thermalPrinterName: thermalPrinterName.trim(),
+      colorPrinterName: colorPrinterName.trim(),
       enableShutterSound,
       themeColor,
       themePreset,
@@ -258,7 +332,7 @@ export const AdminSettings: React.FC = () => {
     setDriveUrl(cleanUrl);
     setIsSaving(false);
     setSaveMessage(
-      `Pengaturan & warna tema berhasil disimpan ke IndexedDB pada ${new Date().toLocaleTimeString('id-ID')}.`
+      `Pengaturan, nama printer & warna tema berhasil disimpan ke IndexedDB pada ${new Date().toLocaleTimeString('id-ID')}.`
     );
   };
 
@@ -278,6 +352,8 @@ export const AdminSettings: React.FC = () => {
     setCameraSourceMode('auto');
     setPrintApiEndpoint(DEFAULT_APP_SETTINGS.printApiEndpoint || '');
     setPrinterName(DEFAULT_APP_SETTINGS.printerName || '');
+    setThermalPrinterName(DEFAULT_APP_SETTINGS.thermalPrinterName || '');
+    setColorPrinterName(DEFAULT_APP_SETTINGS.colorPrinterName || '');
     setEnableShutterSound(DEFAULT_APP_SETTINGS.enableShutterSound ?? true);
     setThemeColor(DEFAULT_APP_SETTINGS.themeColor || '#E11D48');
     setThemePreset(DEFAULT_APP_SETTINGS.themePreset || 'crimson');
@@ -848,39 +924,85 @@ export const AdminSettings: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="printerNameInput"
-                    className="block text-xs font-semibold text-neutral-700"
-                  >
-                    Nama Printer Tujuan (Parameter Opsional)
-                  </label>
-                  <input
-                    id="printerNameInput"
-                    type="text"
-                    value={printerName}
-                    onChange={(e) => setPrinterName(e.target.value)}
-                    placeholder="Contoh: DNP_DS_RX1HS atau EPSON_TM_T82"
-                    className="w-full px-3 py-2 text-sm bg-[#F4F4F0] border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900 font-mono-tabular"
-                  />
-                  <p className="text-[11px] text-neutral-500">
-                    Nilai ini akan diteruskan ke parameter form field <code className="text-neutral-700 font-bold">printer</code> saat memanggil API.
-                  </p>
+                {/* Dua Nama Printer: Thermal & Warna */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5 p-3.5 bg-neutral-50 border border-neutral-200 rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <label
+                        htmlFor="thermalPrinterNameInput"
+                        className="block text-xs font-bold text-neutral-900"
+                      >
+                        1. Nama Printer Thermal (Roll 80mm)
+                      </label>
+                      <span className="text-[10px] font-mono-tabular font-semibold px-1.5 py-0.5 bg-neutral-200 text-neutral-700 rounded">
+                        1-Strip Payload
+                      </span>
+                    </div>
+                    <input
+                      id="thermalPrinterNameInput"
+                      type="text"
+                      value={thermalPrinterName}
+                      onChange={(e) => setThermalPrinterName(e.target.value)}
+                      placeholder="Contoh: Epson_TM_T82 atau RP80"
+                      className="w-full px-3 py-2 text-sm bg-white border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900 font-mono-tabular"
+                    />
+                    <p className="text-[11px] text-neutral-500">
+                      Selalu mengirim <strong className="text-neutral-700">1-strip gambar tunggal</strong> ke printer ini saat tombol Print Thermal ditekan.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5 p-3.5 bg-neutral-50 border border-neutral-200 rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <label
+                        htmlFor="colorPrinterNameInput"
+                        className="block text-xs font-bold text-neutral-900"
+                      >
+                        2. Nama Printer Warna (Dye-Sub 4R)
+                      </label>
+                      <span className="text-[10px] font-mono-tabular font-semibold px-1.5 py-0.5 bg-rose-100 text-rose-800 rounded">
+                        2-Strip Payload
+                      </span>
+                    </div>
+                    <input
+                      id="colorPrinterNameInput"
+                      type="text"
+                      value={colorPrinterName}
+                      onChange={(e) => setColorPrinterName(e.target.value)}
+                      placeholder="Contoh: DNP_DS_RX1HS atau Citizen_CY02"
+                      className="w-full px-3 py-2 text-sm bg-white border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900 font-mono-tabular"
+                    />
+                    <p className="text-[11px] text-neutral-500">
+                      Mengirim <strong className="text-neutral-700">2-strip berdampingan</strong> (jika strip vertikal) atau gambar 4R tunggal ke printer ini.
+                    </p>
+                  </div>
                 </div>
 
-                <div className="pt-1 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                {/* Tombol Uji Cetak Masing-Masing Printer */}
+                <div className="pt-1 flex flex-wrap items-center gap-3">
                   <button
                     type="button"
                     disabled={testingApi}
-                    onClick={handleTestPrintApi}
-                    className="px-4 py-2 text-xs font-semibold text-neutral-800 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 rounded-xl transition-all cursor-pointer disabled:opacity-50 flex items-center gap-2 shadow-xs"
+                    onClick={handleTestPrintThermal}
+                    className="px-3.5 py-2 text-xs font-semibold text-neutral-800 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 rounded-xl transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-xs"
+                    title="Kirim 1-strip test canvas ke printer thermal"
                   >
-                    <span>🖨️</span>
-                    <span>{testingApi ? 'Mengirim Test Job...' : 'Uji Koneksi Print API'}</span>
+                    <span>🧾</span>
+                    <span>{testingApi ? 'Mengirim...' : 'Uji Printer Thermal (1-Strip)'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={testingApi}
+                    onClick={handleTestPrintColor}
+                    className="px-3.5 py-2 text-xs font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:brightness-90 rounded-xl transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-xs"
+                    title="Kirim 2-strip side-by-side test canvas ke printer warna"
+                  >
+                    <span>🖼️</span>
+                    <span>{testingApi ? 'Mengirim...' : 'Uji Printer Warna (2-Strip)'}</span>
                   </button>
 
                   <span className="text-[11px] text-neutral-500">
-                    Mengirim pola gambar uji coba sintetis untuk memverifikasi respon server tanpa memulai sesi foto baru.
+                    Memverifikasi komunikasi API endpoint & parameter nama printer ke Print Server tanpa memulai sesi photobox baru.
                   </span>
                 </div>
 
@@ -904,6 +1026,59 @@ export const AdminSettings: React.FC = () => {
                     </p>
                   </div>
                 )}
+              </div>
+
+              {/* Bagian: Akses PWA & Caching Offline 100% */}
+              <div className="pt-4 border-t border-neutral-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
+                      <span>📶 Mode Offline & Akses Tanpa Internet</span>
+                      <span className="px-2 py-0.5 text-[10px] font-mono-tabular font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded">
+                        100% Offline Ready
+                      </span>
+                    </h3>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      Aplikasi dapat dibuka dan dijalankan tanpa koneksi internet sama sekali, hanya terhubung ke Print Server lokal.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={cachingOffline}
+                    onClick={handleWarmOfflineCache}
+                    className="px-3.5 py-1.5 text-xs font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                  >
+                    <span>⚡</span>
+                    <span>{cachingOffline ? 'Menyimpan Aset...' : 'Pre-Cache Seluruh Aset'}</span>
+                  </button>
+                </div>
+
+                <div className="p-3.5 bg-neutral-50 border border-neutral-200 rounded-xl space-y-2 text-xs text-neutral-600">
+                  <div className="flex items-start gap-2">
+                    <span className="text-emerald-600 font-bold text-sm">✔</span>
+                    <div>
+                      <strong className="text-neutral-800">Semua Berkas Aplikasi & Bingkai Dicache:</strong>
+                      <p className="text-[11px] text-neutral-500 mt-0.5">
+                        Workbox Service Worker dikonfigurasi dengan batas cache 25MB untuk memastikan seluruh file transparansi bingkai foto, font, dan skrip tersimpan di browser Anda.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-blue-600 font-bold text-sm">✔</span>
+                    <div>
+                      <strong className="text-neutral-800">Bypass Jaringan Print API:</strong>
+                      <p className="text-[11px] text-neutral-500 mt-0.5">
+                        Panggilan HTTP POST multipart ke server cetak (localhost atau IP LAN) langsung diteruskan tanpa hambatan cache browser.
+                      </p>
+                    </div>
+                  </div>
+
+                  {offlineCacheStatus && (
+                    <div className="mt-2 p-2.5 bg-white border border-neutral-200 rounded-lg text-[11px] font-mono-tabular text-neutral-800">
+                      {offlineCacheStatus}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
