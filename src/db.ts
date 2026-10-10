@@ -46,6 +46,9 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   mirrorCamera: true,
   cameraSourceMode: 'auto',
   showCropGuide: true,
+  printApiEndpoint: '', // URL e.g. http://localhost:5000/print
+  printerName: '',
+  enableShutterSound: true,
   kioskBackground: '', // Empty means use default studio hero image
   kioskBackgroundOverlayOpacity: 60, // 60%
   themeColor: '#E11D48',

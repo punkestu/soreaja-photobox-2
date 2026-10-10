@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { QRCodeSVG } from 'qrcode.react';
 import { db, DEFAULT_DRIVE_URL } from '../../db';
 import { usePhotobox } from '../../context/PhotoboxContext';
@@ -35,12 +36,14 @@ export const PrintResultScreen: React.FC = () => {
     isHydrated,
   } = usePhotobox();
 
+  const settings = useLiveQuery(() => db.settings.get('app_settings'), []);
   const [driveUrl, setDriveUrl] = useState<string>(DEFAULT_DRIVE_URL);
   const [isGeneratingGif, setIsGeneratingGif] = useState<boolean>(false);
   const [gifProgress, setGifProgress] = useState<number>(0);
   const [printStatus, setPrintStatus] = useState<string>(
-    'Menghubungkan ke Printer Thermal...'
+    'Menghubungkan ke Printer...'
   );
+  const [printError, setPrintError] = useState<string | null>(null);
   const [isPrintingThermal, setIsPrintingThermal] = useState<boolean>(false);
   const [isPrintingColor, setIsPrintingColor] = useState<boolean>(false);
   const [downloadedManifest, setDownloadedManifest] = useState<
@@ -58,10 +61,12 @@ export const PrintResultScreen: React.FC = () => {
     hasInitializedRef.current = true;
 
     const runOnMountPipeline = async () => {
-      // 1. Ambil URL G-Drive dari Dexie.js
+      // 1. Ambil URL G-Drive dan pengaturan dari Dexie.js
       let currentDriveUrl = DEFAULT_DRIVE_URL;
       let shouldAutoDownload = true;
       let themeAccent = '#E11D48';
+      let targetApiEndpoint = '';
+      let targetPrinterName = '';
       try {
         const data = await db.settings.get('app_settings');
         if (data && data.driveUrl) {
@@ -73,6 +78,12 @@ export const PrintResultScreen: React.FC = () => {
         }
         if (data && data.themeColor) {
           themeAccent = data.themeColor;
+        }
+        if (data && data.printApiEndpoint) {
+          targetApiEndpoint = data.printApiEndpoint;
+        }
+        if (data && data.printerName) {
+          targetPrinterName = data.printerName;
         }
       } catch {
         // Fallback default URL
@@ -138,12 +149,28 @@ export const PrintResultScreen: React.FC = () => {
       );
       setDownloadedManifest(files);
 
-      // 4. Jalankan fungsi Mock printThermal()
+      // 4. Jalankan fungsi Cetak (Print API atau Mock)
       setIsPrintingThermal(true);
-      setPrintStatus('Menghubungkan ke Printer Thermal...');
-      const thermalRes = await printThermal(layoutToUse);
-      setIsPrintingThermal(false);
-      setPrintStatus(`✅ ${thermalRes.message} · ID: ${thermalRes.jobId}`);
+      setPrintError(null);
+      setPrintStatus(
+        targetApiEndpoint
+          ? `Mengirim file ke Print API (${targetApiEndpoint})...`
+          : 'Menghubungkan ke Printer Thermal...'
+      );
+      try {
+        const thermalRes = await printThermal(
+          layoutToUse,
+          targetApiEndpoint,
+          targetPrinterName
+        );
+        setIsPrintingThermal(false);
+        setPrintStatus(`✅ ${thermalRes.message} · ID: ${thermalRes.jobId}`);
+      } catch (err) {
+        setIsPrintingThermal(false);
+        const errMsg = err instanceof Error ? err.message : String(err);
+        setPrintStatus(`⚠️ Gagal Print API: ${errMsg}`);
+        setPrintError(errMsg);
+      }
 
       // 5. Simpan riwayat sesi ke IndexedDB
       try {
@@ -180,27 +207,65 @@ export const PrintResultScreen: React.FC = () => {
 
   const handleReprintThermal = async () => {
     setIsPrintingThermal(true);
-    setPrintStatus('Menghubungkan ke Printer Thermal (80mm)...');
-    const res = await printThermal(finalLayoutBase64);
-    setIsPrintingThermal(false);
-    setPrintStatus(`✅ Cetak Ulang Thermal Berhasil (${res.jobId}) · Strip Tunggal 80mm`);
+    setPrintError(null);
+    setPrintStatus(
+      settings?.printApiEndpoint
+        ? `Mengirim ke Print API (${settings.printApiEndpoint})...`
+        : 'Menghubungkan ke Printer Thermal (80mm)...'
+    );
+    try {
+      const res = await printThermal(
+        finalLayoutBase64,
+        settings?.printApiEndpoint,
+        settings?.printerName
+      );
+      setPrintStatus(`✅ Cetak Thermal Berhasil (${res.jobId}) · ${res.message}`);
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setPrintStatus(`⚠️ Gagal Print API: ${errMsg}`);
+      setPrintError(errMsg);
+    } finally {
+      setIsPrintingThermal(false);
+    }
   };
 
   const handlePrintColor = async () => {
     setIsPrintingColor(true);
+    setPrintError(null);
     const imageToPrint = doubleStripBase64 || finalLayoutBase64;
     setPrintStatus(
-      doubleStripBase64
+      settings?.printApiEndpoint
+        ? `Mengirim file gambar ke Print API (${settings.printApiEndpoint})...`
+        : doubleStripBase64
         ? 'Menghubungkan ke Printer Warna (Dye-Sub 4R - 2 Strip Side-by-Side)...'
         : 'Menghubungkan ke Printer Warna...'
     );
-    const res = await printColor(imageToPrint);
+    try {
+      const res = await printColor(
+        imageToPrint,
+        settings?.printApiEndpoint,
+        settings?.printerName
+      );
+      setPrintStatus(
+        `✅ Cetak Warna Selesai (${res.jobId}) · ${res.message}`
+      );
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setPrintStatus(`⚠️ Gagal Print API: ${errMsg}`);
+      setPrintError(errMsg);
+    } finally {
+      setIsPrintingColor(false);
+    }
+  };
+
+  const handleFallbackMockPrint = async () => {
+    setPrintError(null);
+    setIsPrintingColor(true);
+    setPrintStatus('Menjalankan simulasi cetak offline...');
+    const imageToPrint = doubleStripBase64 || finalLayoutBase64;
+    const res = await printColor(imageToPrint, undefined, undefined);
     setIsPrintingColor(false);
-    setPrintStatus(
-      `✅ Cetak Warna Selesai (${res.jobId}) · ${
-        doubleStripBase64 ? 'Format 2-Strip Side-by-Side (4R)' : 'Format Standar'
-      }`
-    );
+    setPrintStatus(`✅ Simulasi Cetak Selesai (${res.jobId}) · Mode Offline`);
   };
 
   const handleNewSession = () => {
@@ -259,6 +324,42 @@ export const PrintResultScreen: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Print Error Alert Banner */}
+      {printError && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-amber-950/70 border border-amber-600/60 rounded-2xl text-amber-200 text-xs shadow-lg">
+          <div className="flex items-center gap-2.5">
+            <span className="text-amber-400 font-bold text-base">⚠️</span>
+            <div>
+              <p className="font-semibold text-amber-200">Gagal Mengirim ke Print API</p>
+              <p className="text-amber-300/80 font-mono text-[11px] mt-0.5">{printError}</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handlePrintColor}
+              className="px-3.5 py-1.5 bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] text-white font-semibold rounded-xl transition-colors cursor-pointer shadow-sm text-xs"
+            >
+              Coba Cetak Warna
+            </button>
+            <button
+              type="button"
+              onClick={handleReprintThermal}
+              className="px-3.5 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white font-medium rounded-xl transition-colors cursor-pointer text-xs"
+            >
+              Coba Cetak Thermal
+            </button>
+            <button
+              type="button"
+              onClick={handleFallbackMockPrint}
+              className="px-3.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium rounded-xl transition-colors cursor-pointer text-xs"
+            >
+              Simulasi Offline
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 3-Column Result Showcase: Final Framed Strip | Animated GIF | QR Code Google Drive */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">

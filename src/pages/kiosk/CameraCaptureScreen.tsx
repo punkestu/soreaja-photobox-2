@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { usePhotobox } from '../../context/PhotoboxContext';
 import { DEFAULT_FRAMES, STUDIO_PORTRAITS } from '../../data/defaultFrames';
+import { playShutterSound } from '../../services/shutterAudio';
 
 export const CameraCaptureScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -217,6 +218,9 @@ export const CameraCaptureScreen: React.FC = () => {
     setIsCapturingSequence(false);
     setCountdown(null);
     setIsFlashing(true);
+    if (settings?.enableShutterSound !== false) {
+      playShutterSound();
+    }
     setTimeout(() => setIsFlashing(false), 300);
 
     if (isRetakeMode && retakeIndex !== null) {
@@ -244,6 +248,7 @@ export const CameraCaptureScreen: React.FC = () => {
     retakeIndex,
     setCapturedPhotos,
     setRetakeIndex,
+    settings?.enableShutterSound,
     totalShotsNeeded,
     updatePhotoAtIndex,
   ]);
@@ -266,6 +271,9 @@ export const CameraCaptureScreen: React.FC = () => {
           clearInterval(interval);
           setCountdown(null);
           setIsFlashing(true);
+          if (settings?.enableShutterSound !== false) {
+            playShutterSound();
+          }
           setTimeout(() => setIsFlashing(false), 300);
           const newPhoto = captureSinglePhoto(activePoseIdx);
           updatePhotoAtIndex(retakeIndex, newPhoto);
@@ -295,6 +303,9 @@ export const CameraCaptureScreen: React.FC = () => {
           clearInterval(interval);
           setCountdown(null);
           setIsFlashing(true);
+          if (settings?.enableShutterSound !== false) {
+            playShutterSound();
+          }
           setTimeout(() => setIsFlashing(false), 300);
 
           const snap = captureSinglePhoto(currentIdx);
@@ -402,35 +413,28 @@ export const CameraCaptureScreen: React.FC = () => {
   }, [slotAspect, cameraAspect]);
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto px-6 md:px-10 py-6 flex flex-col justify-between gap-6">
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
-        <div>
-          <div className="text-xs font-mono-tabular text-zinc-400 flex items-center gap-2 mb-1">
-            <span>Tahap 03 dari 06</span>
-            <span aria-hidden="true">·</span>
-            <span>Bingkai: {activeFrame.name}</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {isRetakeMode
-                ? `Mode Retake Foto #${(retakeIndex ?? 0) + 1}`
-                : `Target: ${totalShotsNeeded} Pose`}
-            </span>
-          </div>
-          <h1 className="font-display text-2xl md:text-3xl font-bold text-[#F4F4F0]">
+    <div className="flex-1 w-full max-w-7xl mx-auto px-2 sm:px-4 md:px-6 py-2 sm:py-3 flex flex-col justify-between gap-3">
+      {/* Top Breadcrumb & Minimalist Status */}
+      <div className="flex items-center justify-between text-xs font-mono-tabular text-zinc-400 pb-0.5 px-1">
+        <div className="flex items-center gap-2">
+          <span className="text-[var(--theme-accent,#E11D48)] font-semibold">Tahap 03/06</span>
+          <span aria-hidden="true">·</span>
+          <span className="text-zinc-200">Bingkai: {activeFrame.name}</span>
+          <span aria-hidden="true">·</span>
+          <span className="hidden sm:inline">
             {isRetakeMode
-              ? `Ulangi Pengambilan Foto #${(retakeIndex ?? 0) + 1}`
-              : `Sesi Pemotretan Studio (${currentShotNumber} / ${totalShotsNeeded})`}
-          </h1>
+              ? `Mode Retake Foto #${(retakeIndex ?? 0) + 1}`
+              : `${totalShotsNeeded} Pose Diperlukan`}
+          </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setUseSimulator((prev) => !prev)}
-            className="px-3.5 py-2 text-xs font-medium text-zinc-300 bg-zinc-900 border border-zinc-700 hover:border-zinc-500 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+            className="px-2.5 py-1 text-xs font-medium text-zinc-300 bg-zinc-900/90 border border-zinc-700/80 hover:border-zinc-500 rounded-lg transition-colors cursor-pointer"
           >
-            {useSimulator ? 'Mode: Simulator Studio' : 'Mode: Kamera WebRTC'}
+            {useSimulator ? '🖥️ Simulator' : '📷 WebRTC'}
           </button>
           <button
             type="button"
@@ -442,354 +446,333 @@ export const CameraCaptureScreen: React.FC = () => {
                 navigate('/app/frame-selection');
               }
             }}
-            className="px-3.5 py-2 text-xs font-medium text-zinc-400 hover:text-white border border-zinc-800 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+            className="px-2.5 py-1 text-xs font-medium text-zinc-400 hover:text-white border border-zinc-800 rounded-lg transition-colors cursor-pointer"
           >
             {isRetakeMode ? 'Batal Retake' : '← Ganti Bingkai'}
           </button>
         </div>
       </div>
 
-      {/* Main Viewfinder & Shot Progress */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Live Camera / Studio Simulator Viewport */}
-        <div className="lg:col-span-8 space-y-4">
-          <div
-            data-testid="camera-viewfinder"
-            className="relative aspect-[4/3] w-full bg-zinc-950 rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center"
-          >
-            {/* WebRTC Video Element */}
-            <video
-              ref={videoRef}
-              playsInline
-              muted
-              className={`w-full h-full object-cover ${
-                useSimulator ? 'hidden' : 'block'
-              } ${settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''}`}
+      {/* Hero Edge-to-Edge Spotlight Viewfinder */}
+      <div className="relative w-full flex-1 max-w-6xl mx-auto flex flex-col items-center justify-center">
+        {/* Spotlight Stage Viewport */}
+        <div
+          data-testid="camera-viewfinder"
+          className="relative aspect-[4/3] w-full max-h-[76vh] md:max-h-[82vh] bg-black rounded-3xl overflow-hidden shadow-[0_0_120px_rgba(0,0,0,0.98),0_0_60px_rgba(225,29,72,0.22)] ring-1 ring-white/20 border border-zinc-800/80 flex items-center justify-center group"
+        >
+          {/* WebRTC Video Element */}
+          <video
+            ref={videoRef}
+            playsInline
+            muted
+            className={`w-full h-full object-cover ${
+              useSimulator ? 'hidden' : 'block'
+            } ${settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''}`}
+          />
+
+          {/* Studio Camera Simulator Fallback */}
+          {useSimulator && (
+            <img
+              src={currentPortrait.src}
+              alt={currentPortrait.label}
+              referrerPolicy="no-referrer"
+              className={`w-full h-full object-cover transition-all duration-300 ${
+                settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
+              }`}
             />
+          )}
 
-            {/* Studio Camera Simulator Fallback */}
-            {useSimulator && (
-              <img
-                src={currentPortrait.src}
-                alt={currentPortrait.label}
-                referrerPolicy="no-referrer"
-                className={`w-full h-full object-cover transition-all duration-300 ${
-                  settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
-                }`}
-              />
-            )}
+          {/* Cinematic Spotlight Vignette & Radial Beam Overlay */}
+          <div
+            className="absolute inset-0 pointer-events-none z-10 bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(0,0,0,0.45)_65%,rgba(0,0,0,0.94)_100%)]"
+            aria-hidden="true"
+          />
+          {/* Atmospheric Spotlight Glow Rim */}
+          <div
+            className="absolute inset-0 pointer-events-none z-10 shadow-[inset_0_0_80px_rgba(0,0,0,0.85)]"
+            aria-hidden="true"
+          />
 
-            {/* Dynamic Crop Guide Mask & Framing Overlay */}
-            {showCropGuide ? (
-              <div className="absolute inset-0 pointer-events-none z-10">
-                {/* Left & Right Cropped Area Dark Masks */}
-                {cropInfo.type === 'sides' && (
-                  <>
-                    <div
-                      className="absolute top-0 bottom-0 left-0 bg-black/70 backdrop-blur-[1px] flex flex-col items-center justify-center border-r-2 border-dashed border-red-500/80 shadow-inner"
-                      style={{ width: `${cropInfo.leftPercent}%` }}
-                    >
-                      <div className="rotate-[-90deg] whitespace-nowrap text-[10px] font-mono tracking-widest text-red-300 font-bold uppercase select-none drop-shadow">
-                        ✂ Terpotong
-                      </div>
-                    </div>
-                    <div
-                      className="absolute top-0 bottom-0 right-0 bg-black/70 backdrop-blur-[1px] flex flex-col items-center justify-center border-l-2 border-dashed border-red-500/80 shadow-inner"
-                      style={{ width: `${cropInfo.leftPercent}%` }}
-                    >
-                      <div className="rotate-90 whitespace-nowrap text-[10px] font-mono tracking-widest text-red-300 font-bold uppercase select-none drop-shadow">
-                        ✂ Terpotong
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* Top & Bottom Cropped Area Dark Masks */}
-                {cropInfo.type === 'topBottom' && (
-                  <>
-                    <div
-                      className="absolute top-0 left-0 right-0 bg-black/70 backdrop-blur-[1px] flex items-center justify-center border-b-2 border-dashed border-red-500/80 shadow-inner"
-                      style={{ height: `${cropInfo.topPercent}%` }}
-                    >
-                      <span className="text-[10px] font-mono tracking-widest text-red-300 font-bold uppercase select-none drop-shadow">
-                        ✂ Area Terpotong Bingkai
-                      </span>
-                    </div>
-                    <div
-                      className="absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-[1px] flex items-center justify-center border-t-2 border-dashed border-red-500/80 shadow-inner"
-                      style={{ height: `${cropInfo.topPercent}%` }}
-                    >
-                      <span className="text-[10px] font-mono tracking-widest text-red-300 font-bold uppercase select-none drop-shadow">
-                        ✂ Area Terpotong Bingkai
-                      </span>
-                    </div>
-                  </>
-                )}
-
-                {/* Active Photo Framing Boundary */}
-                <div
-                  className={`absolute transition-all duration-200 ${
-                    cropInfo.isCropped
-                      ? 'border-2 border-[var(--theme-accent,#E11D48)] shadow-[0_0_24px_rgba(225,29,72,0.45)]'
-                      : 'border-2 border-white/50'
-                  }`}
-                  style={{
-                    left: `${cropInfo.leftPercent}%`,
-                    top: `${cropInfo.topPercent}%`,
-                    width: `${cropInfo.widthPercent}%`,
-                    height: `${cropInfo.heightPercent}%`,
-                  }}
-                >
-                  {/* Studio Viewfinder Corner Brackets */}
-                  <div className="absolute -top-1 -left-1 w-6 h-6 border-t-[3px] border-l-[3px] border-[var(--theme-accent,#E11D48)] drop-shadow" />
-                  <div className="absolute -top-1 -right-1 w-6 h-6 border-t-[3px] border-r-[3px] border-[var(--theme-accent,#E11D48)] drop-shadow" />
-                  <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-[3px] border-l-[3px] border-[var(--theme-accent,#E11D48)] drop-shadow" />
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-[3px] border-r-[3px] border-[var(--theme-accent,#E11D48)] drop-shadow" />
-
-                  {/* Center Crosshair Alignment Mark */}
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="relative w-8 h-8 opacity-40">
-                      <div className="absolute top-1/2 left-0 right-0 h-px bg-white -translate-y-1/2" />
-                      <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white -translate-x-1/2" />
-                      <div className="absolute inset-1.5 border border-white rounded-full" />
+          {/* Dynamic Crop Guide Mask & Framing Overlay */}
+          {showCropGuide ? (
+            <div className="absolute inset-0 pointer-events-none z-10">
+              {/* Left & Right Cropped Area Dark Masks */}
+              {cropInfo.type === 'sides' && (
+                <>
+                  <div
+                    className="absolute top-0 bottom-0 left-0 bg-black/75 backdrop-blur-[1px] flex flex-col items-center justify-center border-r-2 border-dashed border-red-500/85 shadow-inner"
+                    style={{ width: `${cropInfo.leftPercent}%` }}
+                  >
+                    <div className="rotate-[-90deg] whitespace-nowrap text-[10px] font-mono tracking-widest text-red-300 font-bold uppercase select-none drop-shadow">
+                      ✂ Terpotong
                     </div>
                   </div>
-
-                  {/* Rule-of-Thirds Grid inside the Active Crop Area */}
-                  {showGridLines && (
-                    <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none opacity-20">
-                      <div className="border-r border-b border-white" />
-                      <div className="border-r border-b border-white" />
-                      <div className="border-b border-white" />
-                      <div className="border-r border-b border-white" />
-                      <div className="border-r border-b border-white" />
-                      <div className="border-b border-white" />
-                      <div className="border-r border-white" />
-                      <div className="border-r border-white" />
-                      <div />
+                  <div
+                    className="absolute top-0 bottom-0 right-0 bg-black/75 backdrop-blur-[1px] flex flex-col items-center justify-center border-l-2 border-dashed border-red-500/85 shadow-inner"
+                    style={{ width: `${cropInfo.leftPercent}%` }}
+                  >
+                    <div className="rotate-90 whitespace-nowrap text-[10px] font-mono tracking-widest text-red-300 font-bold uppercase select-none drop-shadow">
+                      ✂ Terpotong
                     </div>
-                  )}
+                  </div>
+                </>
+              )}
 
-                  {/* Floating Frame Slot Badge on Bottom */}
-                  <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-black/85 backdrop-blur-xs text-[11px] font-mono-tabular text-white rounded-full border border-white/20 whitespace-nowrap shadow-xl flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-[var(--theme-accent,#E11D48)] animate-pulse" />
-                    <span>
-                      Area Masuk Bingkai: {targetSlot.width}×{targetSlot.height}px ({slotAspect.toFixed(2)}:1)
+              {/* Top & Bottom Cropped Area Dark Masks */}
+              {cropInfo.type === 'topBottom' && (
+                <>
+                  <div
+                    className="absolute top-0 left-0 right-0 bg-black/75 backdrop-blur-[1px] flex items-center justify-center border-b-2 border-dashed border-red-500/85 shadow-inner"
+                    style={{ height: `${cropInfo.topPercent}%` }}
+                  >
+                    <span className="text-[10px] font-mono tracking-widest text-red-300 font-bold uppercase select-none drop-shadow">
+                      ✂ Area Terpotong Bingkai
                     </span>
                   </div>
-                </div>
-              </div>
-            ) : (
-              /* Fallback Full Viewfinder Grid if Crop Guide is Toggled Off */
-              showGridLines && (
-                <div className="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3 opacity-20">
-                  <div className="border-r border-b border-white" />
-                  <div className="border-r border-b border-white" />
-                  <div className="border-b border-white" />
-                  <div className="border-r border-b border-white" />
-                  <div className="border-r border-b border-white" />
-                  <div className="border-b border-white" />
-                  <div className="border-r border-white" />
-                  <div className="border-r border-white" />
-                  <div />
-                </div>
-              )
-            )}
-
-            {/* Top Viewfinder Status Overlay */}
-            <div className="absolute top-4 left-4 right-4 flex items-center justify-between text-xs font-mono-tabular text-white bg-black/65 backdrop-blur-xs px-3.5 py-2 rounded-lg z-20">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>{cameraReady ? '● LIVE · 800×600 RAW' : 'MEMUAT KAMERA...'}</span>
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="text-zinc-300">
-                  SLOT #{activeSlotIndex + 1} ({targetSlot.width}×{targetSlot.height}px)
-                </span>
-                <span aria-hidden="true" className="text-zinc-500">·</span>
-                <span className="text-[var(--theme-accent,#E11D48)] font-bold">
-                  {isRetakeMode
-                    ? `RETAKE SLOT #${(retakeIndex ?? 0) + 1}`
-                    : `POSE ${currentShotNumber} DARI ${totalShotsNeeded}`}
-                </span>
-              </span>
-            </div>
-
-            {/* Countdown Overlay */}
-            {countdown !== null && (
-              <div className="absolute inset-0 bg-black/45 flex flex-col items-center justify-center pointer-events-none z-30">
-                <span className="font-display text-8xl md:text-9xl font-extrabold text-white tabular-nums drop-shadow-lg">
-                  {countdown}
-                </span>
-                <p className="mt-2 text-sm font-mono-tabular text-zinc-200 uppercase tracking-widest">
-                  Siapkan Pose Terbaikmu
-                </p>
-              </div>
-            )}
-
-            {/* Flash Burst Effect */}
-            {isFlashing && (
-              <div className="absolute inset-0 bg-white animate-flash pointer-events-none z-40" />
-            )}
-          </div>
-
-          {/* Crop Guide Toolbar & Informational Callout */}
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-zinc-900/80 border border-zinc-800 rounded-xl px-4 py-3">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCropGuide((prev) => !prev)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
-                    showCropGuide
-                      ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
-                      : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                  }`}
-                >
-                  <span>📐 Panduan Crop:</span>
-                  <span className="font-bold">{showCropGuide ? 'AKTIF' : 'NONAKTIF'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowGridLines((prev) => !prev)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
-                    showGridLines
-                      ? 'bg-zinc-800 text-white border border-zinc-600'
-                      : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200'
-                  }`}
-                >
-                  <span>⊞ Grid 3×3:</span>
-                  <span>{showGridLines ? 'ON' : 'OFF'}</span>
-                </button>
-              </div>
-
-              <div className="text-xs font-mono-tabular text-zinc-400 flex items-center gap-2">
-                <span>Rasio Bingkai: {targetSlot.width}×{targetSlot.height}px ({slotAspect.toFixed(2)}:1)</span>
-                <span aria-hidden="true">·</span>
-                <span>Kamera: 4:3 (1.33:1)</span>
-              </div>
-            </div>
-
-            {/* Dynamic Crop Warning Chip */}
-            {cropInfo.isCropped && showCropGuide && (
-              <div className="flex items-start gap-2.5 px-4 py-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-200">
-                <span className="text-amber-400 font-bold shrink-0">ℹ Panduan Komposisi:</span>
-                <span>
-                  Bingkai <strong>{activeFrame.name}</strong> memiliki ukuran slot <strong>{targetSlot.width} × {targetSlot.height} px</strong>.
-                  {" "}{cropInfo.label}. Pastikan seluruh pose dan wajah berada di dalam <strong>kotak garis panduan merah</strong> agar tidak terpotong saat digabungkan ke bingkai akhir.
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Simulator Pose Selector (helpful when using Studio Simulator) */}
-          {useSimulator && (
-            <div className="flex flex-wrap items-center justify-between gap-2 bg-zinc-900/90 border border-zinc-800 rounded-lg p-3">
-              <span className="text-xs text-zinc-400">
-                Preset Pose Simulator Studio:
-              </span>
-              <div className="flex flex-wrap items-center gap-1.5">
-                {STUDIO_PORTRAITS.map((pose, idx) => (
-                  <button
-                    key={pose.id}
-                    type="button"
-                    onClick={() => setActivePoseIdx(idx)}
-                    className={`px-3 py-1.5 text-xs font-mono-tabular rounded-md transition-colors cursor-pointer ${
-                      activePoseIdx === idx
-                        ? 'bg-white text-zinc-950 font-semibold'
-                        : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                    }`}
+                  <div
+                    className="absolute bottom-0 left-0 right-0 bg-black/75 backdrop-blur-[1px] flex items-center justify-center border-t-2 border-dashed border-red-500/85 shadow-inner"
+                    style={{ height: `${cropInfo.topPercent}%` }}
                   >
-                    Pose 0{idx + 1}
-                  </button>
-                ))}
+                    <span className="text-[10px] font-mono tracking-widest text-red-300 font-bold uppercase select-none drop-shadow">
+                      ✂ Area Terpotong Bingkai
+                    </span>
+                  </div>
+                </>
+              )}
+
+              {/* Active Photo Framing Boundary */}
+              <div
+                className={`absolute transition-all duration-200 ${
+                  cropInfo.isCropped
+                    ? 'border-2 border-[var(--theme-accent,#E11D48)] shadow-[0_0_24px_rgba(225,29,72,0.45)]'
+                    : 'border-2 border-white/50'
+                }`}
+                style={{
+                  left: `${cropInfo.leftPercent}%`,
+                  top: `${cropInfo.topPercent}%`,
+                  width: `${cropInfo.widthPercent}%`,
+                  height: `${cropInfo.heightPercent}%`,
+                }}
+              >
+                {/* Studio Viewfinder Corner Brackets */}
+                <div className="absolute -top-1 -left-1 w-6 h-6 border-t-[3px] border-l-[3px] border-[var(--theme-accent,#E11D48)] drop-shadow" />
+                <div className="absolute -top-1 -right-1 w-6 h-6 border-t-[3px] border-r-[3px] border-[var(--theme-accent,#E11D48)] drop-shadow" />
+                <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-[3px] border-l-[3px] border-[var(--theme-accent,#E11D48)] drop-shadow" />
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-[3px] border-r-[3px] border-[var(--theme-accent,#E11D48)] drop-shadow" />
+
+                {/* Center Crosshair Alignment Mark */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="relative w-8 h-8 opacity-40">
+                    <div className="absolute top-1/2 left-0 right-0 h-px bg-white -translate-y-1/2" />
+                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white -translate-x-1/2" />
+                    <div className="absolute inset-1.5 border border-white rounded-full" />
+                  </div>
+                </div>
+
+                {/* Rule-of-Thirds Grid inside the Active Crop Area */}
+                {showGridLines && (
+                  <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none opacity-20">
+                    <div className="border-r border-b border-white" />
+                    <div className="border-r border-b border-white" />
+                    <div className="border-b border-white" />
+                    <div className="border-r border-b border-white" />
+                    <div className="border-r border-b border-white" />
+                    <div className="border-b border-white" />
+                    <div className="border-r border-white" />
+                    <div className="border-r border-white" />
+                    <div />
+                  </div>
+                )}
               </div>
+            </div>
+          ) : (
+            showGridLines && (
+              <div className="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3 opacity-20 z-10">
+                <div className="border-r border-b border-white" />
+                <div className="border-r border-b border-white" />
+                <div className="border-b border-white" />
+                <div className="border-r border-b border-white" />
+                <div className="border-r border-b border-white" />
+                <div className="border-b border-white" />
+                <div className="border-r border-white" />
+                <div className="border-r border-white" />
+                <div />
+              </div>
+            )
+          )}
+
+          {/* Floating Minimalist Top Header (z-20) */}
+          <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex items-center justify-between text-xs font-mono-tabular text-white z-20 pointer-events-auto">
+            <span className="flex items-center gap-1.5 px-3 py-1.5 bg-black/70 backdrop-blur-md border border-white/10 rounded-full shadow-lg">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[11px] font-semibold">{cameraReady ? 'LIVE' : 'MEMUAT'}</span>
+            </span>
+
+            <div className="flex items-center gap-2 px-4 py-1.5 bg-black/75 backdrop-blur-md border border-white/15 rounded-full shadow-xl">
+              <span className="text-[var(--theme-accent,#E11D48)] font-bold text-xs uppercase tracking-wider">
+                {isRetakeMode
+                  ? `RETAKE SLOT #${(retakeIndex ?? 0) + 1}`
+                  : `POSE ${currentShotNumber} / ${totalShotsNeeded}`}
+              </span>
+            </div>
+
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-black/70 backdrop-blur-md border border-white/10 rounded-full text-[11px] text-zinc-300">
+              <span>{targetSlot.width}×{targetSlot.height}px</span>
+            </div>
+          </div>
+
+          {/* Countdown Big Center Overlay (z-30) */}
+          {countdown !== null && (
+            <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px] flex flex-col items-center justify-center pointer-events-none z-30">
+              <span className="font-display text-9xl md:text-[160px] font-extrabold text-white tabular-nums drop-shadow-[0_10px_30px_rgba(0,0,0,0.9)] animate-pulse">
+                {countdown}
+              </span>
+              <p className="mt-2 text-sm font-mono-tabular text-zinc-200 uppercase tracking-widest drop-shadow">
+                Siapkan Pose Terbaikmu
+              </p>
             </div>
           )}
-        </div>
 
-        {/* Controls & Captured Slot Strip */}
-        <div className="lg:col-span-4 bg-zinc-900/80 rounded-2xl p-6 space-y-6">
-          <div className="space-y-2">
-            <h2 className="font-display text-lg font-bold text-[#F4F4F0]">
-              Kontrol Pemotretan
-            </h2>
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              {isRetakeMode
-                ? `Mengambil ulang 1 foto untuk menggantikan Foto #${
-                    (retakeIndex ?? 0) + 1
-                  }.`
-                : `Sistem akan mengambil ${totalShotsNeeded} foto berturut-turut dengan jeda hitung mundur ${
-                    settings?.countdownSeconds || 3
-                  } detik.`}
-            </p>
-          </div>
+          {/* Flash Burst Effect (z-40) */}
+          {isFlashing && (
+            <div className="absolute inset-0 bg-white animate-flash pointer-events-none z-40" />
+          )}
 
-          <div className="space-y-3">
-            <button
-              type="button"
-              disabled={isCapturingSequence}
-              onClick={startCountdownSequence}
-              className="w-full py-4 px-5 text-sm font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] disabled:opacity-50 rounded-xl transition-colors whitespace-nowrap cursor-pointer shadow-lg"
-            >
-              {isCapturingSequence
-                ? `Mengambil Foto (${countdown ?? '...'})`
-                : isRetakeMode
-                ? `Mulai Countdown Retake #${(retakeIndex ?? 0) + 1}`
-                : `Mulai Hitung Mundur (${totalShotsNeeded} Foto)`}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleInstantCapture}
-              className="w-full py-3 px-4 text-xs font-semibold text-zinc-100 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors whitespace-nowrap cursor-pointer"
-            >
-              {isRetakeMode
-                ? `Ambil Instan Foto #${(retakeIndex ?? 0) + 1} (Tanpa Delay)`
-                : `Ambil Instan Semua (${totalShotsNeeded} Foto)`}
-            </button>
-          </div>
-
-          {/* Slot Thumbnails */}
-          <div className="pt-4 space-y-3">
-            <div className="flex items-center justify-between text-xs font-mono-tabular text-zinc-400">
-              <span>Slot Bingkai</span>
-              <span>
-                {localShots.length} / {totalShotsNeeded} Tersimpan
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+          {/* Floating Minimalist Bottom Control Center (z-20) */}
+          <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 right-3 sm:right-4 z-20 flex flex-col sm:flex-row items-center justify-between gap-3 pointer-events-auto">
+            {/* Captured Photos Floating Mini Tray */}
+            <div className="flex items-center gap-1.5 p-1.5 bg-black/75 backdrop-blur-md border border-white/15 rounded-2xl shadow-xl">
               {Array.from({ length: totalShotsNeeded }).map((_, idx) => {
                 const shotSrc = localShots[idx];
+                const isCurrent = !isRetakeMode && idx === currentShotNumber - 1;
                 const isTargetRetake = isRetakeMode && retakeIndex === idx;
                 return (
                   <div
                     key={idx}
-                    className={`aspect-[4/3] rounded-xl overflow-hidden relative bg-zinc-950 flex items-center justify-center ${
-                      isTargetRetake
-                        ? 'ring-2 ring-[var(--theme-accent,#E11D48)]'
-                        : ''
+                    className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl overflow-hidden relative bg-zinc-900/90 flex items-center justify-center transition-all ${
+                      isTargetRetake || isCurrent
+                        ? 'ring-2 ring-[var(--theme-accent,#E11D48)] shadow-[0_0_12px_rgba(225,29,72,0.5)]'
+                        : 'opacity-70 hover:opacity-100'
                     }`}
                   >
                     {shotSrc ? (
                       <img
                         src={shotSrc}
-                        alt={`Slot foto ${idx + 1}`}
+                        alt={`Foto ${idx + 1}`}
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <span className="text-xs font-mono-tabular text-zinc-600">
-                        Foto #{idx + 1}
+                      <span className="text-[10px] font-mono-tabular text-zinc-400 font-bold">
+                        #{idx + 1}
                       </span>
                     )}
                   </div>
                 );
               })}
             </div>
+
+            {/* Spotlight Shutter Action Buttons */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={isCapturingSequence}
+                onClick={startCountdownSequence}
+                className="px-6 sm:px-8 py-3 sm:py-3.5 text-xs sm:text-sm font-bold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-2xl transition-all whitespace-nowrap cursor-pointer shadow-[0_0_25px_rgba(225,29,72,0.6)] flex items-center gap-2"
+              >
+                <span className="text-base sm:text-lg">📸</span>
+                <span>
+                  {isCapturingSequence
+                    ? `Hitung Mundur (${countdown ?? '...'})`
+                    : isRetakeMode
+                    ? `Ambil Ulang #${(retakeIndex ?? 0) + 1}`
+                    : `Mulai (${settings?.countdownSeconds || 3}s)`}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleInstantCapture}
+                className="px-3.5 sm:px-4 py-3 sm:py-3.5 text-xs font-semibold text-zinc-200 bg-black/75 hover:bg-zinc-800/90 active:scale-95 backdrop-blur-md border border-white/15 rounded-2xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center gap-1.5"
+                title="Ambil foto instan tanpa hitung mundur"
+              >
+                <span>⚡</span>
+                <span className="hidden sm:inline">Instan</span>
+              </button>
+            </div>
+
+            {/* Quick Floating Toggles */}
+            <div className="flex items-center gap-1.5 p-1.5 bg-black/75 backdrop-blur-md border border-white/15 rounded-2xl shadow-xl">
+              <button
+                type="button"
+                onClick={() => setShowCropGuide((prev) => !prev)}
+                className={`px-2.5 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1 ${
+                  showCropGuide
+                    ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+                title="Toggle Garis Panduan Crop"
+              >
+                <span>📐</span>
+                <span className="hidden md:inline">Crop</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowGridLines((prev) => !prev)}
+                className={`px-2.5 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1 ${
+                  showGridLines
+                    ? 'bg-zinc-700 text-white shadow-sm'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+                title="Toggle Grid Rule of Thirds"
+              >
+                <span>⊞</span>
+                <span className="hidden md:inline">Grid</span>
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Dynamic Crop Warning Chip below Spotlight */}
+        {cropInfo.isCropped && showCropGuide && (
+          <div className="mt-3 w-full flex items-center justify-between gap-3 px-4 py-2 bg-zinc-900/90 border border-zinc-800/80 rounded-xl text-xs text-zinc-300">
+            <span className="flex items-center gap-2">
+              <span className="text-amber-400 font-bold shrink-0">ℹ Panduan Komposisi:</span>
+              <span>
+                Bingkai <strong>{activeFrame.name}</strong> ({targetSlot.width}×{targetSlot.height}px).
+                {" "}{cropInfo.label}. Posisikan wajah di dalam kotak panduan merah.
+              </span>
+            </span>
+            <span className="text-[11px] font-mono-tabular text-zinc-500 shrink-0">
+              Slot #{activeSlotIndex + 1}
+            </span>
+          </div>
+        )}
+
+        {/* Studio Simulator Pose Picker */}
+        {useSimulator && (
+          <div className="mt-2 w-full flex flex-wrap items-center justify-between gap-2 bg-zinc-900/80 border border-zinc-800 rounded-xl p-2.5">
+            <span className="text-xs text-zinc-400 pl-1 font-mono-tabular">
+              Preset Simulator Studio:
+            </span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {STUDIO_PORTRAITS.map((pose, idx) => (
+                <button
+                  key={pose.id}
+                  type="button"
+                  onClick={() => setActivePoseIdx(idx)}
+                  className={`px-2.5 py-1 text-xs font-mono-tabular rounded-lg transition-colors cursor-pointer ${
+                    activePoseIdx === idx
+                      ? 'bg-white text-zinc-950 font-bold shadow-sm'
+                      : 'bg-zinc-800/90 text-zinc-300 hover:bg-zinc-700'
+                  }`}
+                >
+                  Pose 0{idx + 1}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -42,6 +42,9 @@ export interface AppSettings {
   mirrorCamera?: boolean;
   cameraSourceMode?: 'auto' | 'simulator';
   showCropGuide?: boolean; // Tampilkan batas panduan area crop kamera
+  printApiEndpoint?: string; // Endpoint URL for multipart/form-data printing API
+  printerName?: string; // Optional printer name string parameter
+  enableShutterSound?: boolean; // Suara kamera saat capture foto
   kioskBackground?: string; // Data URL Base64, preset ID, or external URL
   kioskBackgroundOverlayOpacity?: number; // 20 - 100 percent
   themeColor?: string; // Hex color e.g. '#E11D48'

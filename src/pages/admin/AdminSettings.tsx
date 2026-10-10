@@ -8,6 +8,8 @@ import {
   calculateHoverColor,
 } from '../../data/themeConfig';
 import { KIOSK_HERO_BACKDROP } from '../../data/defaultFrames';
+import { playShutterSound } from '../../services/shutterAudio';
+import { testPrintApi } from '../../services/printServices';
 
 export const AdminSettings: React.FC = () => {
   const [driveUrl, setDriveUrl] = useState(DEFAULT_DRIVE_URL);
@@ -22,6 +24,23 @@ export const AdminSettings: React.FC = () => {
   const [mirrorCamera, setMirrorCamera] = useState<boolean>(true);
   const [showCropGuide, setShowCropGuide] = useState<boolean>(true);
   const [cameraSourceMode, setCameraSourceMode] = useState<'auto' | 'simulator'>('auto');
+
+  // Hardware: Print Server API & Shutter Sound
+  const [printApiEndpoint, setPrintApiEndpoint] = useState<string>(
+    DEFAULT_APP_SETTINGS.printApiEndpoint || ''
+  );
+  const [printerName, setPrinterName] = useState<string>(
+    DEFAULT_APP_SETTINGS.printerName || ''
+  );
+  const [enableShutterSound, setEnableShutterSound] = useState<boolean>(
+    DEFAULT_APP_SETTINGS.enableShutterSound ?? true
+  );
+  const [testingApi, setTestingApi] = useState<boolean>(false);
+  const [testApiResult, setTestApiResult] = useState<{
+    success: boolean;
+    message: string;
+    jobId?: string;
+  } | null>(null);
 
   // Tema & Background Kiosk
   const [themeColor, setThemeColor] = useState<string>(DEFAULT_APP_SETTINGS.themeColor || '#E11D48');
@@ -63,6 +82,15 @@ export const AdminSettings: React.FC = () => {
         }
         if (data.cameraSourceMode) {
           setCameraSourceMode(data.cameraSourceMode);
+        }
+        if (data.printApiEndpoint !== undefined) {
+          setPrintApiEndpoint(data.printApiEndpoint);
+        }
+        if (data.printerName !== undefined) {
+          setPrinterName(data.printerName);
+        }
+        if (typeof data.enableShutterSound === 'boolean') {
+          setEnableShutterSound(data.enableShutterSound);
         }
         if (data.themeColor) {
           setThemeColor(data.themeColor);
@@ -170,6 +198,33 @@ export const AdminSettings: React.FC = () => {
     return kioskBackground;
   }, [kioskBackground]);
 
+  const handleTestShutterSound = () => {
+    playShutterSound();
+  };
+
+  const handleTestPrintApi = async () => {
+    if (!printApiEndpoint.trim()) {
+      setTestApiResult({
+        success: false,
+        message: 'Harap isi URL Print API Endpoint terlebih dahulu untuk melakukan uji coba.',
+      });
+      return;
+    }
+    setTestingApi(true);
+    setTestApiResult(null);
+    try {
+      const res = await testPrintApi(printApiEndpoint.trim(), printerName.trim());
+      setTestApiResult(res);
+    } catch (err) {
+      setTestApiResult({
+        success: false,
+        message: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setTestingApi(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -189,6 +244,9 @@ export const AdminSettings: React.FC = () => {
       mirrorCamera,
       showCropGuide,
       cameraSourceMode,
+      printApiEndpoint: printApiEndpoint.trim(),
+      printerName: printerName.trim(),
+      enableShutterSound,
       themeColor,
       themePreset,
       kioskBackground,
@@ -218,12 +276,16 @@ export const AdminSettings: React.FC = () => {
     setAutoDownload(true);
     setMirrorCamera(true);
     setCameraSourceMode('auto');
+    setPrintApiEndpoint(DEFAULT_APP_SETTINGS.printApiEndpoint || '');
+    setPrinterName(DEFAULT_APP_SETTINGS.printerName || '');
+    setEnableShutterSound(DEFAULT_APP_SETTINGS.enableShutterSound ?? true);
     setThemeColor(DEFAULT_APP_SETTINGS.themeColor || '#E11D48');
     setThemePreset(DEFAULT_APP_SETTINGS.themePreset || 'crimson');
     setKioskBackground('');
     setKioskBackgroundOverlayOpacity(60);
     setCustomBackdropUrl('');
     setUploadNotice(null);
+    setTestApiResult(null);
     applyThemeColor('#E11D48');
     setSaveMessage('Pengaturan & tema dikembalikan ke konfigurasi bawaan pabrik.');
   };
@@ -695,6 +757,153 @@ export const AdminSettings: React.FC = () => {
                     Tampilkan Panduan Batas Crop Kamera secara default (menampilkan area yang terpotong saat ukuran foto bingkai berbeda dari rasio kamera)
                   </span>
                 </label>
+              </div>
+
+              {/* Bagian: Suara Shutter Kamera */}
+              <div className="pt-4 border-t border-neutral-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
+                      <span>🔊 Suara Shutter Kamera (Mekanik SLR)</span>
+                    </h3>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      Efek audio jepretan kamera mekanik klasik dengan synthesizer Web Audio API offline.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleTestShutterSound}
+                    className="px-3 py-1.5 text-xs font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                    title="Uji coba dengarkan efek suara shutter mekanik"
+                  >
+                    <span>▶️ Uji Suara</span>
+                  </button>
+                </div>
+
+                <label className="flex items-start gap-3 cursor-pointer bg-neutral-50 p-3 rounded-xl border border-neutral-200">
+                  <input
+                    type="checkbox"
+                    checked={enableShutterSound}
+                    onChange={(e) => setEnableShutterSound(e.target.checked)}
+                    style={{ accentColor: themeColor }}
+                    className="w-4 h-4 mt-0.5 rounded cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-neutral-800">
+                      Aktifkan efek suara shutter saat kamera mengambil foto
+                    </span>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      Jika diaktifkan, suara shutter mekanik kamera SLR akan berbunyi tepat saat hitung mundur selesai dan lampu kilat (flash) menyala.
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              {/* Bagian: Integrasi Eksternal Print API */}
+              <div className="pt-4 border-t border-neutral-200 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
+                      <span>🖨️ Integrasi Eksternal Print API</span>
+                      <span className="px-2 py-0.5 text-[10px] font-mono-tabular font-semibold bg-blue-50 text-blue-700 border border-blue-200 rounded">
+                        multipart/form-data
+                      </span>
+                    </h3>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      Hubungkan photobox dengan print server fisik lokal (driver DNP, Epson receipt, CUPS server, atau relay kiosk).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="printApiEndpointInput"
+                    className="block text-xs font-semibold text-neutral-700"
+                  >
+                    URL Endpoint Print API
+                  </label>
+                  <input
+                    id="printApiEndpointInput"
+                    type="url"
+                    value={printApiEndpoint}
+                    onChange={(e) => setPrintApiEndpoint(e.target.value)}
+                    placeholder="http://localhost:5000/print atau http://192.168.1.50:8000/api/print"
+                    className="w-full px-3.5 py-2 text-sm bg-[#F4F4F0] border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900 font-mono-tabular"
+                  />
+                  <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-xl space-y-1.5 text-xs text-neutral-600">
+                    <p className="font-medium text-neutral-800">
+                      Spesifikasi Payload HTTP POST:
+                    </p>
+                    <ul className="list-disc pl-4 space-y-1 font-mono-tabular text-[11px] text-neutral-600">
+                      <li>
+                        <strong className="text-neutral-800">image</strong> (Binary File): File gambar PNG hasil cetakan photobox.
+                      </li>
+                      <li>
+                        <strong className="text-neutral-800">printer</strong> (String, opsional): Nama printer tujuan di mesin server.
+                      </li>
+                    </ul>
+                    <p className="text-[11px] text-neutral-500 pt-0.5">
+                      * Jika URL endpoint dikosongkan, aplikasi akan otomatis menggunakan mode simulasi cetak offline (mock fallback).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="printerNameInput"
+                    className="block text-xs font-semibold text-neutral-700"
+                  >
+                    Nama Printer Tujuan (Parameter Opsional)
+                  </label>
+                  <input
+                    id="printerNameInput"
+                    type="text"
+                    value={printerName}
+                    onChange={(e) => setPrinterName(e.target.value)}
+                    placeholder="Contoh: DNP_DS_RX1HS atau EPSON_TM_T82"
+                    className="w-full px-3 py-2 text-sm bg-[#F4F4F0] border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900 font-mono-tabular"
+                  />
+                  <p className="text-[11px] text-neutral-500">
+                    Nilai ini akan diteruskan ke parameter form field <code className="text-neutral-700 font-bold">printer</code> saat memanggil API.
+                  </p>
+                </div>
+
+                <div className="pt-1 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <button
+                    type="button"
+                    disabled={testingApi}
+                    onClick={handleTestPrintApi}
+                    className="px-4 py-2 text-xs font-semibold text-neutral-800 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 rounded-xl transition-all cursor-pointer disabled:opacity-50 flex items-center gap-2 shadow-xs"
+                  >
+                    <span>🖨️</span>
+                    <span>{testingApi ? 'Mengirim Test Job...' : 'Uji Koneksi Print API'}</span>
+                  </button>
+
+                  <span className="text-[11px] text-neutral-500">
+                    Mengirim pola gambar uji coba sintetis untuk memverifikasi respon server tanpa memulai sesi foto baru.
+                  </span>
+                </div>
+
+                {testApiResult && (
+                  <div
+                    role="status"
+                    className={`p-3 rounded-xl border text-xs font-mono-tabular ${
+                      testApiResult.success
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                        : 'bg-amber-50 border-amber-300 text-amber-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span>{testApiResult.success ? '✅' : '⚠️'}</span>
+                      <span className="font-semibold">
+                        {testApiResult.success ? 'Hasil Uji Koneksi Berhasil:' : 'Hasil Uji Koneksi Gagal:'}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] pl-6 break-all">
+                      {testApiResult.message}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
