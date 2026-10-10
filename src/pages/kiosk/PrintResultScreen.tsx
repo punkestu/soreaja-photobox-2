@@ -41,7 +41,7 @@ export const PrintResultScreen: React.FC = () => {
   const [isGeneratingGif, setIsGeneratingGif] = useState<boolean>(false);
   const [gifProgress, setGifProgress] = useState<number>(0);
   const [printStatus, setPrintStatus] = useState<string>(
-    'Menghubungkan ke Printer...'
+    'Memproses foto...'
   );
   const [printError, setPrintError] = useState<string | null>(null);
   const [isPrintingThermal, setIsPrintingThermal] = useState<boolean>(false);
@@ -52,6 +52,7 @@ export const PrintResultScreen: React.FC = () => {
   const [stripDisplayMode, setStripDisplayMode] = useState<'single' | 'double'>('double');
 
   const hasInitializedRef = useRef<boolean>(false);
+  const sessionIdRef = useRef<number | null>(null);
   const activeFrame = selectedFrame || DEFAULT_FRAMES[0];
 
   // Sesuai TSD 4.2.6: Proses On-Mount
@@ -65,10 +66,6 @@ export const PrintResultScreen: React.FC = () => {
       let currentDriveUrl = DEFAULT_DRIVE_URL;
       let shouldAutoDownload = true;
       let themeAccent = '#E11D48';
-      let targetApiEndpoint = '';
-      let targetPrinterName = '';
-      let targetThermalPrinter = '';
-      let targetColorPrinter = '';
       try {
         const data = await db.settings.get('app_settings');
         if (data && data.driveUrl) {
@@ -80,19 +77,6 @@ export const PrintResultScreen: React.FC = () => {
         }
         if (data && data.themeColor) {
           themeAccent = data.themeColor;
-        }
-        if (data && data.printApiEndpoint) {
-          targetApiEndpoint = data.printApiEndpoint;
-        }
-        if (data && data.thermalPrinterName) {
-          targetThermalPrinter = data.thermalPrinterName;
-        } else if (data && data.printerName) {
-          targetThermalPrinter = data.printerName;
-        }
-        if (data && data.colorPrinterName) {
-          targetColorPrinter = data.colorPrinterName;
-        } else if (data && data.printerName) {
-          targetColorPrinter = data.printerName;
         }
       } catch {
         // Fallback default URL
@@ -158,32 +142,9 @@ export const PrintResultScreen: React.FC = () => {
       );
       setDownloadedManifest(files);
 
-      // 4. Jalankan fungsi Cetak (Thermal: Selalu 1-Strip ke thermalPrinterName)
-      setIsPrintingThermal(true);
-      setPrintError(null);
-      setPrintStatus(
-        targetApiEndpoint
-          ? `Mengirim 1-strip ke Print API (${targetThermalPrinter || 'Thermal'})...`
-          : 'Menghubungkan ke Printer Thermal (Simulasi)...'
-      );
+      // 4. Simpan riwayat sesi ke IndexedDB (Status cetak awal: false, hanya dicetak saat tombol ditekan)
       try {
-        const thermalRes = await printThermal(
-          layoutToUse, // Selalu kirim 1 strip untuk thermal
-          targetApiEndpoint,
-          targetThermalPrinter
-        );
-        setIsPrintingThermal(false);
-        setPrintStatus(`✅ ${thermalRes.message} · ID: ${thermalRes.jobId}`);
-      } catch (err) {
-        setIsPrintingThermal(false);
-        const errMsg = err instanceof Error ? err.message : String(err);
-        setPrintStatus(`⚠️ Gagal Print Thermal: ${errMsg}`);
-        setPrintError(errMsg);
-      }
-
-      // 5. Simpan riwayat sesi ke IndexedDB
-      try {
-        await db.sessions.add({
+        const newSessionId = await db.sessions.add({
           timestamp: Date.now(),
           frameId: activeFrame.id,
           frameName: activeFrame.name,
@@ -191,12 +152,15 @@ export const PrintResultScreen: React.FC = () => {
           finalLayoutBase64: layoutToUse,
           doubleStripBase64: doubleStripToUse,
           driveUrl: currentDriveUrl,
-          printedThermal: true,
+          printedThermal: false,
           printedColor: false,
         });
+        sessionIdRef.current = Number(newSessionId);
       } catch {
         // Ignore DB archive error
       }
+
+      setPrintStatus('Siap Cetak · Silakan tekan tombol Print Thermal atau Print Warna');
     };
 
     runOnMountPipeline();
@@ -214,7 +178,9 @@ export const PrintResultScreen: React.FC = () => {
     showFrameStamps,
   ]);
 
-  const handleReprintThermal = async () => {
+  const handlePrintThermal = async () => {
+    const layout = finalLayoutBase64;
+    if (!layout) return;
     setIsPrintingThermal(true);
     setPrintError(null);
     const targetPrinter = settings?.thermalPrinterName || settings?.printerName;
@@ -225,11 +191,14 @@ export const PrintResultScreen: React.FC = () => {
     );
     try {
       const res = await printThermal(
-        finalLayoutBase64, // Selalu kirim 1-strip untuk thermal
+        layout, // Selalu kirim 1-strip untuk thermal
         settings?.printApiEndpoint,
         targetPrinter
       );
       setPrintStatus(`✅ Cetak Thermal Berhasil (${res.jobId}) · ${res.message}`);
+      if (sessionIdRef.current) {
+        await db.sessions.update(sessionIdRef.current, { printedThermal: true });
+      }
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       setPrintStatus(`⚠️ Gagal Print Thermal: ${errMsg}`);
@@ -263,6 +232,9 @@ export const PrintResultScreen: React.FC = () => {
       setPrintStatus(
         `✅ Cetak Warna Selesai (${res.jobId}) · ${res.message}`
       );
+      if (sessionIdRef.current) {
+        await db.sessions.update(sessionIdRef.current, { printedColor: true });
+      }
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       setPrintStatus(`⚠️ Gagal Print Warna: ${errMsg}`);
@@ -313,17 +285,17 @@ export const PrintResultScreen: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
           <button
             type="button"
-            disabled={isPrintingThermal}
-            onClick={handleReprintThermal}
+            disabled={isPrintingThermal || !finalLayoutBase64}
+            onClick={handlePrintThermal}
             className="min-h-[50px] sm:min-h-[54px] px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-bold text-zinc-100 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-md flex items-center gap-2"
           >
             <span>🖨️</span>
-            <span>{isPrintingThermal ? 'Mencetak Thermal...' : 'Print Ulang Thermal'}</span>
+            <span>{isPrintingThermal ? 'Mencetak Thermal...' : 'Print Thermal'}</span>
           </button>
 
           <button
             type="button"
-            disabled={isPrintingColor}
+            disabled={isPrintingColor || (!doubleStripBase64 && !finalLayoutBase64)}
             onClick={handlePrintColor}
             className="min-h-[50px] sm:min-h-[54px] px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-bold text-zinc-100 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-md flex items-center gap-2"
           >
@@ -362,7 +334,7 @@ export const PrintResultScreen: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={handleReprintThermal}
+              onClick={handlePrintThermal}
               className="px-3.5 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white font-medium rounded-xl transition-colors cursor-pointer text-xs"
             >
               Coba Cetak Thermal
