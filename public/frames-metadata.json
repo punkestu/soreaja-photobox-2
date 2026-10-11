@@ -1,5 +1,67 @@
 [
   {
+    "id": "hbd-1",
+    "name": "Happy Birthday 1 (3-Cut)",
+    "subtitle": "Classic Korean Photobox 3-Cut Vertical",
+    "theme": "Dark Minimalist",
+    "canvasWidth": 602,
+    "canvasHeight": 1794,
+    "previewImg": "/assets/frames/hbd-1-preview.png",
+    "frameImg": "/assets/frames/hbd-1-photo.png",
+    "photoCount": 3,
+    "positions": [
+      {
+        "x": 80,
+        "y": 470,
+        "width": 450,
+        "height": 350
+      },
+      {
+        "x": 70,
+        "y": 840,
+        "width": 460,
+        "height": 350
+      },
+      {
+        "x": 80,
+        "y": 1210,
+        "width": 450,
+        "height": 370
+      }
+    ]
+  },
+  {
+    "id": "hbd-2",
+    "name": "Happy Birthday 1 (3-Cut)",
+    "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+    "theme": "Dark Minimalist",
+    "canvasWidth": 602,
+    "canvasHeight": 1794,
+    "previewImg": "/assets/frames/hbd-2-preview.png",
+    "frameImg": "/assets/frames/hbd-2-photo.png",
+    "photoCount": 3,
+    "positions": [
+      {
+        "x": 30,
+        "y": 100,
+        "width": 520,
+        "height": 370
+      },
+      {
+        "x": 20,
+        "y": 520,
+        "width": 520,
+        "height": 360
+      },
+      {
+        "x": 30,
+        "y": 940,
+        "width": 510,
+        "height": 350
+      }
+    ]
+  },
+  {
     "id": "analog-3_transparent",
     "name": "analog (3 cut)",
     "subtitle": "Classic Korean Photobox 4-Cut Vertical",
