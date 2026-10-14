@@ -65,6 +65,8 @@ export interface SessionRecord {
   driveUrl: string;
   printedThermal: boolean;
   printedColor: boolean;
+  thermalPrintCount?: number;
+  colorPrintCount?: number;
 }
 
 export interface ActiveSessionRecord {

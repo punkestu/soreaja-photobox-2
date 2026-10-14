@@ -46,6 +46,8 @@ export const PrintResultScreen: React.FC = () => {
   const [printError, setPrintError] = useState<string | null>(null);
   const [isPrintingThermal, setIsPrintingThermal] = useState<boolean>(false);
   const [isPrintingColor, setIsPrintingColor] = useState<boolean>(false);
+  const [thermalPrintCount, setThermalPrintCount] = useState<number>(0);
+  const [colorPrintCount, setColorPrintCount] = useState<number>(0);
   const [downloadedManifest, setDownloadedManifest] = useState<
     DownloadedFileManifest[]
   >([]);
@@ -195,9 +197,14 @@ export const PrintResultScreen: React.FC = () => {
         settings?.printApiEndpoint,
         targetPrinter
       );
-      setPrintStatus(`✅ Cetak Thermal Berhasil (${res.jobId}) · ${res.message}`);
+      const nextCount = thermalPrintCount + 1;
+      setThermalPrintCount(nextCount);
+      setPrintStatus(`Cetak Thermal Berhasil (${nextCount}x dicetak · ${res.jobId}) · ${res.message}`);
       if (sessionIdRef.current) {
-        await db.sessions.update(sessionIdRef.current, { printedThermal: true });
+        await db.sessions.update(sessionIdRef.current, {
+          printedThermal: true,
+          thermalPrintCount: nextCount,
+        });
       }
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
@@ -229,11 +236,16 @@ export const PrintResultScreen: React.FC = () => {
         settings?.printApiEndpoint,
         targetPrinter
       );
+      const nextCount = colorPrintCount + 1;
+      setColorPrintCount(nextCount);
       setPrintStatus(
-        `✅ Cetak Warna Selesai (${res.jobId}) · ${res.message}`
+        `Cetak Warna Selesai (${nextCount}x dicetak · ${res.jobId}) · ${res.message}`
       );
       if (sessionIdRef.current) {
-        await db.sessions.update(sessionIdRef.current, { printedColor: true });
+        await db.sessions.update(sessionIdRef.current, {
+          printedColor: true,
+          colorPrintCount: nextCount,
+        });
       }
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
@@ -250,8 +262,16 @@ export const PrintResultScreen: React.FC = () => {
     setPrintStatus('Menjalankan simulasi cetak offline...');
     const imageToPrint = doubleStripBase64 || finalLayoutBase64;
     const res = await printColor(imageToPrint, undefined, undefined);
+    const nextCount = colorPrintCount + 1;
+    setColorPrintCount(nextCount);
     setIsPrintingColor(false);
-    setPrintStatus(`✅ Simulasi Cetak Selesai (${res.jobId}) · Mode Offline`);
+    setPrintStatus(`Simulasi Cetak Selesai (${nextCount}x dicetak · ${res.jobId}) · Mode Offline`);
+    if (sessionIdRef.current) {
+      await db.sessions.update(sessionIdRef.current, {
+        printedColor: true,
+        colorPrintCount: nextCount,
+      });
+    }
   };
 
   const handleNewSession = () => {
@@ -265,48 +285,61 @@ export const PrintResultScreen: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-white/5">
         <div>
           <div className="text-xs sm:text-sm font-mono-tabular text-zinc-400 flex items-center gap-2 mb-1.5">
-            <span className="text-[var(--theme-accent,#E11D48)] font-bold">Tahap 06/06</span>
+            <span className="text-[var(--theme-accent,#E11D48)] font-bold">🏁 Selesai 06/06</span>
             <span aria-hidden="true">·</span>
-            <span>Sesi Selesai</span>
+            <span>💾 Unduh Otomatis</span>
             <span aria-hidden="true">·</span>
-            <span>Auto-Download & Cetak</span>
+            <span>🖨️ Cetak Studio</span>
           </div>
           <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#F4F4F0]">
-            Hasil Akhir Photobox & QR Code
+            Hasil Photobox & QR Code
           </h1>
           <p
             role="status"
-            className="text-xs sm:text-sm font-mono-tabular text-emerald-400 font-semibold mt-1.5"
+            className="text-xs sm:text-sm font-mono-tabular text-emerald-400 font-semibold mt-1.5 flex items-center gap-1.5"
           >
-            {printStatus}
+            <span>{printStatus.startsWith('✅') ? '✅' : printStatus.startsWith('⚠️') ? '⚠️' : '⚡'}</span>
+            <span>{printStatus}</span>
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <button
             type="button"
             disabled={isPrintingThermal || !finalLayoutBase64}
             onClick={handlePrintThermal}
-            className="min-h-[50px] sm:min-h-[54px] px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-bold text-zinc-100 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-md flex items-center gap-2"
+            className="min-h-[46px] sm:min-h-[50px] grow px-4 sm:px-5 py-2 text-xs sm:text-sm font-bold text-zinc-100 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-md flex items-center justify-center gap-2"
           >
             <span>🖨️</span>
-            <span>{isPrintingThermal ? 'Mencetak Thermal...' : 'Print Thermal'}</span>
+            <span>
+              {isPrintingThermal
+                ? 'Mencetak...'
+                : thermalPrintCount > 0
+                ? `Thermal (${thermalPrintCount}x)`
+                : 'Thermal'}
+            </span>
           </button>
 
           <button
             type="button"
             disabled={isPrintingColor || (!doubleStripBase64 && !finalLayoutBase64)}
             onClick={handlePrintColor}
-            className="min-h-[50px] sm:min-h-[54px] px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-bold text-zinc-100 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-md flex items-center gap-2"
+            className="min-h-[46px] sm:min-h-[50px] grow px-4 sm:px-5 py-2 text-xs sm:text-sm font-bold text-zinc-100 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-md flex items-center justify-center gap-2"
           >
             <span>🎨</span>
-            <span>{isPrintingColor ? 'Mencetak Warna (3d)...' : 'Print Warna'}</span>
+            <span>
+              {isPrintingColor
+                ? 'Mencetak...'
+                : colorPrintCount > 0
+                ? `Warna (${colorPrintCount}x)`
+                : 'Warna'}
+            </span>
           </button>
 
           <button
             type="button"
             onClick={handleNewSession}
-            className="min-h-[50px] sm:min-h-[54px] px-8 sm:px-10 py-2.5 text-sm sm:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center gap-2"
+            className="min-h-[46px] sm:min-h-[50px] grow px-6 sm:px-8 py-2 text-sm sm:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center justify-center gap-2"
           >
             <span>Sesi Baru</span>
             <span>✨</span>
@@ -328,113 +361,126 @@ export const PrintResultScreen: React.FC = () => {
             <button
               type="button"
               onClick={handlePrintColor}
-              className="px-3.5 py-1.5 bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] text-white font-semibold rounded-xl transition-colors cursor-pointer shadow-sm text-xs"
+              className="px-3 py-1.5 bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] text-white font-semibold rounded-xl transition-colors cursor-pointer shadow-sm text-xs flex items-center gap-1.5"
             >
-              Coba Cetak Warna
+              <span>🎨</span>
+              <span>Cetak Warna</span>
             </button>
             <button
               type="button"
               onClick={handlePrintThermal}
-              className="px-3.5 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white font-medium rounded-xl transition-colors cursor-pointer text-xs"
+              className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white font-medium rounded-xl transition-colors cursor-pointer text-xs flex items-center gap-1.5"
             >
-              Coba Cetak Thermal
+              <span>🖨️</span>
+              <span>Cetak Thermal</span>
             </button>
             <button
               type="button"
               onClick={handleFallbackMockPrint}
-              className="px-3.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium rounded-xl transition-colors cursor-pointer text-xs"
+              className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium rounded-xl transition-colors cursor-pointer text-xs flex items-center gap-1.5"
             >
-              Simulasi Offline
+              <span>🧪</span>
+              <span>Simulasi</span>
             </button>
             <button
               type="button"
               onClick={() => navigate('/admin/settings')}
-              className="px-3.5 py-1.5 bg-amber-900/60 hover:bg-amber-900 text-amber-200 border border-amber-600/50 font-medium rounded-xl transition-colors cursor-pointer text-xs"
+              className="px-3 py-1.5 bg-amber-900/60 hover:bg-amber-900 text-amber-200 border border-amber-600/50 font-medium rounded-xl transition-colors cursor-pointer text-xs flex items-center gap-1.5"
             >
-              ⚙️ Buka Pengaturan
+              <span>⚙️</span>
+              <span>Pengaturan</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* 3-Column Result Showcase: Tablet-First Balanced Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 md:gap-8 items-start">
-        {/* Column 1: Final Framed Photo Strip - Tablet Left Col */}
-        <div className="md:col-span-1 lg:col-span-5 bg-zinc-900/80 rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl border border-zinc-800/70">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div>
-              <h2 className="font-display text-base font-bold text-[#F4F4F0]">
-                01. Hasil Cetak Berbingkai
-              </h2>
-              <p className="text-xs text-zinc-400">{activeFrame.name}</p>
-            </div>
+      {/* Top Showcase: 2 Enlarged Columns (01. Hasil Cetak Berbingkai & 02. Animasi GIF) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 items-stretch">
+        {/* Column 1: Final Framed Photo Strip (Enlarged) */}
+        <div className="bg-zinc-900/80 rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl border border-zinc-800/70 flex flex-col justify-between">
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div>
+                <h2 className="font-display text-base sm:text-lg font-bold text-[#F4F4F0] flex items-center gap-2">
+                  <span>🖼️</span>
+                  <span>Hasil Cetak Berbingkai</span>
+                </h2>
+                <p className="text-xs text-zinc-400">Bingkai: {activeFrame.name}</p>
+              </div>
 
-            <div className="flex items-center gap-2">
-              {doubleStripBase64 && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    downloadSingleFile(
-                      doubleStripBase64,
-                      `PB_${Date.now()}_side_by_side_2strip.png`
-                    )
-                  }
-                  className="min-h-[44px] px-3.5 py-2 text-xs sm:text-sm font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-sm"
-                  title="Unduh 2 strip berdampingan untuk cetak kertas 4R"
-                >
-                  Unduh 2-Strip (4R)
-                </button>
-              )}
-              {finalLayoutBase64 && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    downloadSingleFile(
-                      finalLayoutBase64,
-                      `PB_${Date.now()}_strip_single.png`
-                    )
-                  }
-                  className="min-h-[44px] px-3.5 py-2 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer"
-                  title="Unduh 1 strip tunggal"
-                >
-                  {doubleStripBase64 ? 'Unduh 1-Strip' : 'Unduh PNG'}
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Toggle View jika 2-strip tersedia */}
-          {doubleStripBase64 && (
-            <div className="flex items-center justify-between bg-zinc-950/80 p-2 rounded-xl border border-zinc-800/80 text-xs">
-              <span className="text-xs text-zinc-400 pl-2">Pratinjau:</span>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setStripDisplayMode('single')}
-                  className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
-                    stripDisplayMode === 'single'
-                      ? 'bg-zinc-700 text-white'
-                      : 'text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  📱 Strip Tunggal
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStripDisplayMode('double')}
-                  className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
-                    stripDisplayMode === 'double'
-                      ? 'bg-[var(--theme-accent,#E11D48)] text-white'
-                      : 'text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  👥 2-Strip Side-by-Side (4R)
-                </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                {doubleStripBase64 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      downloadSingleFile(
+                        doubleStripBase64,
+                        `PB_${Date.now()}_side_by_side_2strip.png`
+                      )
+                    }
+                    className="min-h-[42px] px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-sm flex items-center gap-1.5"
+                    title="Unduh 2 strip berdampingan dengan garis potong untuk cetak 4R"
+                  >
+                    <span>📥</span>
+                    <span>2-Strip (4R)</span>
+                  </button>
+                )}
+                {finalLayoutBase64 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      downloadSingleFile(
+                        finalLayoutBase64,
+                        `PB_${Date.now()}_strip_single.png`
+                      )
+                    }
+                    className="min-h-[42px] px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5"
+                    title="Unduh 1 strip tunggal"
+                  >
+                    <span>📥</span>
+                    <span>{doubleStripBase64 ? '1-Strip' : 'PNG'}</span>
+                  </button>
+                )}
               </div>
             </div>
-          )}
 
-          <div className="bg-zinc-950 rounded-xl p-4 flex flex-col items-center justify-center min-h-[400px] gap-2 border border-zinc-800/60">
+            {/* Toggle View jika 2-strip tersedia */}
+            {doubleStripBase64 && (
+              <div className="flex items-center justify-between bg-zinc-950/80 p-2 rounded-xl border border-zinc-800/80 text-xs">
+                <span className="text-xs text-zinc-400 pl-2 font-medium">Format:</span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setStripDisplayMode('single')}
+                    className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
+                      stripDisplayMode === 'single'
+                        ? 'bg-zinc-700 text-white'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    📱 1-Strip
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStripDisplayMode('double')}
+                    className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 ${
+                      stripDisplayMode === 'double'
+                        ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <span>👥 2-Strip (4R)</span>
+                    <span className="text-[10px] px-1 bg-white/20 text-white rounded font-mono">
+                      ✂️ Garis Potong
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Enlarged Framed Image Viewport */}
+          <div className="bg-zinc-950 rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center min-h-[500px] sm:min-h-[580px] gap-3 border border-zinc-800/60 flex-1">
             {finalLayoutBase64 ? (
               <>
                 <img
@@ -444,12 +490,14 @@ export const PrintResultScreen: React.FC = () => {
                       : finalLayoutBase64
                   }
                   alt="Hasil akhir strip foto berbingkai"
-                  className="max-h-[440px] w-auto object-contain rounded shadow-2xl"
+                  className="max-h-[560px] sm:max-h-[640px] md:max-h-[680px] w-auto max-w-full object-contain rounded-xl shadow-2xl transition-all"
                 />
-                <p className="text-[11px] font-mono-tabular text-zinc-400 text-center">
-                  {stripDisplayMode === 'double' && doubleStripBase64
-                    ? '👥 Mode 2-Strip Side-by-Side · Cetak ganda untuk kertas 4R (4×6")'
-                    : '📱 Mode Strip Tunggal · 80mm Roll / Thermal'}
+                <p className="text-[11px] font-mono-tabular text-zinc-400 text-center flex items-center gap-2">
+                  <span>
+                    {stripDisplayMode === 'double' && doubleStripBase64
+                      ? '👥 Mode 2-Strip Side-by-Side dengan Garis Potong Tebal · Standar 4R (4×6")'
+                      : '📱 Mode 1-Strip Tunggal · Kertas Roll 80mm / Thermal'}
+                  </span>
                 </p>
               </>
             ) : (
@@ -460,103 +508,157 @@ export const PrintResultScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Column 2: Animated GIF (gif.js) - Tablet Right Col */}
-        <div className="md:col-span-1 lg:col-span-4 bg-zinc-900/80 rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl border border-zinc-800/70">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="font-display text-base font-bold text-[#F4F4F0]">
-                02. Animasi GIF (gif.js)
-              </h2>
-              <p className="text-xs text-zinc-400">600×400px · Delay 500ms</p>
+        {/* Column 2: Animated GIF (gif.js) (Enlarged) */}
+        <div className="bg-zinc-900/80 rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl border border-zinc-800/70 flex flex-col justify-between">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-display text-base sm:text-lg font-bold text-[#F4F4F0] flex items-center gap-2">
+                  <span>🎞️</span>
+                  <span>Animasi GIF</span>
+                </h2>
+                <p className="text-xs text-zinc-400">600×400px · Loop 500ms</p>
+              </div>
+              {gifBlobUrl && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    downloadSingleFile(gifBlobUrl, `PB_${Date.now()}_anim.gif`)
+                  }
+                  className="min-h-[42px] px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>📥</span>
+                  <span>Unduh GIF</span>
+                </button>
+              )}
             </div>
-            {gifBlobUrl && (
-              <button
-                type="button"
-                onClick={() =>
-                  downloadSingleFile(gifBlobUrl, `PB_${Date.now()}_anim.gif`)
-                }
-                className="min-h-[44px] px-3.5 py-2 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer"
-              >
-                Unduh GIF
-              </button>
-            )}
+
+            <div className="flex items-center justify-between bg-zinc-950/80 p-2.5 rounded-xl border border-zinc-800/80 text-xs">
+              <span className="text-xs text-zinc-400 font-medium">Status GIF:</span>
+              <div className="flex items-center gap-2 text-xs font-mono-tabular text-zinc-300">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Boomerang Loop</span>
+              </div>
+            </div>
           </div>
 
-          <div className="aspect-[3/2] bg-zinc-950 rounded-xl overflow-hidden flex items-center justify-center border border-zinc-800/60">
+          {/* Enlarged Animated GIF Viewport */}
+          <div className="relative min-h-[500px] sm:min-h-[580px] bg-zinc-950 rounded-2xl overflow-hidden flex flex-col items-center justify-center border border-zinc-800/80 p-4 sm:p-5 shadow-inner flex-1">
             {isGeneratingGif ? (
-              <div className="text-center space-y-2 p-4">
-                <p className="text-xs font-mono-tabular text-zinc-300">
-                  Merender GIF via Web Worker ({gifProgress}%)...
+              <div className="text-center space-y-3 p-6">
+                <div className="w-12 h-12 border-3 border-[var(--theme-accent,#E11D48)] border-t-transparent rounded-full animate-spin mx-auto" />
+                <p className="text-sm font-mono-tabular text-zinc-200 font-semibold">
+                  Merender Animasi GIF ({gifProgress}%)...
                 </p>
-                <p className="text-[11px] text-zinc-500">/assets/gif.worker.js</p>
+                <p className="text-xs text-zinc-500">Memproses pose via Web Worker</p>
               </div>
             ) : gifBlobUrl ? (
-              <img
-                data-testid="generated-gif-preview"
-                src={gifBlobUrl}
-                alt="Animasi GIF Sesi Photobox"
-                className="w-full h-full object-cover"
-              />
+              <div className="w-full h-full flex flex-col items-center justify-center">
+                <img
+                  data-testid="generated-gif-preview"
+                  src={gifBlobUrl}
+                  alt="Animasi GIF Sesi Photobox"
+                  className="max-h-[480px] sm:max-h-[540px] md:max-h-[580px] w-auto max-w-full rounded-xl object-contain shadow-2xl transition-all"
+                />
+                <div className="mt-3 flex items-center gap-2 text-xs font-mono-tabular text-zinc-400">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Animasi Siap Dibagikan</span>
+                </div>
+              </div>
             ) : (
-              <span className="text-xs text-zinc-500">Menyiapkan GIF...</span>
+              <span className="text-xs text-zinc-500 font-mono-tabular">Menyiapkan GIF...</span>
             )}
           </div>
 
           {/* Auto-Download Manifest Summary */}
           <div className="pt-3 border-t border-zinc-800/80 space-y-2">
-            <p className="text-xs font-semibold text-zinc-300">
-              File Sesi Lokal ({downloadedManifest.length} File):
+            <p className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+              <span>💾</span>
+              <span>File Sesi Tersimpan ({downloadedManifest.length}):</span>
             </p>
-            <ul className="space-y-1 text-xs font-mono-tabular text-zinc-400 max-h-36 overflow-y-auto">
+            <ul className="space-y-1 text-xs font-mono-tabular text-zinc-400 max-h-28 overflow-y-auto pr-1">
               {downloadedManifest.map((item) => (
                 <li
                   key={item.filename}
                   className="flex items-center justify-between py-1 border-b border-zinc-800/50"
                 >
-                  <span className="truncate max-w-[200px]">{item.filename}</span>
+                  <span className="truncate max-w-[240px]">{item.filename}</span>
                   <button
                     type="button"
                     onClick={() => downloadSingleFile(item.url, item.filename)}
-                    className="text-zinc-200 hover:text-white underline ml-2 shrink-0 cursor-pointer"
+                    className="text-zinc-200 hover:text-white underline ml-2 shrink-0 cursor-pointer flex items-center gap-1"
                   >
-                    Simpan
+                    <span>📥</span>
+                    <span>Simpan</span>
                   </button>
                 </li>
               ))}
             </ul>
           </div>
         </div>
+      </div>
 
-        {/* Column 3: QR Code Google Drive - Tablet Full Width Banner / Desktop Col 3 */}
-        <div className="md:col-span-2 lg:col-span-3 bg-zinc-900/80 rounded-2xl p-5 sm:p-6 space-y-5 shadow-xl border border-zinc-800/70">
-          <div className="space-y-2">
-            <h2 className="font-display text-base font-bold text-[#F4F4F0]">
-              03. Scan untuk Mengunduh
-            </h2>
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              Pindai QR Code ini menggunakan kamera ponsel untuk membuka tautan Google Drive acara.
-            </p>
+      {/* Bottom Section: Always Put QR Code at Bottom Across Full Width */}
+      <div className="w-full bg-zinc-900/90 rounded-2xl p-5 sm:p-7 shadow-2xl border border-zinc-800/80">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-6 md:gap-8">
+          {/* QR Code Graphic Container */}
+          <div className="flex flex-col sm:flex-row items-center gap-5 sm:gap-6 shrink-0">
+            <div
+              data-testid="qr-code-container"
+              className="bg-white p-4 rounded-2xl flex flex-col items-center justify-center shadow-2xl ring-4 ring-white/10 shrink-0"
+            >
+              <QRCodeSVG value={driveUrl} size={168} level="M" className="max-w-full" />
+            </div>
+
+            <div className="space-y-1.5 text-center sm:text-left">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[var(--theme-accent,#E11D48)]/15 border border-[var(--theme-accent,#E11D48)]/30 text-[var(--theme-accent,#E11D48)] rounded-full text-xs font-bold font-mono-tabular">
+                <span>📱</span>
+                <span>Scan untuk Unduh</span>
+              </div>
+              <h3 className="font-display text-lg sm:text-xl font-bold text-[#F4F4F0]">
+                Pindai QR Code via Kamera Ponsel
+              </h3>
+              <p className="text-xs sm:text-sm text-zinc-400 max-w-md">
+                Buka folder Google Drive untuk mengunduh semua foto raw, bingkai cetak, dan animasi GIF sesi ini ke ponselmu.
+              </p>
+              <p className="text-[11px] font-mono-tabular text-zinc-400 break-all pt-1">
+                🔗 {driveUrl}
+              </p>
+            </div>
           </div>
 
-          <div
-            data-testid="qr-code-container"
-            className="bg-white p-5 rounded-2xl flex flex-col items-center justify-center mx-auto shadow-2xl"
-          >
-            <QRCodeSVG value={driveUrl} size={196} level="M" className="max-w-full" />
-          </div>
-
-          <div className="space-y-2.5 pt-2">
-            <p className="text-[11px] font-mono-tabular text-zinc-400 break-all text-center">
-              {driveUrl}
-            </p>
+          {/* Quick Action Buttons on Bottom Bar */}
+          <div className="flex flex-col sm:flex-row lg:flex-col items-stretch gap-3 w-full lg:w-auto shrink-0">
             <button
               type="button"
               onClick={handleNewSession}
-              className="w-full min-h-[50px] sm:min-h-[54px] py-3.5 px-4 text-sm font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center justify-center gap-2"
+              className="min-h-[52px] sm:min-h-[56px] px-8 sm:px-10 py-3.5 text-base sm:text-lg font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center justify-center gap-2.5"
             >
               <span>Mulai Sesi Baru</span>
               <span>✨</span>
             </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={isPrintingThermal || !finalLayoutBase64}
+                onClick={handlePrintThermal}
+                className="flex-1 min-h-[46px] px-4 py-2 text-xs font-bold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 active:scale-95 disabled:opacity-50 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 border border-zinc-700/60"
+              >
+                <span>🖨️</span>
+                <span>Print Thermal</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={isPrintingColor || (!doubleStripBase64 && !finalLayoutBase64)}
+                onClick={handlePrintColor}
+                className="flex-1 min-h-[46px] px-4 py-2 text-xs font-bold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 active:scale-95 disabled:opacity-50 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 border border-zinc-700/60"
+              >
+                <span>🎨</span>
+                <span>Print Warna</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

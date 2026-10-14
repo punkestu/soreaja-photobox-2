@@ -51,15 +51,15 @@ export const ReviewPhotosScreen: React.FC = () => {
           <div className="text-xs sm:text-sm font-mono-tabular text-zinc-400 flex items-center gap-2 mb-1.5">
             <span className="text-[var(--theme-accent,#E11D48)] font-bold">Tahap 04/06</span>
             <span aria-hidden="true">·</span>
-            <span>Evaluasi Pose Individual</span>
+            <span>📸 Evaluasi Pose</span>
             <span aria-hidden="true">·</span>
-            <span>{capturedPhotos.length} Foto Siap</span>
+            <span>👤 {capturedPhotos.length} Foto Siap</span>
           </div>
           <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#F4F4F0]">
-            Periksa Hasil Foto Individual
+            Evaluasi Hasil Foto
           </h1>
           <p className="text-xs sm:text-sm md:text-base text-zinc-400 mt-1">
-            Sentuh foto yang ingin kamu ulang pose, atau ketuk tombol <strong className="text-white">Selesai</strong> untuk menggabungkan ke bingkai.
+            Sentuh foto untuk retake pose, atau klik <strong className="text-white">Lanjut</strong> jika sudah puas.
           </p>
         </div>
 
@@ -70,18 +70,19 @@ export const ReviewPhotosScreen: React.FC = () => {
               setRetakeIndex(null);
               navigate('/app/camera');
             }}
-            className="min-h-[48px] sm:min-h-[52px] px-4 sm:px-6 py-2.5 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-sm"
+            className="min-h-[46px] sm:min-h-[50px] px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-sm flex items-center gap-1.5"
           >
-            Ulangi Semua
+            <span>↺</span>
+            <span>Ulang Semua</span>
           </button>
 
           <button
             type="button"
             onClick={handleFinishReview}
-            className="min-h-[48px] sm:min-h-[52px] px-6 sm:px-8 py-2.5 text-xs sm:text-sm md:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center gap-2"
+            className="min-h-[46px] sm:min-h-[50px] px-6 sm:px-7 py-2.5 text-xs sm:text-sm md:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center gap-2"
           >
-            <span>Selesai & Gabungkan</span>
-            <span>→</span>
+            <span>Lanjut ke Bingkai</span>
+            <span>🎨</span>
           </button>
         </div>
       </div>
@@ -89,33 +90,33 @@ export const ReviewPhotosScreen: React.FC = () => {
       {/* View Mode Toggle Bar - Tablet Optimized */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-zinc-900/80 border border-zinc-800/80 rounded-2xl p-3 sm:p-4">
         <div className="flex items-center gap-2">
-          <span className="text-xs sm:text-sm text-zinc-400 font-medium mr-1">Tampilan:</span>
+          <span className="text-xs sm:text-sm text-zinc-400 font-medium mr-1">👁️ Tampilan:</span>
           <button
             type="button"
             onClick={() => setViewMode('cropped')}
-            className={`min-h-[44px] px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-2 active:scale-95 ${
+            className={`min-h-[42px] px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${
               viewMode === 'cropped'
                 ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
                 : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
             }`}
           >
-            <span>📐 Potongan Bingkai ({activeFrame.name})</span>
+            <span>📐 Potongan Bingkai</span>
           </button>
           <button
             type="button"
             onClick={() => setViewMode('full')}
-            className={`min-h-[44px] px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-2 active:scale-95 ${
+            className={`min-h-[42px] px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${
               viewMode === 'full'
                 ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
                 : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
             }`}
           >
-            <span>📷 Kamera Utuh + Garis Crop</span>
+            <span>📷 Kamera Utuh</span>
           </button>
         </div>
         <p className="text-xs font-mono-tabular text-zinc-400">
           {viewMode === 'cropped'
-            ? 'Hasil potong presisi sesuai slot bingkai'
+            ? 'Potongan presisi sesuai slot bingkai'
             : 'Foto asli dengan batas crop'}
         </p>
       </div>
@@ -244,10 +245,10 @@ export const ReviewPhotosScreen: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleRetakeSinglePhoto(index)}
-                className="w-full min-h-[48px] sm:min-h-[50px] py-3 px-4 text-xs sm:text-sm font-bold text-zinc-100 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-sm flex items-center justify-center gap-2"
+                className="w-full min-h-[44px] sm:min-h-[48px] py-2.5 px-3 text-xs sm:text-sm font-bold text-zinc-100 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
               >
-                <span>🔄</span>
-                <span>Ulangi Pose #{index + 1}</span>
+                <span>↺</span>
+                <span>Ulang Pose #{index + 1}</span>
               </button>
             </div>
           );
@@ -257,23 +258,23 @@ export const ReviewPhotosScreen: React.FC = () => {
       {/* Bottom Action Bar - Tablet First Touch Area */}
       <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
         <div className="space-y-1">
-          <p className="text-sm sm:text-base font-bold text-[#F4F4F0]">
-            Sudah puas dengan semua ekspresi dan pose?
+          <p className="text-sm sm:text-base font-bold text-[#F4F4F0] flex items-center gap-1.5">
+            <span>✨</span>
+            <span>Semua pose sudah sesuai keinginan?</span>
           </p>
           <p className="text-xs sm:text-sm text-zinc-400">
-            Tahap berikutnya akan menggabungkan {capturedPhotos.length} foto di atas
-            dengan bingkai <strong className="text-zinc-200">{activeFrame.name}</strong>{' '}
-            menggunakan HTML5 Canvas.
+            {capturedPhotos.length} foto akan digabungkan dengan bingkai{' '}
+            <strong className="text-zinc-200">{activeFrame.name}</strong>.
           </p>
         </div>
 
         <button
           type="button"
           onClick={handleFinishReview}
-          className="min-h-[52px] sm:min-h-[56px] px-8 sm:px-10 py-3.5 text-sm sm:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center justify-center gap-2 self-stretch sm:self-auto"
+          className="min-h-[50px] sm:min-h-[54px] px-8 sm:px-10 py-3 text-sm sm:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center justify-center gap-2 self-stretch sm:self-auto"
         >
-          <span>Selesai & Lanjut ke Frame</span>
-          <span>→</span>
+          <span>Lanjut ke Bingkai</span>
+          <span>🎨</span>
         </button>
       </div>
     </div>

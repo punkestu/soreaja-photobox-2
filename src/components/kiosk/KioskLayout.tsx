@@ -5,12 +5,12 @@ import { PWAInstallButton } from '../common/PWAInstallButton';
 import { OfflineIndicator } from '../common/OfflineIndicator';
 
 const STEPS = [
-  { path: '/app/idle', label: '01. Mulai' },
-  { path: '/app/frame-selection', label: '02. Bingkai' },
-  { path: '/app/camera', label: '03. Kamera' },
-  { path: '/app/review-photos', label: '04. Evaluasi' },
-  { path: '/app/preview-final', label: '05. Hasil Frame' },
-  { path: '/app/print-result', label: '06. Cetak & QR' },
+  { path: '/app/idle', label: '1. Mulai' },
+  { path: '/app/frame-selection', label: '2. Bingkai' },
+  { path: '/app/camera', label: '3. Kamera' },
+  { path: '/app/review-photos', label: '4. Evaluasi' },
+  { path: '/app/preview-final', label: '5. Frame' },
+  { path: '/app/print-result', label: '6. Cetak & QR' },
 ];
 
 export const KioskLayout: React.FC = () => {
@@ -108,21 +108,21 @@ export const KioskLayout: React.FC = () => {
             type="button"
             onClick={toggleFullscreen}
             aria-label={isFullscreen ? 'Keluar dari Layar Penuh' : 'Masuk ke Layar Penuh'}
-            className="min-h-[48px] min-w-[48px] flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white bg-zinc-900/90 active:scale-95 hover:bg-zinc-800 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800/80 shadow-sm"
+            className="min-h-[46px] min-w-[46px] flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white bg-zinc-900/90 active:scale-95 hover:bg-zinc-800 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800/80 shadow-sm"
           >
             {isFullscreen ? (
               <>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 9H4m0 0v5m0-5l6 6m5-6h5m0 0v5m0-5l-6 6m6 5h-5m0 0v5m0-5l6-6m-11 5H4m0 0v-5m0 5l6-6" />
                 </svg>
-                <span className="hidden md:inline">Keluar</span>
+                <span className="hidden md:inline">Kecil</span>
               </>
             ) : (
               <>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                 </svg>
-                <span className="hidden md:inline">Layar Penuh</span>
+                <span className="hidden md:inline">Penuh</span>
               </>
             )}
           </button>
@@ -133,17 +133,20 @@ export const KioskLayout: React.FC = () => {
             <button
               type="button"
               onClick={handleRestart}
-              className="min-h-[48px] px-4 py-2.5 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white bg-zinc-900/90 active:scale-95 hover:bg-zinc-800 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800/80 shadow-sm"
+              className="min-h-[46px] px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white bg-zinc-900/90 active:scale-95 hover:bg-zinc-800 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800/80 shadow-sm flex items-center gap-1.5"
+              title="Reset ke sesi awal"
             >
-              Ulangi
+              <span>↺</span>
+              <span className="hidden sm:inline">Reset</span>
             </button>
           )}
 
           <Link
             to="/admin/welcome"
-            className="min-h-[48px] flex items-center px-4 py-2.5 text-xs sm:text-sm font-semibold text-zinc-400 hover:text-white bg-zinc-900/60 active:scale-95 hover:bg-zinc-800 rounded-xl transition-all whitespace-nowrap border border-zinc-800/60"
+            className="min-h-[46px] flex items-center gap-1 px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-semibold text-zinc-400 hover:text-white bg-zinc-900/60 active:scale-95 hover:bg-zinc-800 rounded-xl transition-all whitespace-nowrap border border-zinc-800/60"
           >
-            Admin
+            <span>⚙️</span>
+            <span className="hidden sm:inline">Admin</span>
           </Link>
         </div>
       </header>

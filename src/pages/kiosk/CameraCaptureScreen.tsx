@@ -434,7 +434,7 @@ export const CameraCaptureScreen: React.FC = () => {
             onClick={() => setUseSimulator((prev) => !prev)}
             className="min-h-[44px] px-3.5 py-2 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-900/90 border border-zinc-700/80 active:scale-95 hover:border-zinc-500 rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
           >
-            <span>{useSimulator ? '🖥️ Simulator' : '📷 WebRTC'}</span>
+            <span>{useSimulator ? '🖥️ Sim' : '📷 Live'}</span>
           </button>
           <button
             type="button"
@@ -446,9 +446,9 @@ export const CameraCaptureScreen: React.FC = () => {
                 navigate('/app/frame-selection');
               }
             }}
-            className="min-h-[44px] px-3.5 py-2 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white bg-zinc-900/80 active:scale-95 border border-zinc-800 rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1"
+            className="min-h-[44px] px-3.5 py-2 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white bg-zinc-900/80 active:scale-95 border border-zinc-800 rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
           >
-            <span>{isRetakeMode ? 'Batal Retake' : '← Ganti Bingkai'}</span>
+            <span>{isRetakeMode ? '✕ Batal' : '← Bingkai'}</span>
           </button>
         </div>
       </div>
@@ -672,19 +672,19 @@ export const CameraCaptureScreen: React.FC = () => {
             </div>
 
             {/* Spotlight Shutter Action Buttons - Tablet Optimized */}
-            <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-2.5">
               <button
                 type="button"
                 disabled={isCapturingSequence}
                 onClick={startCountdownSequence}
-                className="min-h-[58px] sm:min-h-[66px] md:min-h-[72px] px-8 sm:px-12 py-3.5 sm:py-4 text-base sm:text-lg md:text-xl font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-2xl transition-all whitespace-nowrap cursor-pointer shadow-[0_0_35px_rgba(225,29,72,0.75)] flex items-center gap-3 ring-2 ring-white/20"
+                className="min-h-[56px] sm:min-h-[64px] md:min-h-[68px] px-6 sm:px-10 py-3 sm:py-3.5 text-sm sm:text-base md:text-lg font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-2xl transition-all whitespace-nowrap cursor-pointer shadow-[0_0_35px_rgba(225,29,72,0.75)] flex items-center gap-2.5 ring-2 ring-white/20"
               >
-                <span className="text-xl sm:text-2xl">📸</span>
+                <span className="text-lg sm:text-xl">📸</span>
                 <span>
                   {isCapturingSequence
-                    ? `Hitung Mundur (${countdown ?? '...'})`
+                    ? `⏱️ ${countdown ?? '...'}`
                     : isRetakeMode
-                    ? `Ambil Ulang #${(retakeIndex ?? 0) + 1}`
+                    ? `↺ Retake #${(retakeIndex ?? 0) + 1}`
                     : `Mulai (${settings?.countdownSeconds || 3}s)`}
                 </span>
               </button>
@@ -692,7 +692,7 @@ export const CameraCaptureScreen: React.FC = () => {
               <button
                 type="button"
                 onClick={handleInstantCapture}
-                className="min-h-[58px] sm:min-h-[66px] md:min-h-[72px] px-4 sm:px-6 py-3.5 text-xs sm:text-sm md:text-base font-bold text-zinc-200 bg-black/85 hover:bg-zinc-800 active:scale-95 backdrop-blur-md border border-white/15 rounded-2xl transition-all whitespace-nowrap cursor-pointer shadow-xl flex items-center gap-2"
+                className="min-h-[56px] sm:min-h-[64px] md:min-h-[68px] px-3.5 sm:px-5 py-3 text-xs sm:text-sm font-bold text-zinc-200 bg-black/85 hover:bg-zinc-800 active:scale-95 backdrop-blur-md border border-white/15 rounded-2xl transition-all whitespace-nowrap cursor-pointer shadow-xl flex items-center gap-1.5"
                 title="Ambil foto instan tanpa hitung mundur"
               >
                 <span>⚡</span>
@@ -701,11 +701,11 @@ export const CameraCaptureScreen: React.FC = () => {
             </div>
 
             {/* Quick Floating Toggles - Tablet 48px Touch Targets */}
-            <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 bg-black/85 backdrop-blur-md border border-white/15 rounded-2xl shadow-2xl">
+            <div className="flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 bg-black/85 backdrop-blur-md border border-white/15 rounded-2xl shadow-2xl">
               <button
                 type="button"
                 onClick={() => setShowCropGuide((prev) => !prev)}
-                className={`min-h-[48px] min-w-[48px] px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 ${
+                className={`min-h-[46px] min-w-[46px] px-3 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
                   showCropGuide
                     ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
                     : 'text-zinc-400 hover:text-white'
@@ -719,7 +719,7 @@ export const CameraCaptureScreen: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowGridLines((prev) => !prev)}
-                className={`min-h-[48px] min-w-[48px] px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 ${
+                className={`min-h-[46px] min-w-[46px] px-3 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
                   showGridLines
                     ? 'bg-zinc-700 text-white shadow-sm'
                     : 'text-zinc-400 hover:text-white'

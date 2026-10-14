@@ -9,6 +9,7 @@ import {
   checkStripRatio,
   type StripRatioInfo,
 } from '../../services/canvasCompositor';
+import { downloadSingleFile } from '../../services/downloadService';
 import type { PhotoFilter } from '../../types/photobox';
 
 const FILTERS: { id: PhotoFilter; label: string; desc: string }[] = [
@@ -116,6 +117,13 @@ export const FinalPreviewScreen: React.FC = () => {
       ? doubleStripBase64
       : finalLayoutBase64;
 
+  const handleDownloadActive = () => {
+    if (!activeDisplayImage) return;
+    const isDouble = isVertical && previewMode === 'double';
+    const filename = `PB_${Date.now()}_${isDouble ? 'side_by_side_2strip_cutline' : 'strip_single'}.png`;
+    downloadSingleFile(activeDisplayImage, filename);
+  };
+
   return (
     <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-8 space-y-6 md:space-y-8 select-none">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-white/5">
@@ -123,35 +131,48 @@ export const FinalPreviewScreen: React.FC = () => {
           <div className="text-xs sm:text-sm font-mono-tabular text-zinc-400 flex items-center gap-2 mb-1.5">
             <span className="text-[var(--theme-accent,#E11D48)] font-bold">Tahap 05/06</span>
             <span aria-hidden="true">·</span>
-            <span>HTML5 Canvas Compositor</span>
+            <span>🎨 Layout Frame</span>
             <span aria-hidden="true">·</span>
-            <span>Bingkai: {activeFrame.name}</span>
+            <span>🖼️ {activeFrame.name}</span>
           </div>
           <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#F4F4F0]">
-            Pratinjau Layout Akhir Berbingkai
+            Pratinjau Layout Berbingkai
           </h1>
           <p className="text-xs sm:text-sm md:text-base text-zinc-400 mt-1">
-            Periksa penggabungan foto dengan bingkai studio dan pilih tone warna sebelum mencetak.
+            Sesuaikan filter warna dan garis potong sebelum lanjut cetak.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex items-center justify-end gap-2 sm:gap-2.5 flex-wrap">
           <button
             type="button"
             onClick={() => navigate('/app/review-photos')}
-            className="min-h-[48px] sm:min-h-[52px] px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-sm"
+            className="min-h-[46px] sm:min-h-[50px] px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-sm flex items-center gap-1.5"
+            title="Kembali ke evaluasi pose"
           >
-            ← Retake
+            <span>↺</span>
+            <span>Retake</span>
+          </button>
+
+          <button
+            type="button"
+            disabled={!activeDisplayImage}
+            onClick={handleDownloadActive}
+            className="min-h-[46px] sm:min-h-[50px] px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-sm flex items-center gap-1.5"
+            title="Unduh hasil gambar berbingkai saat ini (termasuk garis potong)"
+          >
+            <span>📥</span>
+            <span>Unduh</span>
           </button>
 
           <button
             type="button"
             disabled={isCompositing || !finalLayoutBase64}
             onClick={() => navigate('/app/print-result')}
-            className="min-h-[48px] sm:min-h-[52px] px-7 sm:px-8 py-2.5 text-xs sm:text-sm md:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center gap-2"
+            className="min-h-[46px] sm:min-h-[50px] px-6 sm:px-7 py-2.5 text-xs sm:text-sm md:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center gap-2"
           >
-            <span>Lanjut ke Cetak</span>
-            <span>→</span>
+            <span>Lanjut Cetak</span>
+            <span>🖨️</span>
           </button>
         </div>
       </div>
@@ -173,7 +194,7 @@ export const FinalPreviewScreen: React.FC = () => {
                         : 'text-zinc-400 hover:text-white'
                     }`}
                   >
-                    📱 Strip Tunggal (1x)
+                    📱 1-Strip
                   </button>
                   <button
                     type="button"
@@ -184,31 +205,24 @@ export const FinalPreviewScreen: React.FC = () => {
                         : 'text-zinc-400 hover:text-white'
                     }`}
                   >
-                    <span>👥 2-Strip Berdampingan (Side-by-Side)</span>
-                    <span className="text-[10px] px-1.5 py-0.2 bg-white/20 text-white rounded font-mono">
+                    <span>👥 2-Strip (4R)</span>
+                    <span className="text-[10px] px-1 py-0.2 bg-white/20 text-white rounded font-mono">
                       4R
                     </span>
                   </button>
                 </div>
 
                 {previewMode === 'double' && (
-                  <label className="flex items-center gap-1.5 text-xs text-zinc-300 pr-2 cursor-pointer select-none">
+                  <label className="flex items-center gap-1.5 text-xs text-zinc-300 pr-2 cursor-pointer select-none bg-zinc-900/90 px-2.5 py-1.5 rounded-lg border border-zinc-800">
                     <input
                       type="checkbox"
                       checked={showCutLine}
                       onChange={(e) => setShowCutLine(e.target.checked)}
                       className="w-3.5 h-3.5 accent-[var(--theme-accent,#E11D48)] rounded cursor-pointer"
                     />
-                    <span>✂️ Garis Potong Tengah</span>
+                    <span className="font-semibold text-zinc-200">✂️ Garis Potong</span>
                   </label>
                 )}
-              </div>
-
-              <div className="flex items-center gap-2 text-[11px] font-mono-tabular text-emerald-400/90 bg-emerald-950/40 border border-emerald-800/40 px-3 py-1.5 rounded-lg">
-                <span>📐</span>
-                <span>
-                  <strong>Rasio Strip Vertikal ({ratioInfo.ratioFormatted}):</strong> Otomatis digandakan 2 strip berdampingan untuk cetak kertas 4R (4×6").
-                </span>
               </div>
             </div>
           )}
@@ -216,7 +230,7 @@ export const FinalPreviewScreen: React.FC = () => {
           {isCompositing || !finalLayoutBase64 ? (
             <div className="text-center space-y-3 py-16">
               <p className="text-sm font-mono-tabular text-zinc-300">
-                Merender komposisi HTML5 Canvas...
+                Merender komposisi...
               </p>
               <p className="text-xs text-zinc-500">
                 Menggabungkan {capturedPhotos.length} foto dengan {activeFrame.frameImg}
@@ -230,11 +244,20 @@ export const FinalPreviewScreen: React.FC = () => {
                 alt={`Hasil Akhir Bingkai ${activeFrame.name}`}
                 className="max-h-[580px] w-auto object-contain rounded-xl shadow-2xl"
               />
-              <p className="text-[11px] font-mono-tabular text-zinc-400 text-center">
-                {isVertical && previewMode === 'double'
-                  ? `Format Cetak: 2-Strip Side-by-Side (${activeFrame.canvasWidth ? activeFrame.canvasWidth * 2 : 960}×${activeFrame.canvasHeight || 1440}px) · Standar 4R`
-                  : `Format Cetak: Strip Tunggal (${activeFrame.canvasWidth || 480}×${activeFrame.canvasHeight || 1440}px)`}
-              </p>
+              <div className="flex items-center justify-between w-full px-2 text-[11px] font-mono-tabular text-zinc-400">
+                <span>
+                  {isVertical && previewMode === 'double'
+                    ? `Format: 2-Strip Side-by-Side (${activeFrame.canvasWidth ? activeFrame.canvasWidth * 2 : 960}×${activeFrame.canvasHeight || 1440}px) · Kertas 4R`
+                    : `Format: 1-Strip (${activeFrame.canvasWidth || 480}×${activeFrame.canvasHeight || 1440}px)`}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleDownloadActive}
+                  className="text-zinc-300 hover:text-white flex items-center gap-1 underline cursor-pointer"
+                >
+                  <span>📥 Unduh PNG</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -242,11 +265,12 @@ export const FinalPreviewScreen: React.FC = () => {
         {/* Tone Filter & Caption Controls - Tablet 5 Cols */}
         <div className="md:col-span-5 bg-zinc-900/80 rounded-2xl p-5 sm:p-6 space-y-5 sm:space-y-6 shadow-xl border border-zinc-800/70">
           <div className="space-y-3">
-            <h2 className="font-display text-lg font-bold text-[#F4F4F0]">
-              Tone Warna Studio (Filter Kanvas)
+            <h2 className="font-display text-base sm:text-lg font-bold text-[#F4F4F0] flex items-center gap-2">
+              <span>🎨</span>
+              <span>Filter Tone Studio</span>
             </h2>
             <p className="text-xs sm:text-sm text-zinc-400">
-              Pilih karakter warna untuk diterapkan secara langsung pada hasil cetakan.
+              Pilih karakter tone warna yang langsung diterapkan ke cetakan dan file unduhan.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
@@ -275,8 +299,9 @@ export const FinalPreviewScreen: React.FC = () => {
           <div className="pt-2 space-y-3 border-t border-zinc-800/60">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm font-semibold text-zinc-200">
-                  Stempel Teks Bingkai
+                <p className="text-xs sm:text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
+                  <span>🏷️</span>
+                  <span>Stempel Teks Bingkai</span>
                 </p>
                 <p className="text-[11px] text-zinc-400">
                   Header identitas studio & stempel bawah
@@ -301,7 +326,7 @@ export const FinalPreviewScreen: React.FC = () => {
                   htmlFor="captionInput"
                   className="block text-xs sm:text-sm font-semibold text-zinc-300"
                 >
-                  Teks Stempel Bawah Bingkai
+                  ✍️ Teks Bawah Bingkai
                 </label>
                 <input
                   id="captionInput"
@@ -314,7 +339,7 @@ export const FinalPreviewScreen: React.FC = () => {
               </div>
             ) : (
               <p className="text-[11px] text-zinc-400 bg-zinc-950/90 p-3 rounded-xl">
-                Mode bersih aktif: Tidak ada stempel teks yang dicetak di atas bingkai (cocok untuk custom frame).
+                Mode bersih: Tidak ada stempel teks tambahan di atas bingkai.
               </p>
             )}
           </div>
@@ -324,19 +349,19 @@ export const FinalPreviewScreen: React.FC = () => {
               type="button"
               disabled={isCompositing || !finalLayoutBase64}
               onClick={() => navigate('/app/print-result')}
-              className="w-full min-h-[54px] sm:min-h-[58px] py-4 px-6 text-sm sm:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center justify-center gap-2"
+              className="w-full min-h-[52px] sm:min-h-[56px] py-3.5 px-6 text-sm sm:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center justify-center gap-2"
             >
-              <span>Lanjut ke Cetak & QR Code</span>
-              <span>→</span>
+              <span>Lanjut ke Cetak & QR</span>
+              <span>🖨️</span>
             </button>
 
             <button
               type="button"
               onClick={() => navigate('/app/review-photos')}
-              className="w-full min-h-[48px] py-3 px-4 text-xs sm:text-sm font-semibold text-zinc-300 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer flex items-center justify-center gap-2"
+              className="w-full min-h-[46px] py-2.5 px-4 text-xs sm:text-sm font-semibold text-zinc-300 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer flex items-center justify-center gap-2"
             >
-              <span>←</span>
-              <span>Retake (Kembali ke Evaluasi Foto)</span>
+              <span>↺</span>
+              <span>Retake Foto</span>
             </button>
           </div>
         </div>

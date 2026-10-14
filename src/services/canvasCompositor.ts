@@ -90,30 +90,61 @@ export async function generateSideBySideStrip(
   // 2. Draw Right Strip (Duplicate side-by-side)
   ctx.drawImage(img, singleW + spacing, 0, singleW, singleH);
 
-  // 3. Center Cutting Guide (Dashed line with scissor glyphs)
+  // 3. Center Cutting Guide (Bold dashed line with prominent scissor badges)
   if (includeCutLine) {
     const dividerX = singleW + Math.floor(spacing / 2);
     ctx.save();
 
+    // Pass 1: High-contrast white backing stroke to ensure visibility on dark frames
     ctx.beginPath();
-    ctx.setLineDash([10, 8]);
-    ctx.strokeStyle = cutLineColor;
-    ctx.lineWidth = 1.5;
+    ctx.setLineDash([14, 10]);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.lineWidth = 5;
+    ctx.moveTo(dividerX, 0);
+    ctx.lineTo(dividerX, totalH);
+    ctx.stroke();
+
+    // Pass 2: Bold dark charcoal core stroke to ensure visibility on light frames
+    ctx.beginPath();
+    ctx.setLineDash([14, 10]);
+    ctx.strokeStyle = 'rgba(24, 24, 27, 0.95)';
+    ctx.lineWidth = 3;
     ctx.moveTo(dividerX, 0);
     ctx.lineTo(dividerX, totalH);
     ctx.stroke();
 
     if (showScissorIcon) {
-      ctx.fillStyle = cutLineColor;
-      ctx.font = '16px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      // Top icon
-      ctx.fillText('✂', dividerX, 26);
-      // Center icon
-      ctx.fillText('✂', dividerX, Math.floor(totalH / 2));
-      // Bottom icon
-      ctx.fillText('✂', dividerX, totalH - 26);
+      // Draw 3 prominent circular scissor badges (top, center, bottom)
+      const badgeYPositions = [
+        Math.min(48, Math.floor(totalH * 0.05)),
+        Math.floor(totalH / 2),
+        Math.max(totalH - 48, Math.floor(totalH * 0.95)),
+      ];
+
+      for (const y of badgeYPositions) {
+        ctx.save();
+        // Circular white badge with dark ring and shadow
+        ctx.beginPath();
+        ctx.arc(dividerX, y, 18, 0, Math.PI * 2);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+        ctx.shadowBlur = 8;
+        ctx.shadowOffsetY = 2;
+        ctx.fill();
+
+        ctx.shadowColor = 'transparent';
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = '#18181B';
+        ctx.stroke();
+
+        // Bold scissor glyph
+        ctx.fillStyle = '#18181B';
+        ctx.font = 'bold 20px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('✂', dividerX, y + 1);
+        ctx.restore();
+      }
     }
 
     ctx.restore();

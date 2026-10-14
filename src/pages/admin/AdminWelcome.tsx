@@ -4,13 +4,21 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { QRCodeSVG } from 'qrcode.react';
 import { db, DEFAULT_DRIVE_URL, ensureDefaultSettings } from '../../db';
 import { fetchFramesMetadata, KIOSK_HERO_BACKDROP } from '../../data/defaultFrames';
-import type { FrameMetadata } from '../../types/photobox';
+import type { FrameMetadata, SessionRecord } from '../../types/photobox';
 import { downloadSingleFile } from '../../services/downloadService';
+import { printThermal, printColor } from '../../services/printServices';
 
 export const AdminWelcome: React.FC = () => {
   const navigate = useNavigate();
   const [frames, setFrames] = useState<FrameMetadata[]>([]);
   const [loadingFrames, setLoadingFrames] = useState(true);
+  const [reprintingSessionId, setReprintingSessionId] = useState<number | null>(null);
+  const [reprintingType, setReprintingType] = useState<'thermal' | 'color' | null>(null);
+  const [reprintFeedback, setReprintFeedback] = useState<{
+    sessionId: number;
+    message: string;
+    isError: boolean;
+  } | null>(null);
 
   const settings = useLiveQuery(() => db.settings.get('app_settings'), []);
   const sessions = useLiveQuery(
@@ -32,6 +40,70 @@ export const AdminWelcome: React.FC = () => {
 
   const handleClearHistory = async () => {
     await db.sessions.clear();
+  };
+
+  const handleReprintThermal = async (session: SessionRecord) => {
+    if (!session.id || !session.finalLayoutBase64) return;
+    setReprintingSessionId(session.id);
+    setReprintingType('thermal');
+    setReprintFeedback(null);
+    const targetPrinter = settings?.thermalPrinterName || settings?.printerName;
+    try {
+      const res = await printThermal(session.finalLayoutBase64, settings?.printApiEndpoint, targetPrinter);
+      const nextCount = (session.thermalPrintCount || 0) + 1;
+      await db.sessions.update(session.id, {
+        printedThermal: true,
+        thermalPrintCount: nextCount,
+      });
+      setReprintFeedback({
+        sessionId: session.id,
+        message: `✅ Cetak Thermal Berhasil (${nextCount}x · ${res.jobId})`,
+        isError: false,
+      });
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setReprintFeedback({
+        sessionId: session.id,
+        message: `⚠️ Gagal: ${errMsg}`,
+        isError: true,
+      });
+    } finally {
+      setReprintingSessionId(null);
+      setReprintingType(null);
+    }
+  };
+
+  const handleReprintColor = async (session: SessionRecord) => {
+    if (!session.id) return;
+    const imageToPrint = session.doubleStripBase64 || session.finalLayoutBase64;
+    if (!imageToPrint) return;
+    setReprintingSessionId(session.id);
+    setReprintingType('color');
+    setReprintFeedback(null);
+    const targetPrinter = settings?.colorPrinterName || settings?.printerName;
+    try {
+      const res = await printColor(imageToPrint, settings?.printApiEndpoint, targetPrinter);
+      const nextCount = (session.colorPrintCount || 0) + 1;
+      await db.sessions.update(session.id, {
+        printedColor: true,
+        colorPrintCount: nextCount,
+      });
+      setReprintFeedback({
+        sessionId: session.id,
+        message: `✅ Cetak Warna Berhasil (${nextCount}x · ${res.jobId})`,
+        isError: false,
+      });
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setReprintFeedback({
+        sessionId: session.id,
+        message: `⚠️ Gagal: ${errMsg}`,
+        isError: true,
+      });
+    } finally {
+      setReprintingSessionId(null);
+      setReprintingType(null);
+    }
   };
 
   return (
@@ -337,33 +409,95 @@ export const AdminWelcome: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                <div className="flex flex-col gap-1.5 w-full">
-                  {session.doubleStripBase64 && (
+                <div className="flex flex-col gap-2 w-full pt-1">
+                  {/* File Download Buttons */}
+                  <div className="flex flex-col gap-1.5 w-full">
+                    {session.doubleStripBase64 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          downloadSingleFile(
+                            session.doubleStripBase64!,
+                            `SoreAja_${session.timestamp}_side_by_side_2strip.png`
+                          )
+                        }
+                        className="w-full py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-colors cursor-pointer"
+                      >
+                        Unduh 2-Strip Side-by-Side (4R)
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() =>
                         downloadSingleFile(
-                          session.doubleStripBase64!,
-                          `SoreAja_${session.timestamp}_side_by_side_2strip.png`
+                          session.finalLayoutBase64,
+                          `SoreAja_${session.timestamp}_final.png`
                         )
                       }
-                      className="w-full py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md transition-colors cursor-pointer"
+                      className="w-full py-1.5 text-xs font-semibold text-neutral-900 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors cursor-pointer"
                     >
-                      Unduh 2-Strip Side-by-Side (4R)
+                      Unduh Strip Tunggal
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      downloadSingleFile(
-                        session.finalLayoutBase64,
-                        `SoreAja_${session.timestamp}_final.png`
-                      )
-                    }
-                    className="w-full py-1.5 text-xs font-semibold text-neutral-900 bg-neutral-100 hover:bg-neutral-200 rounded-md transition-colors cursor-pointer"
-                  >
-                    Unduh Strip Tunggal
-                  </button>
+                  </div>
+
+                  {/* Direct Reprint Actions & Counters */}
+                  <div className="pt-2 border-t border-neutral-200 space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px] font-mono-tabular text-neutral-500">
+                      <span className="font-medium text-neutral-600">Cetak Ulang Sesi:</span>
+                      <span className="text-neutral-500">
+                        Thermal: <strong className="text-neutral-800">{session.thermalPrintCount || (session.printedThermal ? 1 : 0)}x</strong> · Warna: <strong className="text-neutral-800">{session.colorPrintCount || (session.printedColor ? 1 : 0)}x</strong>
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button
+                        type="button"
+                        disabled={reprintingSessionId === session.id}
+                        onClick={() => handleReprintThermal(session)}
+                        className="min-h-[42px] px-2.5 py-1.5 text-xs font-semibold text-neutral-800 bg-neutral-100 hover:bg-neutral-200 active:scale-95 disabled:opacity-50 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 border border-neutral-300 shadow-2xs"
+                        title="Kirim 1 strip ke printer thermal (80mm)"
+                      >
+                        <span>🖨️</span>
+                        <span>
+                          {reprintingSessionId === session.id && reprintingType === 'thermal'
+                            ? 'Mencetak...'
+                            : session.thermalPrintCount
+                            ? `Thermal (${session.thermalPrintCount}x)`
+                            : 'Thermal'}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={reprintingSessionId === session.id}
+                        onClick={() => handleReprintColor(session)}
+                        className="min-h-[42px] px-2.5 py-1.5 text-xs font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+                        title="Kirim ke printer warna (4R)"
+                      >
+                        <span>🎨</span>
+                        <span>
+                          {reprintingSessionId === session.id && reprintingType === 'color'
+                            ? 'Mencetak...'
+                            : session.colorPrintCount
+                            ? `Warna (${session.colorPrintCount}x)`
+                            : 'Warna'}
+                        </span>
+                      </button>
+                    </div>
+
+                    {reprintFeedback && reprintFeedback.sessionId === session.id && (
+                      <p
+                        role="status"
+                        className={`text-[11px] font-mono-tabular px-2.5 py-1.5 rounded-lg border leading-tight ${
+                          reprintFeedback.isError
+                            ? 'bg-amber-50 text-amber-900 border-amber-300'
+                            : 'bg-emerald-50 text-emerald-900 border-emerald-300 font-semibold'
+                        }`}
+                      >
+                        {reprintFeedback.message}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

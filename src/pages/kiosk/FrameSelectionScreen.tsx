@@ -32,25 +32,25 @@ export const FrameSelectionScreen: React.FC = () => {
           <div className="text-xs sm:text-sm font-mono-tabular text-zinc-400 flex items-center gap-2 mb-1.5">
             <span className="text-[var(--theme-accent,#E11D48)] font-bold">Tahap 02/06</span>
             <span aria-hidden="true">·</span>
-            <span>Pilih Bingkai</span>
+            <span>🖼️ Pilih Bingkai</span>
             <span aria-hidden="true">·</span>
-            <span>{frames.length} Opsi Tersedia</span>
+            <span>{frames.length} Desain</span>
           </div>
           <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#F4F4F0]">
-            Pilih Layout Bingkai Studio
+            Pilih Layout Bingkai
           </h1>
           <p className="text-xs sm:text-sm md:text-base text-zinc-400 mt-1">
-            Sentuh bingkai pilihanmu untuk melanjutkan ke sesi pemotretan kamera.
+            Sentuh bingkai pilihanmu untuk melanjutkan ke sesi foto kamera.
           </p>
         </div>
 
         <button
           type="button"
           onClick={() => navigate('/app/idle')}
-          className="min-h-[48px] px-5 py-2.5 text-xs sm:text-sm font-semibold text-zinc-300 bg-zinc-900/90 active:scale-95 hover:bg-zinc-800 rounded-xl transition-all whitespace-nowrap self-start sm:self-auto cursor-pointer border border-zinc-800 shadow-sm flex items-center gap-2"
+          className="min-h-[46px] px-4 py-2 text-xs sm:text-sm font-semibold text-zinc-300 bg-zinc-900/90 active:scale-95 hover:bg-zinc-800 rounded-xl transition-all whitespace-nowrap self-start sm:self-auto cursor-pointer border border-zinc-800 shadow-sm flex items-center gap-1.5"
         >
           <span>←</span>
-          <span>Kembali ke Layar Mulai</span>
+          <span>Mulai</span>
         </button>
       </div>
 
@@ -127,10 +127,10 @@ export const FrameSelectionScreen: React.FC = () => {
                     e.stopPropagation();
                     handleSelectFrame(frame);
                   }}
-                  className="w-full min-h-[50px] sm:min-h-[54px] py-3 px-4 text-xs sm:text-sm font-bold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-md flex items-center justify-center gap-2"
+                  className="w-full min-h-[46px] sm:min-h-[50px] py-2.5 px-3 text-xs sm:text-sm font-bold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-md flex items-center justify-center gap-1.5"
                 >
-                  <span>Pilih Bingkai ({frame.photoCount} Foto)</span>
-                  <span>→</span>
+                  <span>Pilih ({frame.photoCount} Pose)</span>
+                  <span>📸</span>
                 </button>
               </div>
             );
