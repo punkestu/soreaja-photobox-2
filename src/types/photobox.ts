@@ -30,6 +30,8 @@ export interface StripRatioInfo {
 
 export type PhotoFilter = 'original' | 'warm-sore' | 'noir-bw' | 'vintage-film';
 
+export type AppLanguage = 'id' | 'en';
+
 export interface AppSettings {
   id: string; // 'app_settings'
   driveUrl: string;
@@ -51,6 +53,7 @@ export interface AppSettings {
   kioskBackgroundOverlayOpacity?: number; // 20 - 100 percent
   themeColor?: string; // Hex color e.g. '#E11D48'
   themePreset?: string; // 'crimson' | 'amber' | etc.
+  language?: AppLanguage; // 'id' | 'en'
   updatedAt?: string;
 }
 

@@ -16,8 +16,17 @@ const STEPS = [
 export const KioskLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { resetSession } = usePhotobox();
+  const { resetSession, language, setLanguage, t } = usePhotobox();
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+
+  const steps = [
+    { path: '/app/idle', label: t.steps.step1 },
+    { path: '/app/frame-selection', label: t.steps.step2 },
+    { path: '/app/camera', label: t.steps.step3 },
+    { path: '/app/review-photos', label: t.steps.step4 },
+    { path: '/app/preview-final', label: t.steps.step5 },
+    { path: '/app/print-result', label: t.steps.step6 },
+  ];
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -64,18 +73,18 @@ export const KioskLayout: React.FC = () => {
           to="/app/idle"
           className="font-display text-lg sm:text-xl font-bold tracking-tight text-[#F4F4F0] hover:text-white whitespace-nowrap active:scale-95 transition-transform"
         >
-          SoreAja — Photobox
+          {t.appName}
         </Link>
 
         {!isIdleScreen && (
           <div
-            aria-label="Tahapan Sesi Photobox"
+            aria-label={t.steps.stepIndicator}
             className="flex items-center gap-2 sm:gap-3 text-xs font-mono-tabular select-none"
           >
             {/* Tablet Step Tracker: Segmented Track & Active Label */}
             <div className="flex items-center gap-1.5 p-1 bg-zinc-900/80 rounded-xl border border-zinc-800/80">
-              {STEPS.map((step, idx) => {
-                const currentIdx = STEPS.findIndex((s) => s.path === location.pathname);
+              {steps.map((step, idx) => {
+                const currentIdx = steps.findIndex((s) => s.path === location.pathname);
                 const isCurrent = location.pathname === step.path;
                 const isPassed = idx < currentIdx;
                 return (
@@ -96,18 +105,50 @@ export const KioskLayout: React.FC = () => {
 
             <div className="hidden sm:flex items-center gap-1.5 text-zinc-300">
               <span className="font-bold text-white">
-                {STEPS.find((s) => s.path === location.pathname)?.label || 'Photobox'}
+                {steps.find((s) => s.path === location.pathname)?.label || 'Photobox'}
               </span>
             </div>
           </div>
         )}
 
         <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Language Switcher Segmented Control */}
+          <div
+            role="group"
+            aria-label="Language Switcher"
+            className="flex items-center p-0.5 bg-zinc-900/90 rounded-xl border border-zinc-800/80 shadow-sm"
+          >
+            <button
+              type="button"
+              onClick={() => setLanguage('id')}
+              aria-label="Bahasa Indonesia"
+              className={`min-h-[40px] px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer active:scale-95 ${
+                language === 'id'
+                  ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              🇮🇩 ID
+            </button>
+            <button
+              type="button"
+              onClick={() => setLanguage('en')}
+              aria-label="English"
+              className={`min-h-[40px] px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer active:scale-95 ${
+                language === 'en'
+                  ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              🇬🇧 EN
+            </button>
+          </div>
+
           {/* Fullscreen Button - 48px Tablet Touch Target */}
           <button
             type="button"
             onClick={toggleFullscreen}
-            aria-label={isFullscreen ? 'Keluar dari Layar Penuh' : 'Masuk ke Layar Penuh'}
+            aria-label={isFullscreen ? t.nav.exitFullscreen : t.nav.fullscreen}
             className="min-h-[46px] min-w-[46px] flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white bg-zinc-900/90 active:scale-95 hover:bg-zinc-800 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800/80 shadow-sm"
           >
             {isFullscreen ? (
@@ -115,14 +156,14 @@ export const KioskLayout: React.FC = () => {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 9H4m0 0v5m0-5l6 6m5-6h5m0 0v5m0-5l-6 6m6 5h-5m0 0v5m0-5l6-6m-11 5H4m0 0v-5m0 5l6-6" />
                 </svg>
-                <span className="hidden md:inline">Kecil</span>
+                <span className="hidden md:inline">{t.nav.exitFullscreen}</span>
               </>
             ) : (
               <>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                 </svg>
-                <span className="hidden md:inline">Penuh</span>
+                <span className="hidden md:inline">{t.nav.fullscreen}</span>
               </>
             )}
           </button>
@@ -134,10 +175,10 @@ export const KioskLayout: React.FC = () => {
               type="button"
               onClick={handleRestart}
               className="min-h-[46px] px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white bg-zinc-900/90 active:scale-95 hover:bg-zinc-800 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800/80 shadow-sm flex items-center gap-1.5"
-              title="Reset ke sesi awal"
+              title={t.nav.reset}
             >
               <span>↺</span>
-              <span className="hidden sm:inline">Reset</span>
+              <span className="hidden sm:inline">{t.nav.reset}</span>
             </button>
           )}
 
@@ -146,7 +187,7 @@ export const KioskLayout: React.FC = () => {
             className="min-h-[46px] flex items-center gap-1 px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-semibold text-zinc-400 hover:text-white bg-zinc-900/60 active:scale-95 hover:bg-zinc-800 rounded-xl transition-all whitespace-nowrap border border-zinc-800/60"
           >
             <span>⚙️</span>
-            <span className="hidden sm:inline">Admin</span>
+            <span className="hidden sm:inline">{t.nav.admin}</span>
           </Link>
         </div>
       </header>

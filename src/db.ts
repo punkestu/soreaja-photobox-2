@@ -55,6 +55,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   kioskBackgroundOverlayOpacity: 60, // 60%
   themeColor: '#E11D48',
   themePreset: 'crimson',
+  language: 'id',
   updatedAt: new Date().toISOString(),
 };
 

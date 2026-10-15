@@ -8,7 +8,7 @@ import { BACKDROP_PRESETS } from '../../data/themeConfig';
 
 export const IdleScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { resetSession } = usePhotobox();
+  const { resetSession, t } = usePhotobox();
   const settings = useLiveQuery(() => db.settings.get('app_settings'), []);
 
   const handleStart = async () => {
@@ -40,7 +40,7 @@ export const IdleScreen: React.FC = () => {
     <div
       onClick={handleStart}
       role="region"
-      aria-label="Layar Mulai Sesi Photobox"
+      aria-label={t.idle.touchPrompt}
       className="flex-1 w-full min-h-screen relative flex items-center justify-center overflow-hidden cursor-pointer select-none"
     >
       {/* Editorial Studio Backdrop Image with Configurable Overlay */}
@@ -59,7 +59,7 @@ export const IdleScreen: React.FC = () => {
           <span aria-hidden="true">·</span>
           <span>{settings?.eventName || 'SoreAja Sunset Session 2026'}</span>
           <span aria-hidden="true">·</span>
-          <span className="text-emerald-400 font-bold">100% Offline Ready</span>
+          <span className="text-emerald-400 font-bold">{t.idle.offlineActive}</span>
         </div>
 
         <div className="space-y-4 md:space-y-6">
@@ -67,10 +67,10 @@ export const IdleScreen: React.FC = () => {
             className="font-display text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold tracking-tight text-[#F4F4F0]"
             style={{ textWrap: 'balance' }}
           >
-            SoreAja — Photobox
+            {t.appName}
           </h1>
           <p className="font-serif-editorial italic text-2xl sm:text-3xl md:text-5xl text-zinc-200">
-            Abadikan momenmu sekarang juga.
+            {t.idle.touchSubtitle}
           </p>
         </div>
 
@@ -88,11 +88,11 @@ export const IdleScreen: React.FC = () => {
             className="min-h-[76px] sm:min-h-[86px] md:min-h-[96px] px-10 sm:px-16 md:px-20 py-5 sm:py-6 text-xl sm:text-2xl md:text-3xl font-display font-extrabold text-white rounded-3xl shadow-[0_0_60px_rgba(225,29,72,0.65)] transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer hover:brightness-105 flex items-center gap-4 animate-pulse ring-2 ring-white/30"
           >
             <span className="text-2xl sm:text-3xl md:text-4xl">👉</span>
-            <span>Sentuh Layar untuk Memulai</span>
+            <span>{t.idle.touchPrompt}</span>
           </button>
 
           <p className="text-xs sm:text-sm md:text-base font-mono-tabular text-zinc-300 max-w-xl">
-            Pilih Bingkai · Pose Otomatis · Cetak Instan & Scan QR Google Drive
+            {t.idle.readyBadge}
           </p>
         </div>
       </div>

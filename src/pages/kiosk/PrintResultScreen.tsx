@@ -34,6 +34,8 @@ export const PrintResultScreen: React.FC = () => {
     showFrameStamps,
     resetSession,
     isHydrated,
+    language,
+    t,
   } = usePhotobox();
 
   const settings = useLiveQuery(() => db.settings.get('app_settings'), []);
@@ -41,7 +43,7 @@ export const PrintResultScreen: React.FC = () => {
   const [isGeneratingGif, setIsGeneratingGif] = useState<boolean>(false);
   const [gifProgress, setGifProgress] = useState<number>(0);
   const [printStatus, setPrintStatus] = useState<string>(
-    'Memproses foto...'
+    language === 'en' ? 'Processing photos...' : 'Memproses foto...'
   );
   const [printError, setPrintError] = useState<string | null>(null);
   const [isPrintingThermal, setIsPrintingThermal] = useState<boolean>(false);
@@ -285,14 +287,14 @@ export const PrintResultScreen: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-white/5">
         <div>
           <div className="text-xs sm:text-sm font-mono-tabular text-zinc-400 flex items-center gap-2 mb-1.5">
-            <span className="text-[var(--theme-accent,#E11D48)] font-bold">🏁 Selesai 06/06</span>
+            <span className="text-[var(--theme-accent,#E11D48)] font-bold">{t.printResult.stageBadge}</span>
             <span aria-hidden="true">·</span>
-            <span>💾 Unduh Otomatis</span>
+            <span>{t.printResult.autoDownloadBadge}</span>
             <span aria-hidden="true">·</span>
-            <span>🖨️ Cetak Studio</span>
+            <span>{t.printResult.printBadge}</span>
           </div>
           <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#F4F4F0]">
-            Hasil Photobox & QR Code
+            {t.printResult.title}
           </h1>
           <p
             role="status"
@@ -313,10 +315,10 @@ export const PrintResultScreen: React.FC = () => {
             <span>🖨️</span>
             <span>
               {isPrintingThermal
-                ? 'Mencetak...'
+                ? t.printResult.printing
                 : thermalPrintCount > 0
-                ? `Thermal (${thermalPrintCount}x)`
-                : 'Thermal'}
+                ? `${t.printResult.printThermal} (${thermalPrintCount}x)`
+                : t.printResult.printThermal}
             </span>
           </button>
 
@@ -329,10 +331,10 @@ export const PrintResultScreen: React.FC = () => {
             <span>🎨</span>
             <span>
               {isPrintingColor
-                ? 'Mencetak...'
+                ? t.printResult.printing
                 : colorPrintCount > 0
-                ? `Warna (${colorPrintCount}x)`
-                : 'Warna'}
+                ? `${t.printResult.printColor} (${colorPrintCount}x)`
+                : t.printResult.printColor}
             </span>
           </button>
 
@@ -341,7 +343,7 @@ export const PrintResultScreen: React.FC = () => {
             onClick={handleNewSession}
             className="min-h-[46px] sm:min-h-[50px] grow px-6 sm:px-8 py-2 text-sm sm:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center justify-center gap-2"
           >
-            <span>Sesi Baru</span>
+            <span>{t.printResult.newSession}</span>
             <span>✨</span>
           </button>
         </div>
@@ -353,7 +355,7 @@ export const PrintResultScreen: React.FC = () => {
           <div className="flex items-center gap-2.5">
             <span className="text-amber-400 font-bold text-base">⚠️</span>
             <div>
-              <p className="font-semibold text-amber-200">Gagal Mengirim ke Print API</p>
+              <p className="font-semibold text-amber-200">{t.printResult.printError}</p>
               <p className="text-amber-300/80 font-mono text-[11px] mt-0.5">{printError}</p>
             </div>
           </div>
@@ -364,7 +366,7 @@ export const PrintResultScreen: React.FC = () => {
               className="px-3 py-1.5 bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] text-white font-semibold rounded-xl transition-colors cursor-pointer shadow-sm text-xs flex items-center gap-1.5"
             >
               <span>🎨</span>
-              <span>Cetak Warna</span>
+              <span>{t.printResult.tryColor}</span>
             </button>
             <button
               type="button"
@@ -372,7 +374,7 @@ export const PrintResultScreen: React.FC = () => {
               className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white font-medium rounded-xl transition-colors cursor-pointer text-xs flex items-center gap-1.5"
             >
               <span>🖨️</span>
-              <span>Cetak Thermal</span>
+              <span>{t.printResult.tryThermal}</span>
             </button>
             <button
               type="button"
@@ -380,7 +382,7 @@ export const PrintResultScreen: React.FC = () => {
               className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium rounded-xl transition-colors cursor-pointer text-xs flex items-center gap-1.5"
             >
               <span>🧪</span>
-              <span>Simulasi</span>
+              <span>{t.printResult.simulation}</span>
             </button>
             <button
               type="button"
@@ -388,7 +390,7 @@ export const PrintResultScreen: React.FC = () => {
               className="px-3 py-1.5 bg-amber-900/60 hover:bg-amber-900 text-amber-200 border border-amber-600/50 font-medium rounded-xl transition-colors cursor-pointer text-xs flex items-center gap-1.5"
             >
               <span>⚙️</span>
-              <span>Pengaturan</span>
+              <span>{t.printResult.openSettings}</span>
             </button>
           </div>
         </div>
@@ -403,7 +405,7 @@ export const PrintResultScreen: React.FC = () => {
               <div>
                 <h2 className="font-display text-base sm:text-lg font-bold text-[#F4F4F0] flex items-center gap-2">
                   <span>🖼️</span>
-                  <span>Hasil Cetak Berbingkai</span>
+                  <span>{t.printResult.framedPrintTitle}</span>
                 </h2>
                 <p className="text-xs text-zinc-400">Bingkai: {activeFrame.name}</p>
               </div>
@@ -419,7 +421,7 @@ export const PrintResultScreen: React.FC = () => {
                       )
                     }
                     className="min-h-[42px] px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-sm flex items-center gap-1.5"
-                    title="Unduh 2 strip berdampingan dengan garis potong untuk cetak 4R"
+                    title={t.printResult.doubleStripDesc}
                   >
                     <span>📥</span>
                     <span>2-Strip (4R)</span>
@@ -435,7 +437,7 @@ export const PrintResultScreen: React.FC = () => {
                       )
                     }
                     className="min-h-[42px] px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5"
-                    title="Unduh 1 strip tunggal"
+                    title={t.printResult.singleStripDesc}
                   >
                     <span>📥</span>
                     <span>{doubleStripBase64 ? '1-Strip' : 'PNG'}</span>
@@ -471,7 +473,7 @@ export const PrintResultScreen: React.FC = () => {
                   >
                     <span>👥 2-Strip (4R)</span>
                     <span className="text-[10px] px-1 bg-white/20 text-white rounded font-mono">
-                      ✂️ Garis Potong
+                      ✂️ {t.preview.cutLine}
                     </span>
                   </button>
                 </div>
@@ -495,14 +497,14 @@ export const PrintResultScreen: React.FC = () => {
                 <p className="text-[11px] font-mono-tabular text-zinc-400 text-center flex items-center gap-2">
                   <span>
                     {stripDisplayMode === 'double' && doubleStripBase64
-                      ? '👥 Mode 2-Strip Side-by-Side dengan Garis Potong Tebal · Standar 4R (4×6")'
-                      : '📱 Mode 1-Strip Tunggal · Kertas Roll 80mm / Thermal'}
+                      ? `👥 ${t.printResult.doubleStripDesc}`
+                      : `📱 ${t.printResult.singleStripDesc}`}
                   </span>
                 </p>
               </>
             ) : (
               <span className="text-xs font-mono-tabular text-zinc-500">
-                Memuat gambar akhir...
+                {t.preview.rendering}
               </span>
             )}
           </div>
@@ -515,7 +517,7 @@ export const PrintResultScreen: React.FC = () => {
               <div>
                 <h2 className="font-display text-base sm:text-lg font-bold text-[#F4F4F0] flex items-center gap-2">
                   <span>🎞️</span>
-                  <span>Animasi GIF</span>
+                  <span>{t.printResult.animatedGifTitle}</span>
                 </h2>
                 <p className="text-xs text-zinc-400">600×400px · Loop 500ms</p>
               </div>
@@ -528,7 +530,7 @@ export const PrintResultScreen: React.FC = () => {
                   className="min-h-[42px] px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5"
                 >
                   <span>📥</span>
-                  <span>Unduh GIF</span>
+                  <span>{t.printResult.downloadGif}</span>
                 </button>
               )}
             </div>
@@ -548,9 +550,9 @@ export const PrintResultScreen: React.FC = () => {
               <div className="text-center space-y-3 p-6">
                 <div className="w-12 h-12 border-3 border-[var(--theme-accent,#E11D48)] border-t-transparent rounded-full animate-spin mx-auto" />
                 <p className="text-sm font-mono-tabular text-zinc-200 font-semibold">
-                  Merender Animasi GIF ({gifProgress}%)...
+                  {t.printResult.renderingGif} ({gifProgress}%)...
                 </p>
-                <p className="text-xs text-zinc-500">Memproses pose via Web Worker</p>
+                <p className="text-xs text-zinc-500">{t.printResult.gifProcessing}</p>
               </div>
             ) : gifBlobUrl ? (
               <div className="w-full h-full flex flex-col items-center justify-center">
@@ -562,11 +564,11 @@ export const PrintResultScreen: React.FC = () => {
                 />
                 <div className="mt-3 flex items-center gap-2 text-xs font-mono-tabular text-zinc-400">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Animasi Siap Dibagikan</span>
+                  <span>{t.printResult.gifReady}</span>
                 </div>
               </div>
             ) : (
-              <span className="text-xs text-zinc-500 font-mono-tabular">Menyiapkan GIF...</span>
+              <span className="text-xs text-zinc-500 font-mono-tabular">{t.printResult.savingGif}</span>
             )}
           </div>
 
@@ -574,7 +576,7 @@ export const PrintResultScreen: React.FC = () => {
           <div className="pt-3 border-t border-zinc-800/80 space-y-2">
             <p className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
               <span>💾</span>
-              <span>File Sesi Tersimpan ({downloadedManifest.length}):</span>
+              <span>{t.printResult.savedFiles} ({downloadedManifest.length}):</span>
             </p>
             <ul className="space-y-1 text-xs font-mono-tabular text-zinc-400 max-h-28 overflow-y-auto pr-1">
               {downloadedManifest.map((item) => (
@@ -589,7 +591,7 @@ export const PrintResultScreen: React.FC = () => {
                     className="text-zinc-200 hover:text-white underline ml-2 shrink-0 cursor-pointer flex items-center gap-1"
                   >
                     <span>📥</span>
-                    <span>Simpan</span>
+                    <span>{t.printResult.saveFile}</span>
                   </button>
                 </li>
               ))}
@@ -613,13 +615,13 @@ export const PrintResultScreen: React.FC = () => {
             <div className="space-y-1.5 text-center sm:text-left">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[var(--theme-accent,#E11D48)]/15 border border-[var(--theme-accent,#E11D48)]/30 text-[var(--theme-accent,#E11D48)] rounded-full text-xs font-bold font-mono-tabular">
                 <span>📱</span>
-                <span>Scan untuk Unduh</span>
+                <span>{t.printResult.scanQrBadge}</span>
               </div>
               <h3 className="font-display text-lg sm:text-xl font-bold text-[#F4F4F0]">
-                Pindai QR Code via Kamera Ponsel
+                {t.printResult.scanQrTitle}
               </h3>
               <p className="text-xs sm:text-sm text-zinc-400 max-w-md">
-                Buka folder Google Drive untuk mengunduh semua foto raw, bingkai cetak, dan animasi GIF sesi ini ke ponselmu.
+                {t.printResult.scanQrSubtitle}
               </p>
               <p className="text-[11px] font-mono-tabular text-zinc-400 break-all pt-1">
                 🔗 {driveUrl}
@@ -634,7 +636,7 @@ export const PrintResultScreen: React.FC = () => {
               onClick={handleNewSession}
               className="min-h-[52px] sm:min-h-[56px] px-8 sm:px-10 py-3.5 text-base sm:text-lg font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center justify-center gap-2.5"
             >
-              <span>Mulai Sesi Baru</span>
+              <span>{t.printResult.startNewSession}</span>
               <span>✨</span>
             </button>
 
@@ -646,7 +648,7 @@ export const PrintResultScreen: React.FC = () => {
                 className="flex-1 min-h-[46px] px-4 py-2 text-xs font-bold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 active:scale-95 disabled:opacity-50 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 border border-zinc-700/60"
               >
                 <span>🖨️</span>
-                <span>Print Thermal</span>
+                <span>{t.printResult.printThermal}</span>
               </button>
 
               <button
@@ -656,7 +658,7 @@ export const PrintResultScreen: React.FC = () => {
                 className="flex-1 min-h-[46px] px-4 py-2 text-xs font-bold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 active:scale-95 disabled:opacity-50 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 border border-zinc-700/60"
               >
                 <span>🎨</span>
-                <span>Print Warna</span>
+                <span>{t.printResult.printColor}</span>
               </button>
             </div>
           </div>

@@ -6,7 +6,7 @@ import type { FrameMetadata } from '../../types/photobox';
 
 export const FrameSelectionScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { selectedFrame, setSelectedFrame, setCapturedPhotos, setRetakeIndex } =
+  const { selectedFrame, setSelectedFrame, setCapturedPhotos, setRetakeIndex, t } =
     usePhotobox();
   const [frames, setFrames] = useState<FrameMetadata[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,17 +30,17 @@ export const FrameSelectionScreen: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-2 sm:pb-4 border-b border-white/5">
         <div>
           <div className="text-xs sm:text-sm font-mono-tabular text-zinc-400 flex items-center gap-2 mb-1.5">
-            <span className="text-[var(--theme-accent,#E11D48)] font-bold">Tahap 02/06</span>
+            <span className="text-[var(--theme-accent,#E11D48)] font-bold">{t.frameSelect.stageBadge}</span>
             <span aria-hidden="true">·</span>
-            <span>🖼️ Pilih Bingkai</span>
+            <span>🖼️ {t.frameSelect.title}</span>
             <span aria-hidden="true">·</span>
-            <span>{frames.length} Desain</span>
+            <span>{frames.length} {t.frameSelect.framesAvailable}</span>
           </div>
           <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#F4F4F0]">
-            Pilih Layout Bingkai
+            {t.frameSelect.title}
           </h1>
           <p className="text-xs sm:text-sm md:text-base text-zinc-400 mt-1">
-            Sentuh bingkai pilihanmu untuk melanjutkan ke sesi foto kamera.
+            {t.frameSelect.subtitle}
           </p>
         </div>
 
@@ -50,7 +50,7 @@ export const FrameSelectionScreen: React.FC = () => {
           className="min-h-[46px] px-4 py-2 text-xs sm:text-sm font-semibold text-zinc-300 bg-zinc-900/90 active:scale-95 hover:bg-zinc-800 rounded-xl transition-all whitespace-nowrap self-start sm:self-auto cursor-pointer border border-zinc-800 shadow-sm flex items-center gap-1.5"
         >
           <span>←</span>
-          <span>Mulai</span>
+          <span>{t.nav.backToStart}</span>
         </button>
       </div>
 
@@ -98,7 +98,7 @@ export const FrameSelectionScreen: React.FC = () => {
                   <div className="space-y-1.5">
                     <div className="text-[11px] sm:text-xs font-mono-tabular text-zinc-400 flex items-center justify-between">
                       <span className="font-bold text-white bg-zinc-800/80 px-2 py-0.5 rounded-md">
-                        {frame.photoCount} Pose
+                        {frame.photoCount} {t.frameSelect.poses}
                       </span>
                       <span>
                         {frame.canvasWidth || 500}×{frame.canvasHeight || 1220}px
@@ -129,7 +129,7 @@ export const FrameSelectionScreen: React.FC = () => {
                   }}
                   className="w-full min-h-[46px] sm:min-h-[50px] py-2.5 px-3 text-xs sm:text-sm font-bold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-md flex items-center justify-center gap-1.5"
                 >
-                  <span>Pilih ({frame.photoCount} Pose)</span>
+                  <span>{t.frameSelect.selectAction} ({frame.photoCount} {t.frameSelect.poses})</span>
                   <span>📸</span>
                 </button>
               </div>

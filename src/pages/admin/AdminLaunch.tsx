@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { printThermal, printColor, type PrintJobResult } from '../../services/printServices';
+import { usePhotobox } from '../../context/PhotoboxContext';
 
 export const AdminLaunch: React.FC = () => {
   const navigate = useNavigate();
+  const { t, language } = usePhotobox();
   const [testingThermal, setTestingThermal] = useState(false);
   const [testingColor, setTestingColor] = useState(false);
   const [lastPrintResult, setLastPrintResult] = useState<PrintJobResult | null>(null);
@@ -36,19 +38,18 @@ export const AdminLaunch: React.FC = () => {
   return (
     <div className="space-y-8 max-w-4xl">
       <div>
-        <div className="text-xs text-neutral-500 flex items-center gap-2 mb-2">
-          <span>Mode Pelanggan</span>
+        <div className="text-xs text-neutral-500 flex items-center gap-2 mb-2 font-mono-tabular">
+          <span>{t.admin.launchCustomerMode}</span>
           <span aria-hidden="true">·</span>
-          <span>Rute Target: /app/idle</span>
+          <span>{t.admin.launchTargetRoute}</span>
           <span aria-hidden="true">·</span>
-          <span>Layar Penuh Kiosk</span>
+          <span>{t.admin.launchFullscreenBadge}</span>
         </div>
         <h1 className="font-display text-2xl md:text-3xl font-bold text-neutral-900">
-          Peluncuran Sesi Photobox (Kiosk Mode)
+          {t.admin.launchTitle}
         </h1>
         <p className="text-sm text-neutral-600 mt-1">
-          Pastikan printer thermal, printer warna, dan kamera studio siap sebelum
-          membuka tampilan layar penuh untuk pelanggan.
+          {t.admin.launchSubtitle}
         </p>
       </div>
 
@@ -59,11 +60,10 @@ export const AdminLaunch: React.FC = () => {
             KIOSK DISPLAY · 100% OFFLINE READY
           </p>
           <h2 className="font-display text-2xl font-bold">
-            Siap Menerima Pelanggan di Booth?
+            {t.admin.launchReadyTitle}
           </h2>
           <p className="text-sm text-neutral-300 leading-relaxed">
-            Membuka antarmuka layar sentuh pelanggan dimulai dari layar tunggu, pemilihan
-            bingkai, pengambilan foto otomatis, hingga pencetakan dan QR Code.
+            {t.admin.launchReadyDesc}
           </p>
         </div>
 
@@ -74,7 +74,7 @@ export const AdminLaunch: React.FC = () => {
             className="min-h-[50px] px-7 py-3 text-sm font-bold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap text-center cursor-pointer shadow-md flex items-center justify-center gap-2"
           >
             <span>🖥️</span>
-            <span>Luncurkan Photobox Fullscreen</span>
+            <span>{t.admin.launchFullscreenBtn}</span>
           </button>
           <Link
             to="/app/idle"
@@ -83,7 +83,7 @@ export const AdminLaunch: React.FC = () => {
             className="min-h-[46px] px-6 py-2.5 text-xs sm:text-sm font-semibold text-neutral-200 bg-neutral-800 hover:bg-neutral-700 active:scale-95 rounded-xl transition-all whitespace-nowrap text-center flex items-center justify-center gap-2"
           >
             <span>↗</span>
-            <span>Buka di Tab Baru</span>
+            <span>{t.admin.launchNewTabBtn}</span>
           </Link>
         </div>
       </section>
@@ -92,12 +92,10 @@ export const AdminLaunch: React.FC = () => {
       <section className="bg-white border border-neutral-200 rounded-xl p-6 space-y-5">
         <div>
           <h2 className="text-lg font-semibold text-neutral-900">
-            Uji Coba Printer (Simulasi Mock Hardware)
+            {t.admin.printerDiagnosticTitle}
           </h2>
           <p className="text-xs text-neutral-500 mt-0.5">
-            Verifikasi fungsi <code className="font-mono-tabular">printThermal()</code>{' '}
-            (1500ms) dan <code className="font-mono-tabular">printColor()</code> (3000ms)
-            sebelum sesi dimulai.
+            {t.admin.printerDiagnosticDesc}
           </p>
         </div>
 
@@ -105,10 +103,10 @@ export const AdminLaunch: React.FC = () => {
           <div className="p-4 bg-[#F4F4F0] rounded-lg border border-neutral-200 flex flex-col justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-neutral-900">
-                Printer Thermal 80mm
+                {t.admin.printerThermalTitle}
               </p>
               <p className="text-xs text-neutral-600 mt-1">
-                Digunakan untuk cetak otomatis struk foto monokrom saat sesi selesai.
+                {t.admin.printerThermalDesc}
               </p>
             </div>
             <button
@@ -117,17 +115,17 @@ export const AdminLaunch: React.FC = () => {
               onClick={handleTestThermal}
               className="px-4 py-2 text-xs font-semibold text-neutral-900 bg-white border border-neutral-300 hover:bg-neutral-100 rounded-lg transition-colors whitespace-nowrap cursor-pointer disabled:opacity-50"
             >
-              {testingThermal ? 'Menghubungkan Printer Thermal...' : 'Test Cetak Thermal'}
+              {testingThermal ? t.admin.testingThermalBtn : t.admin.testThermalBtn}
             </button>
           </div>
 
           <div className="p-4 bg-[#F4F4F0] rounded-lg border border-neutral-200 flex flex-col justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-neutral-900">
-                Printer Warna Studio (Dye-Sub 4R)
+                {t.admin.printerColorTitle}
               </p>
               <p className="text-xs text-neutral-600 mt-1">
-                Digunakan untuk cetak warna kualitas tinggi berbingkai pada tahap akhir.
+                {t.admin.printerColorDesc}
               </p>
             </div>
             <button
@@ -136,7 +134,7 @@ export const AdminLaunch: React.FC = () => {
               onClick={handleTestColor}
               className="px-4 py-2 text-xs font-semibold text-neutral-900 bg-white border border-neutral-300 hover:bg-neutral-100 rounded-lg transition-colors whitespace-nowrap cursor-pointer disabled:opacity-50"
             >
-              {testingColor ? 'Menghubungkan Printer Warna...' : 'Test Cetak Warna'}
+              {testingColor ? t.admin.testingColorBtn : t.admin.testColorBtn}
             </button>
           </div>
         </div>

@@ -1,9 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import type { FrameMetadata, PhotoFilter, PhotoboxState } from '../types/photobox';
+import type { FrameMetadata, PhotoFilter, PhotoboxState, AppLanguage } from '../types/photobox';
 import { db } from '../db';
 import { DEFAULT_FRAMES } from '../data/defaultFrames';
+import { TRANSLATIONS, type TranslationDictionary } from '../i18n/translations';
 
 interface PhotoboxContextValue extends PhotoboxState {
+  language: AppLanguage;
+  setLanguage: (lang: AppLanguage) => void;
+  t: TranslationDictionary;
   setSelectedFrame: (frame: FrameMetadata | null) => void;
   setCapturedPhotos: React.Dispatch<React.SetStateAction<string[]>>;
   updatePhotoAtIndex: (index: number, photoBase64: string) => void;
@@ -43,7 +47,21 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [selectedFilter, setSelectedFilter] = useState<PhotoFilter>(initialState.selectedFilter);
   const [customCaption, setCustomCaption] = useState<string>(initialState.customCaption);
   const [showFrameStamps, setShowFrameStamps] = useState<boolean>(initialState.showFrameStamps);
+  const [language, setLanguageState] = useState<AppLanguage>('id');
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
+
+  // Set language with instant update and persistent DB write
+  const setLanguage = useCallback((lang: AppLanguage) => {
+    setLanguageState(lang);
+    db.settings.update('app_settings', { language: lang }).catch(() => {
+      // If record not created yet, put with default
+      db.settings.get('app_settings').then((existing) => {
+        if (existing) {
+          db.settings.put({ ...existing, language: lang });
+        }
+      }).catch(() => {});
+    });
+  }, []);
 
   // Load saved session and settings from Dexie IndexedDB on initial mount
   useEffect(() => {
@@ -59,6 +77,12 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           savedSettings?.showFrameStamps !== undefined
             ? savedSettings.showFrameStamps
             : true;
+
+        if (isMounted) {
+          if (savedSettings?.language === 'en' || savedSettings?.language === 'id') {
+            setLanguageState(savedSettings.language);
+          }
+        }
 
         if (isMounted && savedSession) {
           if (savedSession.selectedFrame) setSelectedFrame(savedSession.selectedFrame);
@@ -200,6 +224,8 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [selectedFrame]);
 
+  const t = TRANSLATIONS[language];
+
   return (
     <PhotoboxContext.Provider
       value={{
@@ -213,6 +239,9 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         customCaption,
         showFrameStamps,
         isHydrated,
+        language,
+        setLanguage,
+        t,
         setSelectedFrame,
         setCapturedPhotos,
         updatePhotoAtIndex,

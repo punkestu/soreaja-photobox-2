@@ -12,6 +12,7 @@ export const ReviewPhotosScreen: React.FC = () => {
     setCapturedPhotos,
     setRetakeIndex,
     isHydrated,
+    t,
   } = usePhotobox();
 
   const [viewMode, setViewMode] = useState<'cropped' | 'full'>('cropped');
@@ -49,17 +50,17 @@ export const ReviewPhotosScreen: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-white/5">
         <div>
           <div className="text-xs sm:text-sm font-mono-tabular text-zinc-400 flex items-center gap-2 mb-1.5">
-            <span className="text-[var(--theme-accent,#E11D48)] font-bold">Tahap 04/06</span>
+            <span className="text-[var(--theme-accent,#E11D48)] font-bold">{t.review.stageBadge}</span>
             <span aria-hidden="true">·</span>
-            <span>📸 Evaluasi Pose</span>
+            <span>📸 {t.review.title}</span>
             <span aria-hidden="true">·</span>
-            <span>👤 {capturedPhotos.length} Foto Siap</span>
+            <span>👤 {capturedPhotos.length} {t.review.photosReady}</span>
           </div>
           <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#F4F4F0]">
-            Evaluasi Hasil Foto
+            {t.review.title}
           </h1>
           <p className="text-xs sm:text-sm md:text-base text-zinc-400 mt-1">
-            Sentuh foto untuk retake pose, atau klik <strong className="text-white">Lanjut</strong> jika sudah puas.
+            {t.review.subtitle}
           </p>
         </div>
 
@@ -73,7 +74,7 @@ export const ReviewPhotosScreen: React.FC = () => {
             className="min-h-[46px] sm:min-h-[50px] px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-sm flex items-center gap-1.5"
           >
             <span>↺</span>
-            <span>Ulang Semua</span>
+            <span>{t.review.retakeAll}</span>
           </button>
 
           <button
@@ -81,7 +82,7 @@ export const ReviewPhotosScreen: React.FC = () => {
             onClick={handleFinishReview}
             className="min-h-[46px] sm:min-h-[50px] px-6 sm:px-7 py-2.5 text-xs sm:text-sm md:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center gap-2"
           >
-            <span>Lanjut ke Bingkai</span>
+            <span>{t.review.continueToFrame}</span>
             <span>🎨</span>
           </button>
         </div>
@@ -90,7 +91,7 @@ export const ReviewPhotosScreen: React.FC = () => {
       {/* View Mode Toggle Bar - Tablet Optimized */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-zinc-900/80 border border-zinc-800/80 rounded-2xl p-3 sm:p-4">
         <div className="flex items-center gap-2">
-          <span className="text-xs sm:text-sm text-zinc-400 font-medium mr-1">👁️ Tampilan:</span>
+          <span className="text-xs sm:text-sm text-zinc-400 font-medium mr-1">👁️ {t.review.viewMode}</span>
           <button
             type="button"
             onClick={() => setViewMode('cropped')}
@@ -100,7 +101,7 @@ export const ReviewPhotosScreen: React.FC = () => {
                 : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
             }`}
           >
-            <span>📐 Potongan Bingkai</span>
+            <span>📐 {t.review.croppedMode}</span>
           </button>
           <button
             type="button"
@@ -111,13 +112,13 @@ export const ReviewPhotosScreen: React.FC = () => {
                 : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
             }`}
           >
-            <span>📷 Kamera Utuh</span>
+            <span>📷 {t.review.fullMode}</span>
           </button>
         </div>
         <p className="text-xs font-mono-tabular text-zinc-400">
           {viewMode === 'cropped'
-            ? 'Potongan presisi sesuai slot bingkai'
-            : 'Foto asli dengan batas crop'}
+            ? t.review.croppedDesc
+            : t.review.fullDesc}
         </p>
       </div>
 
@@ -230,14 +231,14 @@ export const ReviewPhotosScreen: React.FC = () => {
                   {/* Persistent touch hint overlay for tablet / hover overlay for desktop */}
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity bg-black/50 z-10">
                     <span className="px-4 py-2 bg-white text-zinc-950 text-xs sm:text-sm font-bold rounded-xl shadow-lg">
-                      Sentuh untuk Retake Pose #{index + 1}
+                      {t.review.tapToRetake} #{index + 1}
                     </span>
                   </div>
                 </button>
 
                 <div className="text-[11px] font-mono-tabular text-zinc-400 flex items-center justify-between">
                   <span>Rasio: {slotAspect.toFixed(2)}:1</span>
-                  <span>{viewMode === 'cropped' ? 'Pratinjau Crop Bingkai' : 'Kamera Asli (4:3)'}</span>
+                  <span>{viewMode === 'cropped' ? t.review.croppedMode : t.review.fullMode}</span>
                 </div>
               </div>
 
@@ -248,7 +249,7 @@ export const ReviewPhotosScreen: React.FC = () => {
                 className="w-full min-h-[44px] sm:min-h-[48px] py-2.5 px-3 text-xs sm:text-sm font-bold text-zinc-100 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
               >
                 <span>↺</span>
-                <span>Ulang Pose #{index + 1}</span>
+                <span>{t.review.retakeSingle} #{index + 1}</span>
               </button>
             </div>
           );
@@ -260,10 +261,10 @@ export const ReviewPhotosScreen: React.FC = () => {
         <div className="space-y-1">
           <p className="text-sm sm:text-base font-bold text-[#F4F4F0] flex items-center gap-1.5">
             <span>✨</span>
-            <span>Semua pose sudah sesuai keinginan?</span>
+            <span>{t.review.satisfiedQuestion}</span>
           </p>
           <p className="text-xs sm:text-sm text-zinc-400">
-            {capturedPhotos.length} foto akan digabungkan dengan bingkai{' '}
+            {capturedPhotos.length} {t.review.combineDesc}{' '}
             <strong className="text-zinc-200">{activeFrame.name}</strong>.
           </p>
         </div>
@@ -273,7 +274,7 @@ export const ReviewPhotosScreen: React.FC = () => {
           onClick={handleFinishReview}
           className="min-h-[50px] sm:min-h-[54px] px-8 sm:px-10 py-3 text-sm sm:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center justify-center gap-2 self-stretch sm:self-auto"
         >
-          <span>Lanjut ke Bingkai</span>
+          <span>{t.review.continueToFrame}</span>
           <span>🎨</span>
         </button>
       </div>

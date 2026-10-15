@@ -10,8 +10,10 @@ import {
 import { KIOSK_HERO_BACKDROP } from '../../data/defaultFrames';
 import { playShutterSound } from '../../services/shutterAudio';
 import { testPrintApi, precacheAllFrameAssets } from '../../services/printServices';
+import { usePhotobox } from '../../context/PhotoboxContext';
 
 export const AdminSettings: React.FC = () => {
+  const { language, setLanguage, t } = usePhotobox();
   const [driveUrl, setDriveUrl] = useState(DEFAULT_DRIVE_URL);
   const [studioName, setStudioName] = useState(DEFAULT_APP_SETTINGS.studioName || '');
   const [eventName, setEventName] = useState(DEFAULT_APP_SETTINGS.eventName || '');
@@ -325,6 +327,7 @@ export const AdminSettings: React.FC = () => {
       themePreset,
       kioskBackground,
       kioskBackgroundOverlayOpacity,
+      language,
       updatedAt: new Date().toISOString(),
     });
 
@@ -332,7 +335,9 @@ export const AdminSettings: React.FC = () => {
     setDriveUrl(cleanUrl);
     setIsSaving(false);
     setSaveMessage(
-      `Pengaturan, nama printer & warna tema berhasil disimpan ke IndexedDB pada ${new Date().toLocaleTimeString('id-ID')}.`
+      language === 'en'
+        ? `Settings, printer names & theme color saved to IndexedDB at ${new Date().toLocaleTimeString('en-US')}.`
+        : `Pengaturan, nama printer & warna tema berhasil disimpan ke IndexedDB pada ${new Date().toLocaleTimeString('id-ID')}.`
     );
   };
 
@@ -341,6 +346,7 @@ export const AdminSettings: React.FC = () => {
       ...DEFAULT_APP_SETTINGS,
       updatedAt: new Date().toISOString(),
     });
+    setLanguage('id');
     setDriveUrl(DEFAULT_APP_SETTINGS.driveUrl);
     setStudioName(DEFAULT_APP_SETTINGS.studioName || '');
     setEventName(DEFAULT_APP_SETTINGS.eventName || '');
@@ -363,7 +369,11 @@ export const AdminSettings: React.FC = () => {
     setUploadNotice(null);
     setTestApiResult(null);
     applyThemeColor('#E11D48');
-    setSaveMessage('Pengaturan & tema dikembalikan ke konfigurasi bawaan pabrik.');
+    setSaveMessage(
+      language === 'en'
+        ? 'Settings & theme reset to factory default configuration.'
+        : 'Pengaturan & tema dikembalikan ke konfigurasi bawaan pabrik.'
+    );
   };
 
   return (
@@ -397,7 +407,7 @@ export const AdminSettings: React.FC = () => {
               : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
           }`}
         >
-          🎨 Warna Tema & Background
+          🎨 {t.admin.settingsTabAppearance}
         </button>
         <button
           type="button"
@@ -409,7 +419,7 @@ export const AdminSettings: React.FC = () => {
               : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
           }`}
         >
-          ☁️ Google Drive & Teks Stempel
+          ☁️ {t.admin.settingsTabSession}
         </button>
         <button
           type="button"
@@ -421,7 +431,7 @@ export const AdminSettings: React.FC = () => {
               : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
           }`}
         >
-          📷 Kamera & Cetak Otomatis
+          📷 {t.admin.settingsTabHardware}
         </button>
       </div>
 
@@ -433,15 +443,104 @@ export const AdminSettings: React.FC = () => {
           {/* TAB 1: WARNA TEMA & BACKGROUND KIOSK */}
           {activeTab === 'appearance' && (
             <div className="space-y-6">
+              {/* Bagian 0: Bahasa Antarmuka (Language Switcher) */}
+              <div className="space-y-3 p-4 bg-neutral-50 rounded-2xl border border-neutral-200/80">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-sm font-bold text-neutral-900 flex items-center gap-1.5">
+                      <span>🌐</span>
+                      <span>{t.admin.languageTitle}</span>
+                    </h2>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      {t.admin.languageDesc}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setLanguage('id')}
+                    className={`min-h-[58px] p-3.5 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer flex items-center justify-between border ${
+                      language === 'id'
+                        ? 'bg-[var(--theme-accent,#E11D48)]/10 border-[var(--theme-accent,#E11D48)] ring-2 ring-[var(--theme-accent,#E11D48)] shadow-xs'
+                        : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-100'
+                    }`}
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">🇮🇩</span>
+                        <span className="text-xs sm:text-sm font-bold text-neutral-900">
+                          {t.admin.langId}
+                        </span>
+                        {language === 'id' && (
+                          <span className="text-[10px] bg-[var(--theme-accent,#E11D48)] text-white px-2 py-0.2 rounded-full font-bold">
+                            {language === 'id' ? 'Aktif' : 'Active'}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-neutral-500">
+                        {t.admin.langIdDesc}
+                      </p>
+                    </div>
+                    <div
+                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ml-2 ${
+                        language === 'id'
+                          ? 'border-[var(--theme-accent,#E11D48)] bg-[var(--theme-accent,#E11D48)]'
+                          : 'border-neutral-400'
+                      }`}
+                    >
+                      {language === 'id' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setLanguage('en')}
+                    className={`min-h-[58px] p-3.5 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer flex items-center justify-between border ${
+                      language === 'en'
+                        ? 'bg-[var(--theme-accent,#E11D48)]/10 border-[var(--theme-accent,#E11D48)] ring-2 ring-[var(--theme-accent,#E11D48)] shadow-xs'
+                        : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-100'
+                    }`}
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">🇬🇧</span>
+                        <span className="text-xs sm:text-sm font-bold text-neutral-900">
+                          {t.admin.langEn}
+                        </span>
+                        {language === 'en' && (
+                          <span className="text-[10px] bg-[var(--theme-accent,#E11D48)] text-white px-2 py-0.2 rounded-full font-bold">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-neutral-500">
+                        {t.admin.langEnDesc}
+                      </p>
+                    </div>
+                    <div
+                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ml-2 ${
+                        language === 'en'
+                          ? 'border-[var(--theme-accent,#E11D48)] bg-[var(--theme-accent,#E11D48)]'
+                          : 'border-neutral-400'
+                      }`}
+                    >
+                      {language === 'en' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </div>
+                  </button>
+                </div>
+              </div>
+
               {/* Bagian 1: Warna Tema */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-sm font-bold text-neutral-900">
-                      1. Pilihan Warna Tema Aplikasi (Theme Accent Color)
+                      1. {t.admin.themeColorTitle}
                     </h2>
                     <p className="text-xs text-neutral-500 mt-0.5">
-                      Warna ini diterapkan pada tombol aksi, navigasi aktif, seleksi bingkai, dan stempel studio.
+                      {t.admin.themeColorDesc}
                     </p>
                   </div>
                   <div

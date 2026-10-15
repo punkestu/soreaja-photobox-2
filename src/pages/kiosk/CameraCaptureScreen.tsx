@@ -16,6 +16,7 @@ export const CameraCaptureScreen: React.FC = () => {
     retakeIndex,
     setRetakeIndex,
     updatePhotoAtIndex,
+    t,
   } = usePhotobox();
 
   const settings = useLiveQuery(() => db.settings.get('app_settings'), []);
@@ -417,14 +418,14 @@ export const CameraCaptureScreen: React.FC = () => {
       {/* Top Breadcrumb & Minimalist Status */}
       <div className="flex items-center justify-between text-xs sm:text-sm font-mono-tabular text-zinc-400 pb-0.5 px-1">
         <div className="flex items-center gap-2">
-          <span className="text-[var(--theme-accent,#E11D48)] font-bold">Tahap 03/06</span>
+          <span className="text-[var(--theme-accent,#E11D48)] font-bold">{t.camera.stageBadge}</span>
           <span aria-hidden="true">·</span>
-          <span className="text-zinc-200 font-semibold">Bingkai: {activeFrame.name}</span>
+          <span className="text-zinc-200 font-semibold">{activeFrame.name}</span>
           <span aria-hidden="true">·</span>
           <span className="hidden sm:inline">
             {isRetakeMode
-              ? `Mode Retake Foto #${(retakeIndex ?? 0) + 1}`
-              : `${totalShotsNeeded} Pose Diperlukan`}
+              ? `${t.camera.retakeSlot} #${(retakeIndex ?? 0) + 1}`
+              : `${totalShotsNeeded} ${t.camera.posesNeeded}`}
           </span>
         </div>
 
@@ -434,7 +435,7 @@ export const CameraCaptureScreen: React.FC = () => {
             onClick={() => setUseSimulator((prev) => !prev)}
             className="min-h-[44px] px-3.5 py-2 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-900/90 border border-zinc-700/80 active:scale-95 hover:border-zinc-500 rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
           >
-            <span>{useSimulator ? '🖥️ Sim' : '📷 Live'}</span>
+            <span>{useSimulator ? `🖥️ ${t.camera.sim}` : `📷 ${t.camera.webRtc}`}</span>
           </button>
           <button
             type="button"
@@ -448,7 +449,7 @@ export const CameraCaptureScreen: React.FC = () => {
             }}
             className="min-h-[44px] px-3.5 py-2 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white bg-zinc-900/80 active:scale-95 border border-zinc-800 rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
           >
-            <span>{isRetakeMode ? '✕ Batal' : '← Bingkai'}</span>
+            <span>{isRetakeMode ? t.camera.cancelRetake : t.camera.backToFrames}</span>
           </button>
         </div>
       </div>
@@ -605,14 +606,14 @@ export const CameraCaptureScreen: React.FC = () => {
           <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex items-center justify-between text-xs font-mono-tabular text-white z-20 pointer-events-auto">
             <span className="flex items-center gap-1.5 px-3 py-1.5 bg-black/70 backdrop-blur-md border border-white/10 rounded-full shadow-lg">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[11px] font-semibold">{cameraReady ? 'LIVE' : 'MEMUAT'}</span>
+              <span className="text-[11px] font-semibold">{cameraReady ? t.camera.live : t.camera.loading}</span>
             </span>
 
             <div className="flex items-center gap-2 px-4 py-1.5 bg-black/75 backdrop-blur-md border border-white/15 rounded-full shadow-xl">
               <span className="text-[var(--theme-accent,#E11D48)] font-bold text-xs uppercase tracking-wider">
                 {isRetakeMode
-                  ? `RETAKE SLOT #${(retakeIndex ?? 0) + 1}`
-                  : `POSE ${currentShotNumber} / ${totalShotsNeeded}`}
+                  ? `${t.camera.retakeSlot} #${(retakeIndex ?? 0) + 1}`
+                  : `${t.camera.poseProgress} ${currentShotNumber} / ${totalShotsNeeded}`}
               </span>
             </div>
 
@@ -628,7 +629,7 @@ export const CameraCaptureScreen: React.FC = () => {
                 {countdown}
               </span>
               <p className="mt-2 text-base sm:text-lg font-mono-tabular text-zinc-200 uppercase tracking-widest drop-shadow font-bold">
-                Siapkan Pose Terbaikmu
+                {t.camera.getReady}
               </p>
             </div>
           )}
@@ -658,7 +659,7 @@ export const CameraCaptureScreen: React.FC = () => {
                     {shotSrc ? (
                       <img
                         src={shotSrc}
-                        alt={`Foto ${idx + 1}`}
+                        alt={`${t.camera.photoSlot} ${idx + 1}`}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -684,8 +685,8 @@ export const CameraCaptureScreen: React.FC = () => {
                   {isCapturingSequence
                     ? `⏱️ ${countdown ?? '...'}`
                     : isRetakeMode
-                    ? `↺ Retake #${(retakeIndex ?? 0) + 1}`
-                    : `Mulai (${settings?.countdownSeconds || 3}s)`}
+                    ? `↺ ${t.nav.retake} #${(retakeIndex ?? 0) + 1}`
+                    : `${t.camera.startSequence} (${settings?.countdownSeconds || 3}s)`}
                 </span>
               </button>
 
@@ -693,10 +694,10 @@ export const CameraCaptureScreen: React.FC = () => {
                 type="button"
                 onClick={handleInstantCapture}
                 className="min-h-[56px] sm:min-h-[64px] md:min-h-[68px] px-3.5 sm:px-5 py-3 text-xs sm:text-sm font-bold text-zinc-200 bg-black/85 hover:bg-zinc-800 active:scale-95 backdrop-blur-md border border-white/15 rounded-2xl transition-all whitespace-nowrap cursor-pointer shadow-xl flex items-center gap-1.5"
-                title="Ambil foto instan tanpa hitung mundur"
+                title={t.camera.instantCapture}
               >
                 <span>⚡</span>
-                <span className="hidden sm:inline">Instan</span>
+                <span className="hidden sm:inline">{t.camera.instantCapture}</span>
               </button>
             </div>
 
@@ -710,10 +711,10 @@ export const CameraCaptureScreen: React.FC = () => {
                     ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
                     : 'text-zinc-400 hover:text-white'
                 }`}
-                title="Toggle Garis Panduan Crop"
+                title={t.camera.cropToggle}
               >
                 <span>📐</span>
-                <span className="hidden md:inline">Crop</span>
+                <span className="hidden md:inline">{t.camera.cropToggle}</span>
               </button>
 
               <button
@@ -724,10 +725,10 @@ export const CameraCaptureScreen: React.FC = () => {
                     ? 'bg-zinc-700 text-white shadow-sm'
                     : 'text-zinc-400 hover:text-white'
                 }`}
-                title="Toggle Grid Rule of Thirds"
+                title={t.camera.gridToggle}
               >
                 <span>⊞</span>
-                <span className="hidden md:inline">Grid</span>
+                <span className="hidden md:inline">{t.camera.gridToggle}</span>
               </button>
             </div>
           </div>
@@ -737,10 +738,10 @@ export const CameraCaptureScreen: React.FC = () => {
         {cropInfo.isCropped && showCropGuide && (
           <div className="mt-3 w-full flex items-center justify-between gap-3 px-4 py-2 bg-zinc-900/90 border border-zinc-800/80 rounded-xl text-xs text-zinc-300">
             <span className="flex items-center gap-2">
-              <span className="text-amber-400 font-bold shrink-0">ℹ Panduan Komposisi:</span>
+              <span className="text-amber-400 font-bold shrink-0">ℹ {t.camera.compositionGuide}</span>
               <span>
-                Bingkai <strong>{activeFrame.name}</strong> ({targetSlot.width}×{targetSlot.height}px).
-                {" "}{cropInfo.label}. Posisikan wajah di dalam kotak panduan merah.
+                <strong>{activeFrame.name}</strong> ({targetSlot.width}×{targetSlot.height}px).
+                {" "}{cropInfo.label}
               </span>
             </span>
             <span className="text-[11px] font-mono-tabular text-zinc-500 shrink-0">

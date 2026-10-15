@@ -37,6 +37,8 @@ export const FinalPreviewScreen: React.FC = () => {
     showFrameStamps,
     setShowFrameStamps,
     isHydrated,
+    language,
+    t,
   } = usePhotobox();
 
   const [isCompositing, setIsCompositing] = useState<boolean>(!finalLayoutBase64);
@@ -129,17 +131,17 @@ export const FinalPreviewScreen: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-white/5">
         <div>
           <div className="text-xs sm:text-sm font-mono-tabular text-zinc-400 flex items-center gap-2 mb-1.5">
-            <span className="text-[var(--theme-accent,#E11D48)] font-bold">Tahap 05/06</span>
+            <span className="text-[var(--theme-accent,#E11D48)] font-bold">{t.preview.stageBadge}</span>
             <span aria-hidden="true">·</span>
             <span>🎨 Layout Frame</span>
             <span aria-hidden="true">·</span>
             <span>🖼️ {activeFrame.name}</span>
           </div>
           <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#F4F4F0]">
-            Pratinjau Layout Berbingkai
+            {t.preview.title}
           </h1>
           <p className="text-xs sm:text-sm md:text-base text-zinc-400 mt-1">
-            Sesuaikan filter warna dan garis potong sebelum lanjut cetak.
+            {t.preview.subtitle}
           </p>
         </div>
 
@@ -148,10 +150,10 @@ export const FinalPreviewScreen: React.FC = () => {
             type="button"
             onClick={() => navigate('/app/review-photos')}
             className="min-h-[46px] sm:min-h-[50px] px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-sm flex items-center gap-1.5"
-            title="Kembali ke evaluasi pose"
+            title={t.nav.retake}
           >
             <span>↺</span>
-            <span>Retake</span>
+            <span>{t.nav.retake}</span>
           </button>
 
           <button
@@ -159,10 +161,10 @@ export const FinalPreviewScreen: React.FC = () => {
             disabled={!activeDisplayImage}
             onClick={handleDownloadActive}
             className="min-h-[46px] sm:min-h-[50px] px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-sm flex items-center gap-1.5"
-            title="Unduh hasil gambar berbingkai saat ini (termasuk garis potong)"
+            title={t.preview.download}
           >
             <span>📥</span>
-            <span>Unduh</span>
+            <span>{t.preview.download}</span>
           </button>
 
           <button
@@ -171,7 +173,7 @@ export const FinalPreviewScreen: React.FC = () => {
             onClick={() => navigate('/app/print-result')}
             className="min-h-[46px] sm:min-h-[50px] px-6 sm:px-7 py-2.5 text-xs sm:text-sm md:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center gap-2"
           >
-            <span>Lanjut Cetak</span>
+            <span>{t.preview.continueToPrint}</span>
             <span>🖨️</span>
           </button>
         </div>
@@ -194,7 +196,7 @@ export const FinalPreviewScreen: React.FC = () => {
                         : 'text-zinc-400 hover:text-white'
                     }`}
                   >
-                    📱 1-Strip
+                    📱 {t.preview.singleStrip}
                   </button>
                   <button
                     type="button"
@@ -205,7 +207,7 @@ export const FinalPreviewScreen: React.FC = () => {
                         : 'text-zinc-400 hover:text-white'
                     }`}
                   >
-                    <span>👥 2-Strip (4R)</span>
+                    <span>👥 {t.preview.doubleStrip}</span>
                     <span className="text-[10px] px-1 py-0.2 bg-white/20 text-white rounded font-mono">
                       4R
                     </span>
@@ -220,7 +222,7 @@ export const FinalPreviewScreen: React.FC = () => {
                       onChange={(e) => setShowCutLine(e.target.checked)}
                       className="w-3.5 h-3.5 accent-[var(--theme-accent,#E11D48)] rounded cursor-pointer"
                     />
-                    <span className="font-semibold text-zinc-200">✂️ Garis Potong</span>
+                    <span className="font-semibold text-zinc-200">✂️ {t.preview.cutLine}</span>
                   </label>
                 )}
               </div>
@@ -230,10 +232,10 @@ export const FinalPreviewScreen: React.FC = () => {
           {isCompositing || !finalLayoutBase64 ? (
             <div className="text-center space-y-3 py-16">
               <p className="text-sm font-mono-tabular text-zinc-300">
-                Merender komposisi...
+                {t.preview.rendering}
               </p>
               <p className="text-xs text-zinc-500">
-                Menggabungkan {capturedPhotos.length} foto dengan {activeFrame.frameImg}
+                {t.preview.combining}
               </p>
             </div>
           ) : (
@@ -247,15 +249,15 @@ export const FinalPreviewScreen: React.FC = () => {
               <div className="flex items-center justify-between w-full px-2 text-[11px] font-mono-tabular text-zinc-400">
                 <span>
                   {isVertical && previewMode === 'double'
-                    ? `Format: 2-Strip Side-by-Side (${activeFrame.canvasWidth ? activeFrame.canvasWidth * 2 : 960}×${activeFrame.canvasHeight || 1440}px) · Kertas 4R`
-                    : `Format: 1-Strip (${activeFrame.canvasWidth || 480}×${activeFrame.canvasHeight || 1440}px)`}
+                    ? `${t.preview.formatDouble} (${activeFrame.canvasWidth ? activeFrame.canvasWidth * 2 : 960}×${activeFrame.canvasHeight || 1440}px)`
+                    : `${t.preview.formatSingle} (${activeFrame.canvasWidth || 480}×${activeFrame.canvasHeight || 1440}px)`}
                 </span>
                 <button
                   type="button"
                   onClick={handleDownloadActive}
                   className="text-zinc-300 hover:text-white flex items-center gap-1 underline cursor-pointer"
                 >
-                  <span>📥 Unduh PNG</span>
+                  <span>📥 {t.preview.downloadPng}</span>
                 </button>
               </div>
             </div>
@@ -267,14 +269,19 @@ export const FinalPreviewScreen: React.FC = () => {
           <div className="space-y-3">
             <h2 className="font-display text-base sm:text-lg font-bold text-[#F4F4F0] flex items-center gap-2">
               <span>🎨</span>
-              <span>Filter Tone Studio</span>
+              <span>{t.preview.colorFiltersTitle}</span>
             </h2>
             <p className="text-xs sm:text-sm text-zinc-400">
-              Pilih karakter tone warna yang langsung diterapkan ke cetakan dan file unduhan.
+              {t.preview.colorFiltersSubtitle}
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-              {FILTERS.map((f) => {
+              {[
+                { id: 'original' as const, label: t.preview.filters.original, desc: t.preview.filters.originalDesc },
+                { id: 'warm-sore' as const, label: t.preview.filters.warmSore, desc: t.preview.filters.warmSoreDesc },
+                { id: 'noir-bw' as const, label: t.preview.filters.noirBw, desc: t.preview.filters.noirBwDesc },
+                { id: 'vintage-film' as const, label: t.preview.filters.vintageFilm, desc: t.preview.filters.vintageFilmDesc },
+              ].map((f) => {
                 const isActive = selectedFilter === f.id;
                 return (
                   <button
@@ -301,10 +308,10 @@ export const FinalPreviewScreen: React.FC = () => {
               <div>
                 <p className="text-xs sm:text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
                   <span>🏷️</span>
-                  <span>Stempel Teks Bingkai</span>
+                  <span>{t.preview.frameStampsTitle}</span>
                 </p>
                 <p className="text-[11px] text-zinc-400">
-                  Header identitas studio & stempel bawah
+                  {t.preview.frameStampsSubtitle}
                 </p>
               </div>
               <label className="min-h-[44px] flex items-center gap-2 cursor-pointer select-none">
@@ -315,7 +322,7 @@ export const FinalPreviewScreen: React.FC = () => {
                   className="w-4 h-4 accent-[var(--theme-accent,#E11D48)] rounded cursor-pointer"
                 />
                 <span className="text-xs sm:text-sm font-mono-tabular text-zinc-300">
-                  {showFrameStamps ? 'Tampil' : 'Sembunyi'}
+                  {showFrameStamps ? t.preview.showStamp : t.preview.hideStamp}
                 </span>
               </label>
             </div>
@@ -326,7 +333,7 @@ export const FinalPreviewScreen: React.FC = () => {
                   htmlFor="captionInput"
                   className="block text-xs sm:text-sm font-semibold text-zinc-300"
                 >
-                  ✍️ Teks Bawah Bingkai
+                  ✍️ {t.preview.bottomCaptionLabel}
                 </label>
                 <input
                   id="captionInput"
@@ -339,7 +346,7 @@ export const FinalPreviewScreen: React.FC = () => {
               </div>
             ) : (
               <p className="text-[11px] text-zinc-400 bg-zinc-950/90 p-3 rounded-xl">
-                Mode bersih: Tidak ada stempel teks tambahan di atas bingkai.
+                {t.preview.cleanModeNotice}
               </p>
             )}
           </div>
@@ -351,7 +358,7 @@ export const FinalPreviewScreen: React.FC = () => {
               onClick={() => navigate('/app/print-result')}
               className="w-full min-h-[52px] sm:min-h-[56px] py-3.5 px-6 text-sm sm:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center justify-center gap-2"
             >
-              <span>Lanjut ke Cetak & QR</span>
+              <span>{t.preview.continueToPrint}</span>
               <span>🖨️</span>
             </button>
 
@@ -361,7 +368,7 @@ export const FinalPreviewScreen: React.FC = () => {
               className="w-full min-h-[46px] py-2.5 px-4 text-xs sm:text-sm font-semibold text-zinc-300 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer flex items-center justify-center gap-2"
             >
               <span>↺</span>
-              <span>Retake Foto</span>
+              <span>{t.nav.retake}</span>
             </button>
           </div>
         </div>
