@@ -11,16 +11,6 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: [
-          'favicon.ico',
-          'apple-touch-icon.png',
-          'icon.svg',
-          'assets/gif.worker.js',
-          'assets/frames/*.png',
-          'assets/images/*.jpg',
-          'metadata.json',
-          'frames-metadata.json',
-        ],
         manifest: {
           id: '/',
           name: 'SoreAja — Photobox',
@@ -60,6 +50,7 @@ export default defineConfig(() => {
           navigateFallback: '/index.html',
           navigateFallbackDenylist: [/^\/api\/.*/, /^\/print\/.*/],
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,json,jpg,jpeg,webp}'],
+          globIgnores: ['**/pwa-*.png'],
           runtimeCaching: [
             {
               urlPattern: /\.(?:png|jpg|jpeg|svg|webp|gif)$/i,
