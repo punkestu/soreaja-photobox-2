@@ -27,6 +27,7 @@ import { PrintResultScreen } from './pages/kiosk/PrintResultScreen';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import { applyThemeColor } from './data/themeConfig';
+import { PWAReloadPrompt } from './components/common/PWAReloadPrompt';
 
 const LAST_ROUTE_KEY = 'soreaja_last_active_route';
 
@@ -99,6 +100,7 @@ export default function App() {
   return (
     <PhotoboxProvider>
       <ThemeWatcher />
+      <PWAReloadPrompt />
       <BrowserRouter>
         <RouteTracker />
         <Routes>
