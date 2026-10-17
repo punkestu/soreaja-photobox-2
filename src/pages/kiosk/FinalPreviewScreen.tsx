@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
@@ -10,7 +10,9 @@ import {
   type StripRatioInfo,
 } from '../../services/canvasCompositor';
 import { downloadSingleFile } from '../../services/downloadService';
-import type { PhotoFilter } from '../../types/photobox';
+import type { PhotoFilter, PlacedSticker } from '../../types/photobox';
+import { STICKER_COLLECTION, type StickerItem } from '../../data/stickers';
+import { InteractiveStickerCanvas } from '../../components/kiosk/InteractiveStickerCanvas';
 
 const FILTERS: { id: PhotoFilter; label: string; desc: string }[] = [
   { id: 'original', label: 'Original Studio', desc: 'Warna asli tangkapan kamera' },
@@ -36,14 +38,21 @@ export const FinalPreviewScreen: React.FC = () => {
     setCustomCaption,
     showFrameStamps,
     setShowFrameStamps,
+    placedStickers,
+    setPlacedStickers,
     isHydrated,
     language,
     t,
   } = usePhotobox();
 
   const [isCompositing, setIsCompositing] = useState<boolean>(!finalLayoutBase64);
-  const [previewMode, setPreviewMode] = useState<'single' | 'double'>('double');
+  const [previewMode, setPreviewMode] = useState<'single' | 'double'>('single');
   const [showCutLine, setShowCutLine] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<'filters' | 'stickers'>('stickers');
+  const [activeStickerCategory, setActiveStickerCategory] = useState<'sparkles' | 'hearts_y2k' | 'stamps'>('sparkles');
+  const [selectedStickerId, setSelectedStickerId] = useState<string | null>(null);
+  const [stickerHistory, setStickerHistory] = useState<PlacedSticker[][]>([]);
+
   const settings = useLiveQuery(() => db.settings.get('app_settings'), []);
   const activeFrame = selectedFrame || DEFAULT_FRAMES[0];
 
@@ -73,38 +82,54 @@ export const FinalPreviewScreen: React.FC = () => {
     }
   }, [capturedPhotos.length, isHydrated, selectedFrame, setCapturedPhotos, setSelectedFrame]);
 
-  // Gabungkan capturedPhotos + selectedFrame.frameImg menggunakan HTML Canvas
-  // Otomatis cek rasio W/H strip: Jika vertical long strip, buat juga 2-strip side-by-side
+  // Debounced composite run to keep touch interaction silky smooth
+  const compositeTimeoutRef = useRef<number | null>(null);
+
   useEffect(() => {
     if (!isHydrated || capturedPhotos.length === 0) return;
-    let active = true;
+
+    if (compositeTimeoutRef.current) {
+      window.clearTimeout(compositeTimeoutRef.current);
+    }
+
     setIsCompositing(true);
 
-    compositeFinalLayoutBundle(
-      capturedPhotos,
-      activeFrame,
-      selectedFilter,
-      customCaption,
-      showFrameStamps,
-      settings?.themeColor,
-      { includeCutLine: showCutLine }
-    ).then((bundle) => {
-      if (active) {
-        setFinalLayoutBase64(bundle.singleStrip);
-        setDoubleStripBase64(bundle.doubleStrip);
-        setRatioInfo(bundle.ratioInfo);
-        setIsCompositing(false);
-      }
-    });
+    compositeTimeoutRef.current = window.setTimeout(() => {
+      let active = true;
+      compositeFinalLayoutBundle(
+        capturedPhotos,
+        activeFrame,
+        selectedFilter,
+        customCaption,
+        showFrameStamps,
+        settings?.themeColor,
+        { includeCutLine: showCutLine },
+        placedStickers
+      ).then((bundle) => {
+        if (active) {
+          setFinalLayoutBase64(bundle.singleStrip);
+          setDoubleStripBase64(bundle.doubleStrip);
+          setRatioInfo(bundle.ratioInfo);
+          setIsCompositing(false);
+        }
+      });
+
+      return () => {
+        active = false;
+      };
+    }, 180);
 
     return () => {
-      active = false;
+      if (compositeTimeoutRef.current) {
+        window.clearTimeout(compositeTimeoutRef.current);
+      }
     };
   }, [
     activeFrame,
     capturedPhotos,
     customCaption,
     isHydrated,
+    placedStickers,
     selectedFilter,
     setDoubleStripBase64,
     setFinalLayoutBase64,
@@ -125,6 +150,83 @@ export const FinalPreviewScreen: React.FC = () => {
     const filename = `PB_${Date.now()}_${isDouble ? 'side_by_side_2strip_cutline' : 'strip_single'}.png`;
     downloadSingleFile(activeDisplayImage, filename);
   };
+
+  // Sticker actions
+  const handleAddSticker = (item: StickerItem) => {
+    setStickerHistory((prev) => [...prev, placedStickers]);
+    const id = `stk_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    // Random subtle offset near top/middle
+    const randomOffsetX = (Math.random() - 0.5) * 0.25;
+    const randomOffsetY = (Math.random() - 0.5) * 0.35;
+    const newSticker: PlacedSticker = {
+      id,
+      stickerId: item.id,
+      content: item.content,
+      type: item.type,
+      x: Math.max(0.2, Math.min(0.8, 0.5 + randomOffsetX)),
+      y: Math.max(0.15, Math.min(0.85, 0.45 + randomOffsetY)),
+      scale: 1.0,
+      rotation: Math.round((Math.random() - 0.5) * 24),
+    };
+
+    setPlacedStickers((prev) => [...prev, newSticker]);
+    setSelectedStickerId(id);
+    if (previewMode !== 'single') {
+      setPreviewMode('single');
+    }
+  };
+
+  const handleUndoSticker = () => {
+    if (stickerHistory.length === 0) return;
+    const previous = stickerHistory[stickerHistory.length - 1];
+    setStickerHistory((prev) => prev.slice(0, prev.length - 1));
+    setPlacedStickers(previous);
+    setSelectedStickerId(null);
+  };
+
+  const handleClearStickers = () => {
+    if (placedStickers.length === 0) return;
+    setStickerHistory((prev) => [...prev, placedStickers]);
+    setPlacedStickers([]);
+    setSelectedStickerId(null);
+  };
+
+  const handleScaleActive = (delta: number) => {
+    if (!selectedStickerId) return;
+    setPlacedStickers((prev) =>
+      prev.map((s) => {
+        if (s.id !== selectedStickerId) return s;
+        const scale = Math.max(0.4, Math.min(2.5, Number(((s.scale || 1.0) + delta).toFixed(2))));
+        return { ...s, scale };
+      })
+    );
+  };
+
+  const handleRotateActive = (delta: number) => {
+    if (!selectedStickerId) return;
+    setPlacedStickers((prev) =>
+      prev.map((s) => {
+        if (s.id !== selectedStickerId) return s;
+        let rot = (s.rotation || 0) + delta;
+        while (rot > 180) rot -= 360;
+        while (rot < -180) rot += 360;
+        return { ...s, rotation: rot };
+      })
+    );
+  };
+
+  const handleDeleteActive = () => {
+    if (!selectedStickerId) return;
+    setStickerHistory((prev) => [...prev, placedStickers]);
+    setPlacedStickers((prev) => prev.filter((s) => s.id !== selectedStickerId));
+    setSelectedStickerId(null);
+  };
+
+  const filteredStickers = STICKER_COLLECTION.filter(
+    (item) => item.category === activeStickerCategory
+  );
+
+  const selectedSticker = placedStickers.find((s) => s.id === selectedStickerId);
 
   return (
     <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-8 space-y-6 md:space-y-8 select-none">
@@ -200,7 +302,10 @@ export const FinalPreviewScreen: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPreviewMode('double')}
+                    onClick={() => {
+                      setPreviewMode('double');
+                      setSelectedStickerId(null);
+                    }}
                     className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
                       previewMode === 'double'
                         ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
@@ -225,11 +330,17 @@ export const FinalPreviewScreen: React.FC = () => {
                     <span className="font-semibold text-zinc-200">✂️ {t.preview.cutLine}</span>
                   </label>
                 )}
+
+                {previewMode === 'double' && placedStickers.length > 0 && (
+                  <span className="text-[11px] text-zinc-400 font-mono-tabular">
+                    ✨ {placedStickers.length} stiker diduplikasi di kedua strip
+                  </span>
+                )}
               </div>
             </div>
           )}
 
-          {isCompositing || !finalLayoutBase64 ? (
+          {isCompositing && !finalLayoutBase64 ? (
             <div className="text-center space-y-3 py-16">
               <p className="text-sm font-mono-tabular text-zinc-300">
                 {t.preview.rendering}
@@ -240,117 +351,322 @@ export const FinalPreviewScreen: React.FC = () => {
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2 w-full">
-              <img
-                data-testid="final-composite-image"
-                src={activeDisplayImage || finalLayoutBase64}
-                alt={`Hasil Akhir Bingkai ${activeFrame.name}`}
-                className="max-h-[580px] w-auto object-contain rounded-xl shadow-2xl"
-              />
+              {/* Canvas Preview Container with Interactive Sticker Overlay */}
+              <div className="relative inline-block max-h-[580px] max-w-full">
+                <img
+                  data-testid="final-composite-image"
+                  src={activeDisplayImage || finalLayoutBase64 || ''}
+                  alt={`Hasil Akhir Bingkai ${activeFrame.name}`}
+                  className="max-h-[580px] w-auto object-contain rounded-xl shadow-2xl block"
+                />
+
+                {/* Interactive Sticker Studio Layer (only on single strip view for 1:1 precision) */}
+                {previewMode === 'single' && (
+                  <InteractiveStickerCanvas
+                    stickers={placedStickers}
+                    onStickersChange={(newStickers) => setPlacedStickers(newStickers)}
+                    selectedStickerId={selectedStickerId}
+                    onSelectSticker={(id) => setSelectedStickerId(id)}
+                    themeColor={settings?.themeColor}
+                    isInteractive={activeTab === 'stickers'}
+                  />
+                )}
+              </div>
+
               <div className="flex items-center justify-between w-full px-2 text-[11px] font-mono-tabular text-zinc-400">
                 <span>
                   {isVertical && previewMode === 'double'
                     ? `${t.preview.formatDouble} (${activeFrame.canvasWidth ? activeFrame.canvasWidth * 2 : 960}×${activeFrame.canvasHeight || 1440}px)`
                     : `${t.preview.formatSingle} (${activeFrame.canvasWidth || 480}×${activeFrame.canvasHeight || 1440}px)`}
                 </span>
-                <button
-                  type="button"
-                  onClick={handleDownloadActive}
-                  className="text-zinc-300 hover:text-white flex items-center gap-1 underline cursor-pointer"
-                >
-                  <span>📥 {t.preview.downloadPng}</span>
-                </button>
+
+                <div className="flex items-center gap-3">
+                  {placedStickers.length > 0 && (
+                    <span className="text-rose-400 font-bold">
+                      ✨ {placedStickers.length} {t.preview.tabStickers}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleDownloadActive}
+                    className="text-zinc-300 hover:text-white flex items-center gap-1 underline cursor-pointer"
+                  >
+                    <span>📥 {t.preview.downloadPng}</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Tone Filter & Caption Controls - Tablet 5 Cols */}
+        {/* Tone Filter & Sticker Controls - Tablet 5 Cols */}
         <div className="md:col-span-5 bg-zinc-900/80 rounded-2xl p-5 sm:p-6 space-y-5 sm:space-y-6 shadow-xl border border-zinc-800/70">
-          <div className="space-y-3">
-            <h2 className="font-display text-base sm:text-lg font-bold text-[#F4F4F0] flex items-center gap-2">
-              <span>🎨</span>
-              <span>{t.preview.colorFiltersTitle}</span>
-            </h2>
-            <p className="text-xs sm:text-sm text-zinc-400">
-              {t.preview.colorFiltersSubtitle}
-            </p>
+          {/* Main Mode Tabs Switcher */}
+          <div className="grid grid-cols-2 p-1 bg-zinc-950 rounded-xl border border-zinc-800">
+            <button
+              type="button"
+              onClick={() => setActiveTab('stickers')}
+              className={`py-2 px-3 text-xs sm:text-sm font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                activeTab === 'stickers'
+                  ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-md'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <span>✨</span>
+              <span>{t.preview.tabStickers}</span>
+              {placedStickers.length > 0 && (
+                <span className="w-5 h-5 rounded-full bg-white text-zinc-900 text-[10px] font-black flex items-center justify-center ml-1">
+                  {placedStickers.length}
+                </span>
+              )}
+            </button>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-              {[
-                { id: 'original' as const, label: t.preview.filters.original, desc: t.preview.filters.originalDesc },
-                { id: 'warm-sore' as const, label: t.preview.filters.warmSore, desc: t.preview.filters.warmSoreDesc },
-                { id: 'noir-bw' as const, label: t.preview.filters.noirBw, desc: t.preview.filters.noirBwDesc },
-                { id: 'vintage-film' as const, label: t.preview.filters.vintageFilm, desc: t.preview.filters.vintageFilmDesc },
-              ].map((f) => {
-                const isActive = selectedFilter === f.id;
-                return (
+            <button
+              type="button"
+              onClick={() => setActiveTab('filters')}
+              className={`py-2 px-3 text-xs sm:text-sm font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                activeTab === 'filters'
+                  ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-md'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <span>🎨</span>
+              <span>{t.preview.tabFilters}</span>
+            </button>
+          </div>
+
+          {/* TAB 1: INTERACTIVE STICKER STUDIO */}
+          {activeTab === 'stickers' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-display text-base sm:text-lg font-bold text-[#F4F4F0] flex items-center gap-2">
+                    <span>✨</span>
+                    <span>{t.preview.stickerPaletteTitle}</span>
+                  </h2>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    {t.preview.addStickerHint}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-1.5">
                   <button
-                    key={f.id}
                     type="button"
-                    onClick={() => setSelectedFilter(f.id)}
-                    className={`min-h-[52px] p-3.5 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer ${
-                      isActive
-                        ? 'bg-[var(--theme-accent,#E11D48)]/15 ring-2 ring-[var(--theme-accent,#E11D48)] text-white shadow-md'
-                        : 'bg-zinc-950/80 text-zinc-300 hover:bg-zinc-800 border border-zinc-800/60'
+                    disabled={stickerHistory.length === 0}
+                    onClick={handleUndoSticker}
+                    className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 disabled:opacity-40 transition-all cursor-pointer"
+                    title={t.preview.undoSticker}
+                  >
+                    ↩ {t.preview.undoSticker}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={placedStickers.length === 0}
+                    onClick={handleClearStickers}
+                    className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-950/80 hover:bg-rose-900 text-rose-300 disabled:opacity-40 transition-all cursor-pointer border border-rose-800/40"
+                    title={t.preview.clearStickers}
+                  >
+                    🗑️ {t.preview.clearStickers}
+                  </button>
+                </div>
+              </div>
+
+              {/* Categorized Packs Bar */}
+              <div className="flex items-center gap-1.5 bg-zinc-950 p-1 rounded-xl border border-zinc-800 overflow-x-auto scrollbar-none">
+                {[
+                  { id: 'sparkles' as const, label: t.preview.stickersCategorySparkles },
+                  { id: 'hearts_y2k' as const, label: t.preview.stickersCategoryHearts },
+                  { id: 'stamps' as const, label: t.preview.stickersCategoryStamps },
+                ].map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setActiveStickerCategory(cat.id)}
+                    className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg whitespace-nowrap transition-all cursor-pointer ${
+                      activeStickerCategory === cat.id
+                        ? 'bg-zinc-800 text-white shadow-sm ring-1 ring-white/20'
+                        : 'text-zinc-400 hover:text-zinc-200'
                     }`}
                   >
-                    <p className="text-xs sm:text-sm font-bold">{f.label}</p>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">{f.desc}</p>
+                    {cat.label}
                   </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Stempel Teks Bingkai Toggle & Caption */}
-          <div className="pt-2 space-y-3 border-t border-zinc-800/60">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
-                  <span>🏷️</span>
-                  <span>{t.preview.frameStampsTitle}</span>
-                </p>
-                <p className="text-[11px] text-zinc-400">
-                  {t.preview.frameStampsSubtitle}
-                </p>
+                ))}
               </div>
-              <label className="min-h-[44px] flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={showFrameStamps}
-                  onChange={(e) => setShowFrameStamps(e.target.checked)}
-                  className="w-4 h-4 accent-[var(--theme-accent,#E11D48)] rounded cursor-pointer"
-                />
-                <span className="text-xs sm:text-sm font-mono-tabular text-zinc-300">
-                  {showFrameStamps ? t.preview.showStamp : t.preview.hideStamp}
-                </span>
-              </label>
-            </div>
 
-            {showFrameStamps ? (
-              <div className="space-y-1.5 pt-1">
-                <label
-                  htmlFor="captionInput"
-                  className="block text-xs sm:text-sm font-semibold text-zinc-300"
-                >
-                  ✍️ {t.preview.bottomCaptionLabel}
-                </label>
-                <input
-                  id="captionInput"
-                  type="text"
-                  maxLength={32}
-                  value={customCaption}
-                  onChange={(e) => setCustomCaption(e.target.value)}
-                  className="w-full px-4 py-2.5 text-sm sm:text-base bg-zinc-950 rounded-xl text-white focus:outline-none ring-1 ring-zinc-700 focus:ring-[var(--theme-accent,#E11D48)] font-mono-tabular"
-                />
+              {/* Sticker Grid Palette */}
+              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2.5 p-3 bg-zinc-950/90 rounded-xl border border-zinc-800/70 max-h-[220px] overflow-y-auto">
+                {filteredStickers.map((sticker) => (
+                  <button
+                    key={sticker.id}
+                    type="button"
+                    onClick={() => handleAddSticker(sticker)}
+                    className="aspect-square flex items-center justify-center p-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 hover:scale-105 active:scale-95 transition-all border border-zinc-800/60 shadow-sm cursor-pointer group"
+                    title={`Add ${sticker.label}`}
+                  >
+                    {sticker.type === 'emoji' ? (
+                      <span className="text-2xl sm:text-3xl drop-shadow-sm group-hover:scale-110 transition-transform">
+                        {sticker.content}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-black uppercase text-center tracking-tight leading-tight text-white/90">
+                        {sticker.content}
+                      </span>
+                    )}
+                  </button>
+                ))}
               </div>
-            ) : (
-              <p className="text-[11px] text-zinc-400 bg-zinc-950/90 p-3 rounded-xl">
-                {t.preview.cleanModeNotice}
-              </p>
-            )}
-          </div>
 
+              {/* Interaction Tip or Selected Sticker Controls */}
+              {selectedSticker ? (
+                <div className="p-3 bg-zinc-950 rounded-xl border border-[var(--theme-accent,#E11D48)]/50 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-white flex items-center gap-1.5">
+                      <span>🎯</span>
+                      <span>Stiker Terpilih:</span>
+                      <span className="text-[var(--theme-accent,#E11D48)]">
+                        {selectedSticker.type === 'emoji' ? selectedSticker.content : selectedSticker.content}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStickerId(null)}
+                      className="text-zinc-400 hover:text-white text-xs underline cursor-pointer"
+                    >
+                      {t.preview.deselectSticker}
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleScaleActive(0.15)}
+                      className="py-1.5 px-2 bg-zinc-800 hover:bg-zinc-700 text-xs font-bold rounded-lg text-white transition-all active:scale-95 cursor-pointer"
+                    >
+                      {t.preview.scaleUp}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleScaleActive(-0.15)}
+                      className="py-1.5 px-2 bg-zinc-800 hover:bg-zinc-700 text-xs font-bold rounded-lg text-white transition-all active:scale-95 cursor-pointer"
+                    >
+                      {t.preview.scaleDown}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRotateActive(45)}
+                      className="py-1.5 px-2 bg-zinc-800 hover:bg-zinc-700 text-xs font-bold rounded-lg text-white transition-all active:scale-95 cursor-pointer"
+                    >
+                      {t.preview.rotate}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteActive}
+                      className="py-1.5 px-2 bg-rose-900/80 hover:bg-rose-800 text-xs font-bold rounded-lg text-rose-200 transition-all active:scale-95 cursor-pointer"
+                    >
+                      {t.preview.deleteSticker}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-zinc-950/60 rounded-xl border border-zinc-800/60 text-xs text-zinc-400 flex items-start gap-2.5">
+                  <span className="text-base">💡</span>
+                  <span>{t.preview.dragStickerHint}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 2: TONE FILTERS & CAPTION CONTROLS */}
+          {activeTab === 'filters' && (
+            <div className="space-y-4">
+              <div className="space-y-3">
+                <h2 className="font-display text-base sm:text-lg font-bold text-[#F4F4F0] flex items-center gap-2">
+                  <span>🎨</span>
+                  <span>{t.preview.colorFiltersTitle}</span>
+                </h2>
+                <p className="text-xs sm:text-sm text-zinc-400">
+                  {t.preview.colorFiltersSubtitle}
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  {[
+                    { id: 'original' as const, label: t.preview.filters.original, desc: t.preview.filters.originalDesc },
+                    { id: 'warm-sore' as const, label: t.preview.filters.warmSore, desc: t.preview.filters.warmSoreDesc },
+                    { id: 'noir-bw' as const, label: t.preview.filters.noirBw, desc: t.preview.filters.noirBwDesc },
+                    { id: 'vintage-film' as const, label: t.preview.filters.vintageFilm, desc: t.preview.filters.vintageFilmDesc },
+                  ].map((f) => {
+                    const isActive = selectedFilter === f.id;
+                    return (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setSelectedFilter(f.id)}
+                        className={`min-h-[52px] p-3.5 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer ${
+                          isActive
+                            ? 'bg-[var(--theme-accent,#E11D48)]/15 ring-2 ring-[var(--theme-accent,#E11D48)] text-white shadow-md'
+                            : 'bg-zinc-950/80 text-zinc-300 hover:bg-zinc-800 border border-zinc-800/60'
+                        }`}
+                      >
+                        <p className="text-xs sm:text-sm font-bold">{f.label}</p>
+                        <p className="text-[11px] text-zinc-400 mt-0.5">{f.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Stempel Teks Bingkai Toggle & Caption */}
+              <div className="pt-2 space-y-3 border-t border-zinc-800/60">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
+                      <span>🏷️</span>
+                      <span>{t.preview.frameStampsTitle}</span>
+                    </p>
+                    <p className="text-[11px] text-zinc-400">
+                      {t.preview.frameStampsSubtitle}
+                    </p>
+                  </div>
+                  <label className="min-h-[44px] flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={showFrameStamps}
+                      onChange={(e) => setShowFrameStamps(e.target.checked)}
+                      className="w-4 h-4 accent-[var(--theme-accent,#E11D48)] rounded cursor-pointer"
+                    />
+                    <span className="text-xs sm:text-sm font-mono-tabular text-zinc-300">
+                      {showFrameStamps ? t.preview.showStamp : t.preview.hideStamp}
+                    </span>
+                  </label>
+                </div>
+
+                {showFrameStamps ? (
+                  <div className="space-y-1.5 pt-1">
+                    <label
+                      htmlFor="captionInput"
+                      className="block text-xs sm:text-sm font-semibold text-zinc-300"
+                    >
+                      ✍️ {t.preview.bottomCaptionLabel}
+                    </label>
+                    <input
+                      id="captionInput"
+                      type="text"
+                      maxLength={32}
+                      value={customCaption}
+                      onChange={(e) => setCustomCaption(e.target.value)}
+                      className="w-full px-4 py-2.5 text-sm sm:text-base bg-zinc-950 rounded-xl text-white focus:outline-none ring-1 ring-zinc-700 focus:ring-[var(--theme-accent,#E11D48)] font-mono-tabular"
+                    />
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-zinc-400 bg-zinc-950/90 p-3 rounded-xl">
+                    {t.preview.cleanModeNotice}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Action CTA Buttons */}
           <div className="pt-2 space-y-3">
             <button
               type="button"

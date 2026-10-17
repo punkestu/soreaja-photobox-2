@@ -74,6 +74,17 @@ export interface SessionRecord {
   colorPrintCount?: number;
 }
 
+export interface PlacedSticker {
+  id: string;
+  stickerId: string;
+  content: string; // Emoji, SVG symbol, or text stamp
+  type: 'emoji' | 'stamp' | 'badge';
+  x: number; // 0 to 1 normalized coordinate relative to canvas width
+  y: number; // 0 to 1 normalized coordinate relative to canvas height
+  scale: number; // 0.5 to 2.5 relative scale
+  rotation: number; // degrees -180 to 180
+}
+
 export interface ActiveSessionRecord {
   id: string; // 'current_active_session'
   selectedFrame: FrameMetadata | null;
@@ -85,6 +96,7 @@ export interface ActiveSessionRecord {
   selectedFilter: PhotoFilter;
   customCaption: string;
   showFrameStamps?: boolean;
+  placedStickers?: PlacedSticker[];
   updatedAt: number;
 }
 
@@ -98,6 +110,8 @@ export interface PhotoboxState {
   selectedFilter: PhotoFilter;
   customCaption: string;
   showFrameStamps: boolean;
+  placedStickers: PlacedSticker[];
   isHydrated: boolean;
 }
+
 

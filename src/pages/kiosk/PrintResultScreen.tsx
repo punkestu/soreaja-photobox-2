@@ -32,6 +32,7 @@ export const PrintResultScreen: React.FC = () => {
     selectedFilter,
     customCaption,
     showFrameStamps,
+    placedStickers,
     resetSession,
     isHydrated,
     language,
@@ -105,7 +106,8 @@ export const PrintResultScreen: React.FC = () => {
           customCaption,
           showFrameStamps,
           themeAccent,
-          { includeCutLine: true }
+          { includeCutLine: true },
+          placedStickers
         );
         layoutToUse = bundle.singleStrip;
         doubleStripToUse = bundle.doubleStrip;

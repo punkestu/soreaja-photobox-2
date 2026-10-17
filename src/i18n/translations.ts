@@ -26,8 +26,12 @@ export const TRANSLATIONS = {
     sessionTimer: {
       timeRemaining: 'Waktu Sesi',
       expiredTitle: 'Waktu Sesi Berakhir!',
-      expiredDesc: 'Waktu sesi photobox Anda telah habis. Anda tetap dapat melanjutkan dan menyelesaikan sesi foto tanpa terhenti.',
+      expiredDesc: 'Waktu sesi photobox Anda telah habis. Anda dapat langsung menyelesaikan sesi atau menambah waktu tambahan.',
       continueBtn: 'Lanjutkan Sesi',
+      autoFinishBtn: '🏁 Selesaikan Sesi & Cetak',
+      addExtraTimeBtn: '⏳ Tambah Waktu (+2 Menit)',
+      incompleteNotice: 'Pilih bingkai dan selesaikan seluruh pose foto terlebih dahulu untuk mencetak.',
+      restartBtn: '↺ Batal & Mulai Ulang',
     },
     // Idle Screen
     idle: {
@@ -37,6 +41,14 @@ export const TRANSLATIONS = {
       startBtn: 'Mulai Sesi Foto ✨',
       settingsBtn: 'Pengaturan Kiosk ⚙️',
       offlineActive: '100% Offline Ready',
+      latestShowcase: 'Hasil Sesi Terbaru',
+      recentGuestStrip: 'Strip Pengunjung',
+      justNow: 'Baru saja',
+      minutesAgo: 'menit lalu',
+      hoursAgo: 'jam lalu',
+      touchAnywhere: 'Sentuh layar di mana saja untuk mulai',
+      viewSession: 'Lihat Sesi',
+      allSessions: 'Galeri Sesi',
     },
     // Frame Selection Screen
     frameSelect: {
@@ -51,6 +63,7 @@ export const TRANSLATIONS = {
       tapToPreview: 'Sentuh untuk melihat',
       prevFrame: 'Bingkai sebelumnya',
       nextFrame: 'Bingkai berikutnya',
+      scrollingIndicator: 'Menggeser...',
     },
     // Camera Screen
     camera: {
@@ -129,6 +142,22 @@ export const TRANSLATIONS = {
         vintageFilm: 'Analog 35mm',
         vintageFilmDesc: 'Tone klasik sepia lembut',
       },
+      tabFilters: 'Filter Tone',
+      tabStickers: 'Stiker & Dekorasi',
+      stickerPaletteTitle: 'Koleksi Stiker',
+      stickersCategorySparkles: '✨ Kilau & Bintang',
+      stickersCategoryHearts: '💖 Y2K & Hearts',
+      stickersCategoryStamps: '🏷️ Stempel Studio',
+      addStickerHint: 'Sentuh stiker untuk menempelkan ke strip foto',
+      dragStickerHint: 'Geser posisi, cubit / tarik sudut untuk ukuran & putaran',
+      clearStickers: 'Hapus Semua',
+      undoSticker: 'Urungkan',
+      noStickersYet: 'Belum ada stiker. Sentuh stiker di samping untuk menghias strip!',
+      scaleUp: 'Perbesar (+)',
+      scaleDown: 'Perkecil (-)',
+      rotate: 'Putar 45°',
+      deleteSticker: 'Hapus Stiker',
+      deselectSticker: 'Selesai',
     },
     // Print Result Screen
     printResult: {
@@ -281,8 +310,12 @@ export const TRANSLATIONS = {
     sessionTimer: {
       timeRemaining: 'Session Time',
       expiredTitle: 'Session Time Expired!',
-      expiredDesc: 'Your photobox session time has expired. You may continue and complete your photo session without interruption.',
+      expiredDesc: 'Your photobox session time has expired. You may finish your session now or add extra time.',
       continueBtn: 'Continue Session',
+      autoFinishBtn: '🏁 Finish Session & Print',
+      addExtraTimeBtn: '⏳ Add Extra Time (+2 Min)',
+      incompleteNotice: 'Select a frame and complete all photo poses before printing.',
+      restartBtn: '↺ Cancel & Restart',
     },
     // Idle Screen
     idle: {
@@ -292,6 +325,14 @@ export const TRANSLATIONS = {
       startBtn: 'Start Photo Session ✨',
       settingsBtn: 'Kiosk Settings ⚙️',
       offlineActive: '100% Offline Ready',
+      latestShowcase: 'Latest Session',
+      recentGuestStrip: 'Recent Guest Strip',
+      justNow: 'Just now',
+      minutesAgo: 'm ago',
+      hoursAgo: 'h ago',
+      touchAnywhere: 'Tap anywhere on screen to start',
+      viewSession: 'View Session',
+      allSessions: 'Session Gallery',
     },
     // Frame Selection Screen
     frameSelect: {
@@ -306,6 +347,7 @@ export const TRANSLATIONS = {
       tapToPreview: 'Tap to preview',
       prevFrame: 'Previous frame',
       nextFrame: 'Next frame',
+      scrollingIndicator: 'Scrolling...',
     },
     // Camera Screen
     camera: {
@@ -384,6 +426,22 @@ export const TRANSLATIONS = {
         vintageFilm: 'Analog 35mm',
         vintageFilmDesc: 'Classic soft sepia tone',
       },
+      tabFilters: 'Tone Filters',
+      tabStickers: 'Stickers & Deco',
+      stickerPaletteTitle: 'Sticker Collection',
+      stickersCategorySparkles: '✨ Sparkles & Stars',
+      stickersCategoryHearts: '💖 Y2K & Hearts',
+      stickersCategoryStamps: '🏷️ Studio Stamps',
+      addStickerHint: 'Tap any sticker to place onto photo strip',
+      dragStickerHint: 'Drag to position, pinch / pull corner to scale & rotate',
+      clearStickers: 'Clear All',
+      undoSticker: 'Undo',
+      noStickersYet: 'No stickers yet. Tap any sticker on the right to decorate!',
+      scaleUp: 'Enlarge (+)',
+      scaleDown: 'Shrink (-)',
+      rotate: 'Rotate 45°',
+      deleteSticker: 'Delete Sticker',
+      deselectSticker: 'Done',
     },
     // Print Result Screen
     printResult: {

@@ -80,3 +80,30 @@ button, a, input, select, textarea {
   animation: flash-burst 350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+@keyframes float-polaroid-1 {
+  0%, 100% {
+    transform: translateY(0px) rotate(var(--base-rot, 0deg));
+  }
+  50% {
+    transform: translateY(-12px) rotate(calc(var(--base-rot, 0deg) + 1.2deg));
+  }
+}
+
+@keyframes float-polaroid-2 {
+  0%, 100% {
+    transform: translateY(0px) rotate(var(--base-rot, 0deg));
+  }
+  50% {
+    transform: translateY(10px) rotate(calc(var(--base-rot, 0deg) - 1.2deg));
+  }
+}
+
+.animate-float-1 {
+  animation: float-polaroid-1 7s ease-in-out infinite;
+}
+
+.animate-float-2 {
+  animation: float-polaroid-2 8.5s ease-in-out infinite;
+}
+
+

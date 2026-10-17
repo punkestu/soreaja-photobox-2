@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import type { FrameMetadata, PhotoFilter, PhotoboxState, AppLanguage } from '../types/photobox';
+import type { FrameMetadata, PhotoFilter, PhotoboxState, AppLanguage, PlacedSticker } from '../types/photobox';
 import { db } from '../db';
 import { DEFAULT_FRAMES } from '../data/defaultFrames';
 import { TRANSLATIONS, type TranslationDictionary } from '../i18n/translations';
@@ -19,6 +19,7 @@ interface PhotoboxContextValue extends PhotoboxState {
   setSelectedFilter: (filter: PhotoFilter) => void;
   setCustomCaption: (caption: string) => void;
   setShowFrameStamps: (show: boolean) => void;
+  setPlacedStickers: React.Dispatch<React.SetStateAction<PlacedSticker[]>>;
   resetSession: () => void;
   seedDemoSession: () => void;
   // Session countdown timer properties
@@ -29,6 +30,7 @@ interface PhotoboxContextValue extends PhotoboxState {
   dismissSessionExpiredAlert: () => void;
   startSessionTimer: () => void;
   resetSessionTimer: () => void;
+  addExtraSessionTime: (minutes?: number) => void;
 }
 
 const initialState: PhotoboxState = {
@@ -41,6 +43,7 @@ const initialState: PhotoboxState = {
   selectedFilter: 'original',
   customCaption: 'SOREAJA — PHOTOBOX 2',
   showFrameStamps: true,
+  placedStickers: [],
   isHydrated: false,
 };
 
@@ -56,6 +59,7 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [selectedFilter, setSelectedFilter] = useState<PhotoFilter>(initialState.selectedFilter);
   const [customCaption, setCustomCaption] = useState<string>(initialState.customCaption);
   const [showFrameStamps, setShowFrameStamps] = useState<boolean>(initialState.showFrameStamps);
+  const [placedStickers, setPlacedStickers] = useState<PlacedSticker[]>(initialState.placedStickers);
   const [language, setLanguageState] = useState<AppLanguage>('id');
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
 
@@ -142,6 +146,9 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           } else {
             setShowFrameStamps(configuredShowStamps);
           }
+          if (savedSession.placedStickers && Array.isArray(savedSession.placedStickers)) {
+            setPlacedStickers(savedSession.placedStickers);
+          }
         } else if (isMounted) {
           setCustomCaption(configuredDefaultCaption);
           setShowFrameStamps(configuredShowStamps);
@@ -179,6 +186,7 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           selectedFilter,
           customCaption,
           showFrameStamps,
+          placedStickers,
           updatedAt: Date.now(),
         })
         .catch((err) => {
@@ -201,6 +209,7 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     selectedFilter,
     customCaption,
     showFrameStamps,
+    placedStickers,
   ]);
 
   // Session timer countdown interval
@@ -210,9 +219,10 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const intervalId = window.setInterval(() => {
       setSessionSecondsLeft((prev) => {
         if (prev <= 1) {
-          // Play audio chime and trigger alert modal
+          // Play audio chime once, pause timer loop, and trigger alert modal
           playSessionExpiredAlertSound();
           setIsSessionExpiredAlertOpen(true);
+          setIsSessionTimerRunning(false);
           return 0;
         }
         return prev - 1;
@@ -232,6 +242,12 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setSessionSecondsLeft(sessionDurationMinutes * 60);
     setIsSessionExpiredAlertOpen(false);
   }, [sessionDurationMinutes]);
+
+  const addExtraSessionTime = useCallback((minutes = 2) => {
+    setSessionSecondsLeft((prev) => Math.max(0, prev) + minutes * 60);
+    setIsSessionExpiredAlertOpen(false);
+    setIsSessionTimerRunning(true);
+  }, []);
 
   const dismissSessionExpiredAlert = useCallback(() => {
     setIsSessionExpiredAlertOpen(false);
@@ -258,6 +274,7 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return null;
     });
     setSelectedFilter('original');
+    setPlacedStickers([]);
 
     // Reset session timer
     setIsSessionTimerRunning(false);
@@ -303,6 +320,8 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         selectedFilter,
         customCaption,
         showFrameStamps,
+        placedStickers,
+        setPlacedStickers,
         isHydrated,
         language,
         setLanguage,
@@ -326,6 +345,7 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         dismissSessionExpiredAlert,
         startSessionTimer,
         resetSessionTimer,
+        addExtraSessionTime,
       }}
     >
       {children}

@@ -1,6 +1,6 @@
-import type { FrameMetadata, PhotoFilter, StripRatioInfo } from '../types/photobox';
+import type { FrameMetadata, PhotoFilter, StripRatioInfo, PlacedSticker } from '../types/photobox';
 
-export { type StripRatioInfo };
+export { type StripRatioInfo, type PlacedSticker };
 
 export function checkStripRatio(width: number, height: number): StripRatioInfo {
   const safeW = width || 480;
@@ -183,7 +183,8 @@ export async function compositeFinalLayout(
   filter: PhotoFilter = 'original',
   customCaption = 'SOREAJA — PHOTOBOX 2',
   showStamps = true,
-  themeColor?: string
+  themeColor?: string,
+  placedStickers: PlacedSticker[] = []
 ): Promise<string> {
   const maxRight = Math.max(...frame.positions.map((p) => p.x + p.width));
   const maxBottom = Math.max(...frame.positions.map((p) => p.y + p.height));
@@ -289,6 +290,64 @@ export async function compositeFinalLayout(
     ctx.fillText(`${dateStr.toUpperCase()} · STUDIO PRINT`, canvasWidth - 50, canvasHeight - 34);
   }
 
+  // 5. Draw Placed Interactive Stickers
+  if (placedStickers && placedStickers.length > 0) {
+    for (const sticker of placedStickers) {
+      const sx = sticker.x * canvasWidth;
+      const sy = sticker.y * canvasHeight;
+      const baseSize = Math.max(48, Math.min(canvasWidth, canvasHeight) * 0.12);
+      const size = baseSize * (sticker.scale || 1.0);
+
+      ctx.save();
+      ctx.translate(sx, sy);
+      if (sticker.rotation) {
+        ctx.rotate((sticker.rotation * Math.PI) / 180);
+      }
+
+      if (sticker.type === 'emoji') {
+        ctx.font = `${Math.round(size)}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+        ctx.shadowBlur = 8;
+        ctx.shadowOffsetY = 4;
+        ctx.fillText(sticker.content, 0, 0);
+      } else {
+        // Stamp / Badge
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const fontSize = Math.round(size * 0.3);
+        ctx.font = `800 ${fontSize}px "Syne", sans-serif`;
+        const textMetrics = ctx.measureText(sticker.content);
+        const padX = fontSize * 0.8;
+        const padY = fontSize * 0.5;
+        const badgeW = textMetrics.width + padX * 2;
+        const badgeH = fontSize + padY * 2;
+
+        ctx.fillStyle = themeColor || '#E11D48';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetY = 4;
+        ctx.beginPath();
+        if (ctx.roundRect) {
+          ctx.roundRect(-badgeW / 2, -badgeH / 2, badgeW, badgeH, 10);
+        } else {
+          ctx.rect(-badgeW / 2, -badgeH / 2, badgeW, badgeH);
+        }
+        ctx.fill();
+
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.stroke();
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.shadowColor = 'transparent';
+        ctx.fillText(sticker.content, 0, 1);
+      }
+      ctx.restore();
+    }
+  }
+
   return canvas.toDataURL('image/png', 0.95);
 }
 
@@ -305,7 +364,8 @@ export async function compositeFinalLayoutBundle(
   customCaption = 'SOREAJA — PHOTOBOX 2',
   showStamps = true,
   themeColor?: string,
-  doubleStripOptions?: DoubleStripOptions
+  doubleStripOptions?: DoubleStripOptions,
+  placedStickers: PlacedSticker[] = []
 ): Promise<CompositeLayoutBundle> {
   const maxRight = Math.max(...frame.positions.map((p) => p.x + p.width));
   const maxBottom = Math.max(...frame.positions.map((p) => p.y + p.height));
@@ -314,14 +374,15 @@ export async function compositeFinalLayoutBundle(
 
   const ratioInfo = checkStripRatio(canvasWidth, canvasHeight);
 
-  // 1. Generate Single Strip Base64
+  // 1. Generate Single Strip Base64 with Placed Stickers
   const singleStrip = await compositeFinalLayout(
     capturedPhotos,
     frame,
     filter,
     customCaption,
     showStamps,
-    themeColor
+    themeColor,
+    placedStickers
   );
 
   // 2. If it is a vertical long strip, generate image with side by side of 2 strip
