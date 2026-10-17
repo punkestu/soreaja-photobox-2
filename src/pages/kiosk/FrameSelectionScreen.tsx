@@ -77,7 +77,7 @@ export const FrameSelectionScreen: React.FC = () => {
     return closestIndex;
   }, []);
 
-  // Programmatically center a card with optional smooth animation
+  // Programmatically center a card with smooth animation
   const scrollToIndex = useCallback(
     (index: number, smooth = true) => {
       const container = carouselRef.current;
@@ -324,9 +324,9 @@ export const FrameSelectionScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-2 sm:py-4 flex flex-col justify-between select-none h-full min-h-0 overflow-hidden">
+    <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3 sm:py-5 flex flex-col justify-between select-none min-h-[calc(100vh-70px)]">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 sm:gap-3 pb-2 sm:pb-3 border-b border-white/5 shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 sm:gap-3 pb-3 border-b border-white/5 shrink-0">
         <div>
           <div className="text-xs sm:text-sm font-mono-tabular text-zinc-400 flex items-center gap-2 mb-1">
             <span className="text-[var(--theme-accent,#E11D48)] font-bold">{t.frameSelect.stageBadge}</span>
@@ -353,16 +353,16 @@ export const FrameSelectionScreen: React.FC = () => {
         </button>
       </div>
 
-      {/* Swipeable Carousel Area with Responsive Viewport Fitting */}
+      {/* Swipeable Carousel Area with Complete Uncropped Frame Preview */}
       {loading ? (
-        <div className="flex-1 flex items-center justify-center py-12">
+        <div className="flex-1 flex items-center justify-center py-16">
           <div className="flex flex-col items-center gap-3">
             <div className="w-12 h-12 border-3 border-[var(--theme-accent,#E11D48)] border-t-transparent rounded-full animate-spin" />
             <p className="text-sm font-mono-tabular text-zinc-400">{t.frameSelect.loadingFrames}</p>
           </div>
         </div>
       ) : (
-        <div className="relative flex-1 min-h-0 w-full flex flex-col justify-center py-2 sm:py-3 overflow-hidden">
+        <div className="relative flex-1 w-full flex flex-col justify-center py-2 sm:py-4 my-auto">
           {/* Side Navigation Arrow Buttons */}
           <button
             type="button"
@@ -408,7 +408,7 @@ export const FrameSelectionScreen: React.FC = () => {
               WebkitOverflowScrolling: 'touch',
               overscrollBehaviorX: 'contain',
             }}
-            className="w-full h-full max-h-[min(65vh,540px)] min-h-[300px] flex items-center gap-4 sm:gap-6 md:gap-8 overflow-x-auto py-2 px-[calc(50vw-135px)] sm:px-[calc(50vw-160px)] md:px-[calc(50vw-170px)] lg:px-[calc(50%-170px)] touch-pan-x focus:outline-none cursor-grab active:cursor-grabbing"
+            className="w-full flex items-center gap-5 sm:gap-7 md:gap-9 overflow-x-auto py-4 px-[calc(50vw-120px)] sm:px-[calc(50vw-145px)] md:px-[calc(50vw-160px)] lg:px-[calc(50%-160px)] touch-pan-x focus:outline-none cursor-grab active:cursor-grabbing"
             tabIndex={0}
             role="region"
             aria-label="Frame Templates Carousel"
@@ -434,62 +434,54 @@ export const FrameSelectionScreen: React.FC = () => {
                       handleCardClick(frame, index);
                     }
                   }}
-                  className={`h-full max-h-[min(62vh,520px)] min-h-[290px] w-[260px] sm:w-[310px] md:w-[340px] shrink-0 rounded-2xl flex flex-col justify-between transition-all duration-300 ease-out select-none border ${
+                  className={`w-[240px] sm:w-[280px] md:w-[310px] shrink-0 rounded-2xl flex flex-col justify-between transition-all duration-300 ease-out select-none border ${
                     isActive
-                      ? 'scale-100 opacity-100 bg-zinc-900 border-[var(--theme-accent,#E11D48)] ring-2 ring-[var(--theme-accent,#E11D48)]/40 shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_35px_rgba(225,29,72,0.35)] p-3.5 sm:p-4.5 z-10'
-                      : 'scale-[0.88] sm:scale-[0.92] opacity-50 hover:opacity-80 bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700/80 p-3.5 sm:p-4.5 cursor-pointer z-0'
+                      ? 'scale-100 opacity-100 bg-zinc-900 border-[var(--theme-accent,#E11D48)] ring-2 ring-[var(--theme-accent,#E11D48)]/40 shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_35px_rgba(225,29,72,0.35)] p-4 sm:p-5 z-10'
+                      : 'scale-[0.9] sm:scale-[0.93] opacity-60 hover:opacity-85 bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700/80 p-4 sm:p-5 cursor-pointer z-0'
                   }`}
                 >
-                  {/* Card Content with Responsive Flex Sizing */}
-                  <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
-                    {/* Artwork Preview Box: Dynamically scales to fit card height */}
-                    <div className="flex-1 min-h-0 bg-zinc-950 rounded-xl p-2 sm:p-3 flex items-center justify-center overflow-hidden border border-zinc-800/70 shadow-inner relative group">
-                      <img
-                        src={frame.previewImg}
-                        alt={`Pratinjau ${frame.name}`}
-                        referrerPolicy="no-referrer"
-                        loading="lazy"
-                        draggable={false}
-                        className="w-full h-full max-h-full max-w-full object-contain rounded shadow-lg pointer-events-none transition-transform duration-300 group-hover:scale-[1.02]"
-                      />
-
-                      {/* Active Badges */}
-                      <div className="absolute top-2 right-2 flex items-center gap-1.5">
-                        <span className="bg-black/80 backdrop-blur-md text-[10px] sm:text-[11px] font-mono-tabular font-bold text-white px-2 py-0.5 rounded-lg border border-white/10 shadow">
-                          {frame.photoCount} {t.frameSelect.poses}
-                        </span>
-                      </div>
-
-                      {isSelected && (
-                        <div className="absolute top-2 left-2 bg-[var(--theme-accent,#E11D48)] text-[9px] sm:text-[10px] font-bold text-white px-2 py-0.5 rounded shadow">
-                          ✓ ACTIVE
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Frame Minimal Details */}
-                    <div className="shrink-0 space-y-0.5 pt-1">
-                      <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-mono-tabular text-zinc-400">
-                        <span className="font-semibold text-zinc-300">
-                          {frame.photoCount} {t.frameSelect.poses}
-                        </span>
-                        <span>
-                          {frame.canvasWidth || 500}×{frame.canvasHeight || 1220}px
-                        </span>
-                      </div>
-                      <h2 className="font-display text-sm sm:text-base md:text-lg font-bold text-[#F4F4F0] line-clamp-1">
-                        {frame.name}
-                      </h2>
-                      {frame.subtitle && (
-                        <p className="text-[10px] sm:text-xs text-zinc-400 line-clamp-1">
-                          {frame.subtitle}
-                        </p>
-                      )}
-                    </div>
+                  {/* Top Metadata: Poses count & Dimensions - Placed ABOVE the artwork so it NEVER covers the frame! */}
+                  <div className="flex items-center justify-between pb-2 text-[11px] font-mono-tabular text-zinc-400 shrink-0">
+                    <span className="font-bold text-white bg-black/60 px-2 py-0.5 rounded border border-white/10 shadow-sm">
+                      {frame.photoCount} {t.frameSelect.poses}
+                    </span>
+                    {isSelected ? (
+                      <span className="text-[10px] font-bold text-[var(--theme-accent,#E11D48)] bg-[var(--theme-accent,#E11D48)]/10 px-2 py-0.5 rounded border border-[var(--theme-accent,#E11D48)]/30">
+                        ✓ ACTIVE
+                      </span>
+                    ) : (
+                      <span className="text-zinc-500">
+                        {frame.canvasWidth || 500}×{frame.canvasHeight || 1220}
+                      </span>
+                    )}
                   </div>
 
-                  {/* Action CTA: Always visible at bottom */}
-                  <div className="shrink-0 pt-2">
+                  {/* Frame Preview Container: High-contrast studio backdrop, perfectly sized to display the ENTIRE uncropped frame */}
+                  <div className="w-full bg-zinc-950/90 rounded-xl p-2.5 sm:p-3 flex items-center justify-center border border-zinc-800/80 shadow-inner relative group min-h-[360px] sm:min-h-[420px] max-h-[62vh]">
+                    <img
+                      src={frame.previewImg}
+                      alt={`Pratinjau ${frame.name}`}
+                      referrerPolicy="no-referrer"
+                      loading="lazy"
+                      draggable={false}
+                      className="h-full w-auto max-h-[58vh] max-w-full object-contain pointer-events-none drop-shadow-[0_12px_30px_rgba(0,0,0,0.8)] transition-transform duration-300 group-hover:scale-[1.01]"
+                    />
+                  </div>
+
+                  {/* Frame Title & Subtitle */}
+                  <div className="pt-3 pb-1 space-y-0.5 shrink-0 text-center">
+                    <h2 className="font-display text-base sm:text-lg font-bold text-[#F4F4F0] line-clamp-1">
+                      {frame.name}
+                    </h2>
+                    {frame.subtitle && (
+                      <p className="text-xs text-zinc-400 line-clamp-1">
+                        {frame.subtitle}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Action CTA */}
+                  <div className="pt-2 shrink-0">
                     {isActive ? (
                       <button
                         type="button"
@@ -497,13 +489,13 @@ export const FrameSelectionScreen: React.FC = () => {
                           e.stopPropagation();
                           handleSelectFrame(frame);
                         }}
-                        className="w-full min-h-[44px] sm:min-h-[46px] py-2 px-4 text-xs sm:text-sm font-bold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-[0.98] rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center justify-center gap-2"
+                        className="w-full min-h-[46px] py-2.5 px-4 text-xs sm:text-sm font-bold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-[0.98] rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center justify-center gap-2"
                       >
                         <span>{t.frameSelect.selectAction}</span>
                         <span>📸</span>
                       </button>
                     ) : (
-                      <div className="w-full min-h-[40px] py-1.5 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors flex items-center justify-center gap-1.5 border border-zinc-800/60 rounded-xl bg-zinc-950/40">
+                      <div className="w-full min-h-[44px] py-2 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors flex items-center justify-center gap-1.5 border border-zinc-800/60 rounded-xl bg-zinc-950/40">
                         <span>{t.frameSelect.tapToPreview}</span>
                       </div>
                     )}
@@ -514,7 +506,7 @@ export const FrameSelectionScreen: React.FC = () => {
           </div>
 
           {/* Dot Indicators & Carousel Counter */}
-          <div className="flex flex-col items-center justify-center gap-1.5 pt-2 shrink-0">
+          <div className="flex flex-col items-center justify-center gap-1.5 pt-3 shrink-0">
             <div
               className="flex items-center justify-center gap-2"
               role="tablist"
