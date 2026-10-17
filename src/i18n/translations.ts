@@ -43,6 +43,8 @@ export const TRANSLATIONS = {
       loadingFrames: 'Memuat katalog bingkai...',
       swipeHint: 'Geser ke kiri atau kanan untuk memilih bingkai',
       tapToPreview: 'Sentuh untuk melihat',
+      prevFrame: 'Bingkai sebelumnya',
+      nextFrame: 'Bingkai berikutnya',
     },
     // Camera Screen
     camera: {
@@ -290,6 +292,8 @@ export const TRANSLATIONS = {
       loadingFrames: 'Loading frame catalog...',
       swipeHint: 'Swipe left or right to browse frames',
       tapToPreview: 'Tap to preview',
+      prevFrame: 'Previous frame',
+      nextFrame: 'Next frame',
     },
     // Camera Screen
     camera: {
