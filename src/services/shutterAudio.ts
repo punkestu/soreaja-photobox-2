@@ -110,3 +110,43 @@ export function playShutterSound(): void {
     console.warn('Audio playback not supported or blocked by policy:', err);
   }
 }
+
+/**
+ * Web Audio API synthesized studio chime for session timer expiration
+ * 100% Offline, no external assets needed
+ */
+export function playSessionExpiredAlertSound(): void {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const notes = [
+      { freq: 523.25, time: 0.0, dur: 0.5 },  // C5
+      { freq: 659.25, time: 0.16, dur: 0.5 }, // E5
+      { freq: 783.99, time: 0.32, dur: 0.8 }, // G5
+      { freq: 1046.5, time: 0.52, dur: 1.1 }, // C6
+    ];
+
+    notes.forEach(({ freq, time, dur }) => {
+      const startTime = now + time;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, startTime);
+
+      gain.gain.setValueAtTime(0.35, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(startTime);
+      osc.stop(startTime + dur);
+    });
+  } catch (err) {
+    console.warn('Session expired alert sound error:', err);
+  }
+}
+

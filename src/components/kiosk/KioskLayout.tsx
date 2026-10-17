@@ -4,19 +4,20 @@ import { usePhotobox } from '../../context/PhotoboxContext';
 import { PWAInstallButton } from '../common/PWAInstallButton';
 import { OfflineIndicator } from '../common/OfflineIndicator';
 
-const STEPS = [
-  { path: '/app/idle', label: '1. Mulai' },
-  { path: '/app/frame-selection', label: '2. Bingkai' },
-  { path: '/app/camera', label: '3. Kamera' },
-  { path: '/app/review-photos', label: '4. Evaluasi' },
-  { path: '/app/preview-final', label: '5. Frame' },
-  { path: '/app/print-result', label: '6. Cetak & QR' },
-];
-
 export const KioskLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { resetSession, language, setLanguage, t } = usePhotobox();
+  const {
+    resetSession,
+    language,
+    setLanguage,
+    t,
+    sessionSecondsLeft,
+    isSessionTimerEnabled,
+    isSessionExpiredAlertOpen,
+    dismissSessionExpiredAlert,
+    startSessionTimer,
+  } = usePhotobox();
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
   const steps = [
@@ -27,6 +28,15 @@ export const KioskLayout: React.FC = () => {
     { path: '/app/preview-final', label: t.steps.step5 },
     { path: '/app/print-result', label: t.steps.step6 },
   ];
+
+  const isIdleScreen = location.pathname === '/app/idle';
+
+  // Automatically initiate session countdown timer when guest starts beyond idle screen
+  useEffect(() => {
+    if (!isIdleScreen && location.pathname.startsWith('/app/')) {
+      startSessionTimer();
+    }
+  }, [isIdleScreen, location.pathname, startSessionTimer]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -55,13 +65,11 @@ export const KioskLayout: React.FC = () => {
     navigate('/app/idle');
   };
 
-  const isIdleScreen = location.pathname === '/app/idle';
-
   return (
     <div className="min-h-screen w-full bg-[#0A0A0B] text-[#F4F4F0] flex flex-col overflow-x-hidden selection:bg-[var(--theme-accent,#E11D48)] selection:text-white">
       <OfflineIndicator />
 
-      {/* Top Bar: Seamless borderless studio navigation */}
+      {/* Top Bar: Seamless studio navigation & session monitor */}
       <header
         className={`flex items-center justify-between px-4 sm:px-6 md:px-8 py-3 z-30 transition-all duration-300 ${
           isIdleScreen
@@ -69,17 +77,40 @@ export const KioskLayout: React.FC = () => {
             : 'sticky top-0 bg-[#0A0A0B]/95 backdrop-blur-md border-b border-white/5'
         }`}
       >
-        <Link
-          to="/app/idle"
-          className="font-display text-lg sm:text-xl font-bold tracking-tight text-[#F4F4F0] hover:text-white whitespace-nowrap active:scale-95 transition-transform"
-        >
-          {t.appName}
-        </Link>
+        <div className="flex items-center gap-3 sm:gap-4">
+          <Link
+            to="/app/idle"
+            className="font-display text-lg sm:text-xl font-bold tracking-tight text-[#F4F4F0] hover:text-white whitespace-nowrap active:scale-95 transition-transform"
+          >
+            {t.appName}
+          </Link>
+
+          {/* Session Countdown Timer Widget */}
+          {isSessionTimerEnabled && !isIdleScreen && (
+            <div
+              title={t.sessionTimer.timeRemaining}
+              aria-label={t.sessionTimer.timeRemaining}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-xs font-mono-tabular transition-all select-none ${
+                sessionSecondsLeft === 0
+                  ? 'bg-rose-950/80 border-rose-500/80 text-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.4)] animate-pulse'
+                  : sessionSecondsLeft <= 60
+                  ? 'bg-amber-950/80 border-amber-500/80 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
+                  : 'bg-zinc-900/90 border-zinc-800 text-zinc-300'
+              }`}
+            >
+              <span className="text-[11px]">{sessionSecondsLeft === 0 ? '🔔' : '⏳'}</span>
+              <span className="font-bold tracking-wider">
+                {String(Math.floor(sessionSecondsLeft / 60)).padStart(2, '0')}:
+                {String(sessionSecondsLeft % 60).padStart(2, '0')}
+              </span>
+            </div>
+          )}
+        </div>
 
         {!isIdleScreen && (
           <div
             aria-label={t.steps.stepIndicator}
-            className="flex items-center gap-2 sm:gap-3 text-xs font-mono-tabular select-none"
+            className="hidden md:flex items-center gap-2 sm:gap-3 text-xs font-mono-tabular select-none"
           >
             {/* Tablet Step Tracker: Segmented Track & Active Label */}
             <div className="flex items-center gap-1.5 p-1 bg-zinc-900/80 rounded-xl border border-zinc-800/80">
@@ -103,7 +134,7 @@ export const KioskLayout: React.FC = () => {
               })}
             </div>
 
-            <div className="hidden sm:flex items-center gap-1.5 text-zinc-300">
+            <div className="hidden lg:flex items-center gap-1.5 text-zinc-300">
               <span className="font-bold text-white">
                 {steps.find((s) => s.path === location.pathname)?.label || 'Photobox'}
               </span>
@@ -195,6 +226,38 @@ export const KioskLayout: React.FC = () => {
       <main className="flex-1 flex flex-col w-full h-full">
         <Outlet />
       </main>
+
+      {/* Session Expired Alert Modal (Non-destructive: alerts guest with sound, does not auto-end session) */}
+      {isSessionExpiredAlertOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="session-expired-title"
+            aria-describedby="session-expired-desc"
+            className="bg-zinc-900 border border-[var(--theme-accent,#E11D48)]/60 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-[0_25px_60px_rgba(0,0,0,0.9),0_0_40px_rgba(225,29,72,0.3)] flex flex-col items-center text-center space-y-4"
+          >
+            <div className="w-16 h-16 rounded-2xl bg-[var(--theme-accent,#E11D48)]/15 border border-[var(--theme-accent,#E11D48)]/40 flex items-center justify-center text-3xl shadow-inner animate-bounce">
+              ⏰
+            </div>
+            <div className="space-y-2">
+              <h3 id="session-expired-title" className="font-display text-xl sm:text-2xl font-extrabold text-[#F4F4F0]">
+                {t.sessionTimer.expiredTitle}
+              </h3>
+              <p id="session-expired-desc" className="text-sm text-zinc-300 leading-relaxed">
+                {t.sessionTimer.expiredDesc}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={dismissSessionExpiredAlert}
+              className="w-full min-h-[48px] py-3 px-6 text-sm font-bold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all shadow-lg cursor-pointer"
+            >
+              {t.sessionTimer.continueBtn}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

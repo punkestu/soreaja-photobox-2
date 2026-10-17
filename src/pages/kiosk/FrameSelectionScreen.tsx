@@ -41,9 +41,12 @@ export const FrameSelectionScreen: React.FC = () => {
         if (foundIndex !== -1) {
           setActiveIndex(foundIndex);
         }
+      } else if (data.length > 0) {
+        // Set first frame as default selected if none chosen yet
+        setSelectedFrame(data[0]);
       }
     });
-  }, [selectedFrame]);
+  }, [selectedFrame, setSelectedFrame]);
 
   // Cancel any active momentum animation
   const cancelMomentum = useCallback(() => {
@@ -122,35 +125,34 @@ export const FrameSelectionScreen: React.FC = () => {
     }
   }, [loading, frames.length, scrollToIndex, activeIndex]);
 
-  // Handle free fluid scrolling: preview the closest card while moving, then when scroll slows down, settle & center
-  const handleScroll = useCallback(() => {
-    const container = carouselRef.current;
-    if (!container) return;
-
-    const closest = getClosestFrameIndex();
-
-    // If this is a programmatic scroll (e.g. arrow button or settle animation), update active index and exit
-    if (isProgrammaticScrollRef.current) {
-      setActiveIndex(closest);
-      return;
+  // Snap and commit selection only when sliding has completely stopped
+  const snapToSettledFrame = useCallback(() => {
+    if (isProgrammaticScrollRef.current || frames.length === 0) return;
+    const finalTarget = getClosestFrameIndex();
+    setActiveIndex(finalTarget);
+    if (frames[finalTarget]) {
+      setSelectedFrame(frames[finalTarget]);
     }
+    scrollToIndex(finalTarget, true);
+  }, [getClosestFrameIndex, frames, setSelectedFrame, scrollToIndex]);
 
-    // Live update active card visual indicator as cards glide past center
-    setActiveIndex(closest);
+  // Pure fluid scrolling without React state churn or re-rendering while in motion
+  const handleScroll = useCallback(() => {
+    // If this is a programmatic scroll (e.g. arrow button), do not trigger settle
+    if (isProgrammaticScrollRef.current) return;
 
-    // Clear any previous settle timeout
+    // Clear any pending settle timer
     if (settleTimeoutRef.current) {
       clearTimeout(settleTimeoutRef.current);
     }
 
-    // When scrolling slows down and comes to rest (150ms debounce), snap cleanly to the selected frame
+    // Only commit selection and snap when motion has completely stopped (zero flicker on mid-end devices)
     settleTimeoutRef.current = setTimeout(() => {
       if (!isPointerDownRef.current) {
-        const finalTarget = getClosestFrameIndex();
-        scrollToIndex(finalTarget, true);
+        snapToSettledFrame();
       }
-    }, 150);
-  }, [getClosestFrameIndex, scrollToIndex]);
+    }, 160);
+  }, [snapToSettledFrame]);
 
   // Listen for native scrollend event where supported
   useEffect(() => {
@@ -159,30 +161,39 @@ export const FrameSelectionScreen: React.FC = () => {
 
     const onScrollEnd = () => {
       if (isProgrammaticScrollRef.current || isPointerDownRef.current) return;
-      const finalTarget = getClosestFrameIndex();
-      scrollToIndex(finalTarget, true);
+      snapToSettledFrame();
     };
 
     container.addEventListener('scrollend', onScrollEnd);
     return () => {
       container.removeEventListener('scrollend', onScrollEnd);
     };
-  }, [getClosestFrameIndex, scrollToIndex]);
+  }, [snapToSettledFrame]);
 
-  // Directional navigation helpers
-  const handlePrev = useCallback(() => {
-    cancelMomentum();
-    if (activeIndex > 0) {
-      scrollToIndex(activeIndex - 1, true);
-    }
-  }, [activeIndex, scrollToIndex, cancelMomentum]);
-
+  // Next and Prev buttons: actively select the frame, update state, and glide to center
   const handleNext = useCallback(() => {
     cancelMomentum();
-    if (activeIndex < frames.length - 1) {
-      scrollToIndex(activeIndex + 1, true);
+    const nextIndex = Math.min(frames.length - 1, activeIndex + 1);
+    if (nextIndex !== activeIndex) {
+      setActiveIndex(nextIndex);
+      if (frames[nextIndex]) {
+        setSelectedFrame(frames[nextIndex]);
+      }
+      scrollToIndex(nextIndex, true);
     }
-  }, [activeIndex, frames.length, scrollToIndex, cancelMomentum]);
+  }, [activeIndex, frames, setSelectedFrame, scrollToIndex, cancelMomentum]);
+
+  const handlePrev = useCallback(() => {
+    cancelMomentum();
+    const prevIndex = Math.max(0, activeIndex - 1);
+    if (prevIndex !== activeIndex) {
+      setActiveIndex(prevIndex);
+      if (frames[prevIndex]) {
+        setSelectedFrame(frames[prevIndex]);
+      }
+      scrollToIndex(prevIndex, true);
+    }
+  }, [activeIndex, frames, setSelectedFrame, scrollToIndex, cancelMomentum]);
 
   // Keyboard navigation (Left / Right / Enter / Space)
   useEffect(() => {
@@ -260,7 +271,7 @@ export const FrameSelectionScreen: React.FC = () => {
         hasMovedRef.current = true;
       }
 
-      // 1:1 instantaneous drag tracking
+      // 1:1 instantaneous drag tracking on compositor
       container.scrollLeft = scrollLeftStartRef.current - dx;
     };
 
@@ -285,16 +296,14 @@ export const FrameSelectionScreen: React.FC = () => {
             momentumAnimationRef.current = requestAnimationFrame(glide);
           } else {
             momentumAnimationRef.current = null;
-            // Motion slowed down: calculate which frame is selected and center it
-            const target = getClosestFrameIndex();
-            scrollToIndex(target, true);
+            // Motion stopped: commit selection and snap
+            snapToSettledFrame();
           }
         };
         momentumAnimationRef.current = requestAnimationFrame(glide);
       } else {
-        // Slow release: settle to closest frame
-        const target = getClosestFrameIndex();
-        scrollToIndex(target, true);
+        // Slow release: commit selection and snap
+        snapToSettledFrame();
       }
     };
 
@@ -304,7 +313,7 @@ export const FrameSelectionScreen: React.FC = () => {
       window.removeEventListener('mousemove', handleWindowMouseMove);
       window.removeEventListener('mouseup', handleWindowMouseUp);
     };
-  }, [getClosestFrameIndex, scrollToIndex]);
+  }, [snapToSettledFrame]);
 
   const handleSelectFrame = (frame: FrameMetadata) => {
     setSelectedFrame(frame);
@@ -316,6 +325,8 @@ export const FrameSelectionScreen: React.FC = () => {
   const handleCardClick = (frame: FrameMetadata, index: number) => {
     if (hasMovedRef.current) return; // Ignore drag release click
     cancelMomentum();
+    setActiveIndex(index);
+    setSelectedFrame(frame);
     if (index === activeIndex) {
       handleSelectFrame(frame);
     } else {
@@ -353,7 +364,7 @@ export const FrameSelectionScreen: React.FC = () => {
         </button>
       </div>
 
-      {/* Swipeable Carousel Area with Complete Uncropped Frame Preview */}
+      {/* Swipeable Carousel Area with Lightweight 60+ FPS Scroll */}
       {loading ? (
         <div className="flex-1 flex items-center justify-center py-16">
           <div className="flex flex-col items-center gap-3">
@@ -363,7 +374,7 @@ export const FrameSelectionScreen: React.FC = () => {
         </div>
       ) : (
         <div className="relative flex-1 w-full flex flex-col justify-center py-2 sm:py-4 my-auto">
-          {/* Side Navigation Arrow Buttons */}
+          {/* Side Navigation Arrow Buttons - Pressing Next / Prev actively selects the frame */}
           <button
             type="button"
             onClick={handlePrev}
@@ -396,7 +407,7 @@ export const FrameSelectionScreen: React.FC = () => {
             </svg>
           </button>
 
-          {/* Scroll Track: Completely fluid, uninhibited momentum scroll with deceleration settle */}
+          {/* Scroll Track: Native momentum scroll without state churn during movement */}
           <div
             ref={carouselRef}
             onScroll={handleScroll}
@@ -408,7 +419,7 @@ export const FrameSelectionScreen: React.FC = () => {
               WebkitOverflowScrolling: 'touch',
               overscrollBehaviorX: 'contain',
             }}
-            className="w-full flex items-center gap-5 sm:gap-7 md:gap-9 overflow-x-auto py-4 px-[calc(50vw-120px)] sm:px-[calc(50vw-145px)] md:px-[calc(50vw-160px)] lg:px-[calc(50%-160px)] touch-pan-x focus:outline-none cursor-grab active:cursor-grabbing"
+            className="w-full flex items-center gap-5 sm:gap-7 md:gap-9 overflow-x-auto py-4 px-[calc(50vw-120px)] sm:px-[calc(50vw-145px)] md:px-[calc(50vw-160px)] lg:px-[calc(50%-160px)] touch-pan-x focus:outline-none cursor-grab active:cursor-grabbing will-change-scroll"
             tabIndex={0}
             role="region"
             aria-label="Frame Templates Carousel"
@@ -434,13 +445,13 @@ export const FrameSelectionScreen: React.FC = () => {
                       handleCardClick(frame, index);
                     }
                   }}
-                  className={`w-[240px] sm:w-[280px] md:w-[310px] shrink-0 rounded-2xl flex flex-col justify-between transition-all duration-300 ease-out select-none border ${
+                  className={`w-[240px] sm:w-[280px] md:w-[310px] shrink-0 rounded-2xl flex flex-col justify-between transition-all duration-300 ease-out select-none border transform-gpu ${
                     isActive
                       ? 'scale-100 opacity-100 bg-zinc-900 border-[var(--theme-accent,#E11D48)] ring-2 ring-[var(--theme-accent,#E11D48)]/40 shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_35px_rgba(225,29,72,0.35)] p-4 sm:p-5 z-10'
                       : 'scale-[0.9] sm:scale-[0.93] opacity-60 hover:opacity-85 bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700/80 p-4 sm:p-5 cursor-pointer z-0'
                   }`}
                 >
-                  {/* Top Metadata: Poses count & Dimensions - Placed ABOVE the artwork so it NEVER covers the frame! */}
+                  {/* Top Metadata: Poses count & Dimensions - Placed ABOVE artwork */}
                   <div className="flex items-center justify-between pb-2 text-[11px] font-mono-tabular text-zinc-400 shrink-0">
                     <span className="font-bold text-white bg-black/60 px-2 py-0.5 rounded border border-white/10 shadow-sm">
                       {frame.photoCount} {t.frameSelect.poses}
@@ -456,13 +467,14 @@ export const FrameSelectionScreen: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Frame Preview Container: High-contrast studio backdrop, perfectly sized to display the ENTIRE uncropped frame */}
+                  {/* Frame Preview Container: Uncropped, completely visible vertical strip */}
                   <div className="w-full bg-zinc-950/90 rounded-xl p-2.5 sm:p-3 flex items-center justify-center border border-zinc-800/80 shadow-inner relative group min-h-[360px] sm:min-h-[420px] max-h-[62vh]">
                     <img
                       src={frame.previewImg}
                       alt={`Pratinjau ${frame.name}`}
                       referrerPolicy="no-referrer"
                       loading="lazy"
+                      decoding="async"
                       draggable={false}
                       className="h-full w-auto max-h-[58vh] max-w-full object-contain pointer-events-none drop-shadow-[0_12px_30px_rgba(0,0,0,0.8)] transition-transform duration-300 group-hover:scale-[1.01]"
                     />
@@ -521,7 +533,11 @@ export const FrameSelectionScreen: React.FC = () => {
                     role="tab"
                     aria-selected={isActive}
                     aria-label={`${frame.name} (${idx + 1} / ${frames.length})`}
-                    onClick={() => scrollToIndex(idx, true)}
+                    onClick={() => {
+                      setActiveIndex(idx);
+                      setSelectedFrame(frame);
+                      scrollToIndex(idx, true);
+                    }}
                     className={`transition-all duration-300 rounded-full cursor-pointer ${
                       isActive
                         ? 'w-8 h-2.5 bg-[var(--theme-accent,#E11D48)] shadow-[0_0_12px_rgba(225,29,72,0.6)]'

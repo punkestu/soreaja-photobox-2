@@ -3,6 +3,7 @@ import type { FrameMetadata, PhotoFilter, PhotoboxState, AppLanguage } from '../
 import { db } from '../db';
 import { DEFAULT_FRAMES } from '../data/defaultFrames';
 import { TRANSLATIONS, type TranslationDictionary } from '../i18n/translations';
+import { playSessionExpiredAlertSound } from '../services/shutterAudio';
 
 interface PhotoboxContextValue extends PhotoboxState {
   language: AppLanguage;
@@ -20,6 +21,14 @@ interface PhotoboxContextValue extends PhotoboxState {
   setShowFrameStamps: (show: boolean) => void;
   resetSession: () => void;
   seedDemoSession: () => void;
+  // Session countdown timer properties
+  sessionSecondsLeft: number;
+  sessionDurationMinutes: number;
+  isSessionTimerEnabled: boolean;
+  isSessionExpiredAlertOpen: boolean;
+  dismissSessionExpiredAlert: () => void;
+  startSessionTimer: () => void;
+  resetSessionTimer: () => void;
 }
 
 const initialState: PhotoboxState = {
@@ -50,11 +59,17 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [language, setLanguageState] = useState<AppLanguage>('id');
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
 
+  // Session timer states
+  const [sessionDurationMinutes, setSessionDurationMinutes] = useState<number>(5);
+  const [isSessionTimerEnabled, setIsSessionTimerEnabled] = useState<boolean>(true);
+  const [sessionSecondsLeft, setSessionSecondsLeft] = useState<number>(300);
+  const [isSessionTimerRunning, setIsSessionTimerRunning] = useState<boolean>(false);
+  const [isSessionExpiredAlertOpen, setIsSessionExpiredAlertOpen] = useState<boolean>(false);
+
   // Set language with instant update and persistent DB write
   const setLanguage = useCallback((lang: AppLanguage) => {
     setLanguageState(lang);
     db.settings.update('app_settings', { language: lang }).catch(() => {
-      // If record not created yet, put with default
       db.settings.get('app_settings').then((existing) => {
         if (existing) {
           db.settings.put({ ...existing, language: lang });
@@ -77,8 +92,20 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           savedSettings?.showFrameStamps !== undefined
             ? savedSettings.showFrameStamps
             : true;
+        const durationMinutes =
+          typeof savedSettings?.sessionDurationMinutes === 'number' && savedSettings.sessionDurationMinutes > 0
+            ? savedSettings.sessionDurationMinutes
+            : 5;
+        const timerEnabled =
+          typeof savedSettings?.enableSessionTimer === 'boolean'
+            ? savedSettings.enableSessionTimer
+            : true;
 
         if (isMounted) {
+          setSessionDurationMinutes(durationMinutes);
+          setIsSessionTimerEnabled(timerEnabled);
+          setSessionSecondsLeft(durationMinutes * 60);
+
           if (savedSettings?.language === 'en' || savedSettings?.language === 'id') {
             setLanguageState(savedSettings.language);
           }
@@ -141,28 +168,23 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
 
     saveTimeoutRef.current = window.setTimeout(() => {
-      if (capturedPhotos.length === 0 && !selectedFrame && !finalLayoutBase64 && !doubleStripBase64) {
-        // Empty state
-        db.activeSession.delete('current_active_session').catch(() => {});
-      } else {
-        db.activeSession
-          .put({
-            id: 'current_active_session',
-            selectedFrame,
-            capturedPhotos,
-            retakeIndex,
-            finalLayoutBase64,
-            doubleStripBase64,
-            selectedFilter,
-            customCaption,
-            showFrameStamps,
-            updatedAt: Date.now(),
-          })
-          .catch((err) => {
-            console.warn('Could not save session to IndexedDB:', err);
-          });
-      }
-    }, 150);
+      db.activeSession
+        .put({
+          id: 'current_active_session',
+          selectedFrame,
+          capturedPhotos,
+          retakeIndex,
+          finalLayoutBase64,
+          doubleStripBase64,
+          selectedFilter,
+          customCaption,
+          showFrameStamps,
+          updatedAt: Date.now(),
+        })
+        .catch((err) => {
+          console.warn('Failed to persist active session to Dexie:', err);
+        });
+    }, 300);
 
     return () => {
       if (saveTimeoutRef.current) {
@@ -181,11 +203,45 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     showFrameStamps,
   ]);
 
+  // Session timer countdown interval
+  useEffect(() => {
+    if (!isSessionTimerRunning || !isSessionTimerEnabled) return;
+
+    const intervalId = window.setInterval(() => {
+      setSessionSecondsLeft((prev) => {
+        if (prev <= 1) {
+          // Play audio chime and trigger alert modal
+          playSessionExpiredAlertSound();
+          setIsSessionExpiredAlertOpen(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isSessionTimerRunning, isSessionTimerEnabled]);
+
+  const startSessionTimer = useCallback(() => {
+    setIsSessionTimerRunning(true);
+  }, []);
+
+  const resetSessionTimer = useCallback(() => {
+    setSessionSecondsLeft(sessionDurationMinutes * 60);
+    setIsSessionExpiredAlertOpen(false);
+  }, [sessionDurationMinutes]);
+
+  const dismissSessionExpiredAlert = useCallback(() => {
+    setIsSessionExpiredAlertOpen(false);
+  }, []);
+
   const updatePhotoAtIndex = useCallback((index: number, photoBase64: string) => {
     setCapturedPhotos((prev) => {
-      const next = [...prev];
-      next[index] = photoBase64;
-      return next;
+      const updated = [...prev];
+      updated[index] = photoBase64;
+      return updated;
     });
   }, []);
 
@@ -203,14 +259,23 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
     setSelectedFilter('original');
 
-    // Restore configured default caption & stamp settings from local settings
+    // Reset session timer
+    setIsSessionTimerRunning(false);
+    setIsSessionExpiredAlertOpen(false);
     db.settings
       .get('app_settings')
       .then((settings) => {
+        const duration =
+          typeof settings?.sessionDurationMinutes === 'number' && settings.sessionDurationMinutes > 0
+            ? settings.sessionDurationMinutes
+            : 5;
+        setSessionDurationMinutes(duration);
+        setSessionSecondsLeft(duration * 60);
         setCustomCaption(settings?.defaultCaption?.trim() || 'SOREAJA — PHOTOBOX 2');
         setShowFrameStamps(settings?.showFrameStamps !== undefined ? settings.showFrameStamps : true);
       })
       .catch(() => {
+        setSessionSecondsLeft(300);
         setCustomCaption('SOREAJA — PHOTOBOX 2');
         setShowFrameStamps(true);
       });
@@ -254,13 +319,19 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setShowFrameStamps,
         resetSession,
         seedDemoSession,
+        sessionSecondsLeft,
+        sessionDurationMinutes,
+        isSessionTimerEnabled,
+        isSessionExpiredAlertOpen,
+        dismissSessionExpiredAlert,
+        startSessionTimer,
+        resetSessionTimer,
       }}
     >
       {children}
     </PhotoboxContext.Provider>
   );
 };
-
 
 export const usePhotobox = (): PhotoboxContextValue => {
   const ctx = useContext(PhotoboxContext);

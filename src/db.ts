@@ -51,6 +51,8 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   thermalPrinterName: '', // Nama printer thermal bawaan
   colorPrinterName: '', // Nama printer warna bawaan
   enableShutterSound: true,
+  enableSessionTimer: true,
+  sessionDurationMinutes: 5,
   kioskBackground: '', // Empty means use default studio hero image
   kioskBackgroundOverlayOpacity: 60, // 60%
   themeColor: '#E11D48',

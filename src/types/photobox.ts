@@ -49,6 +49,8 @@ export interface AppSettings {
   thermalPrinterName?: string; // Nama printer thermal (misal Epson TM-T82 roll 80mm)
   colorPrinterName?: string; // Nama printer warna (misal DNP DS-RX1HS kertas 4R)
   enableShutterSound?: boolean; // Suara kamera saat capture foto
+  enableSessionTimer?: boolean; // Aktifkan timer sesi booth
+  sessionDurationMinutes?: number; // Durasi sesi dalam menit (default 5 menit)
   kioskBackground?: string; // Data URL Base64, preset ID, or external URL
   kioskBackgroundOverlayOpacity?: number; // 20 - 100 percent
   themeColor?: string; // Hex color e.g. '#E11D48'

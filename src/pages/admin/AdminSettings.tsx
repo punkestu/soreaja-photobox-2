@@ -43,6 +43,12 @@ export const AdminSettings: React.FC = () => {
   const [enableShutterSound, setEnableShutterSound] = useState<boolean>(
     DEFAULT_APP_SETTINGS.enableShutterSound ?? true
   );
+  const [enableSessionTimer, setEnableSessionTimer] = useState<boolean>(
+    DEFAULT_APP_SETTINGS.enableSessionTimer ?? true
+  );
+  const [sessionDurationMinutes, setSessionDurationMinutes] = useState<number>(
+    DEFAULT_APP_SETTINGS.sessionDurationMinutes || 5
+  );
   const [testingApi, setTestingApi] = useState<boolean>(false);
   const [testApiResult, setTestApiResult] = useState<{
     success: boolean;
@@ -111,6 +117,12 @@ export const AdminSettings: React.FC = () => {
         }
         if (typeof data.enableShutterSound === 'boolean') {
           setEnableShutterSound(data.enableShutterSound);
+        }
+        if (typeof data.enableSessionTimer === 'boolean') {
+          setEnableSessionTimer(data.enableSessionTimer);
+        }
+        if (typeof data.sessionDurationMinutes === 'number') {
+          setSessionDurationMinutes(data.sessionDurationMinutes);
         }
         if (data.themeColor) {
           setThemeColor(data.themeColor);
@@ -323,6 +335,8 @@ export const AdminSettings: React.FC = () => {
       thermalPrinterName: thermalPrinterName.trim(),
       colorPrinterName: colorPrinterName.trim(),
       enableShutterSound,
+      enableSessionTimer,
+      sessionDurationMinutes,
       themeColor,
       themePreset,
       kioskBackground,
@@ -843,6 +857,56 @@ export const AdminSettings: React.FC = () => {
                     </p>
                   </div>
                 </label>
+              </div>
+
+              {/* Konfigurasi Timer Sesi Photobox */}
+              <div className="space-y-3 pt-3 border-t border-neutral-200">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={enableSessionTimer}
+                    onChange={(e) => setEnableSessionTimer(e.target.checked)}
+                    style={{ accentColor: themeColor }}
+                    className="w-4 h-4 mt-0.5 rounded cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-sm font-semibold text-neutral-800">
+                      Aktifkan Timer Sesi Kiosk (dengan audio chime & dialog pengingat)
+                    </span>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      Menghitung mundur durasi sesi photobox pelanggan di bar navigasi atas. Bila waktu habis, chime audio dan dialog pengingat akan muncul tanpa menutup sesi secara paksa.
+                    </p>
+                  </div>
+                </label>
+
+                {enableSessionTimer && (
+                  <div className="pl-7 pt-1 max-w-sm">
+                    <label
+                      htmlFor="sessionDurationInput"
+                      className="block text-xs font-semibold text-neutral-700 mb-1"
+                    >
+                      Durasi Sesi Pelanggan (Menit)
+                    </label>
+                    <div className="flex items-center gap-2.5">
+                      <input
+                        id="sessionDurationInput"
+                        type="number"
+                        min={1}
+                        max={60}
+                        value={sessionDurationMinutes}
+                        onChange={(e) =>
+                          setSessionDurationMinutes(
+                            Math.max(1, Math.min(60, Number(e.target.value) || 5))
+                          )
+                        }
+                        className="w-24 px-3 py-2 text-sm bg-[#F4F4F0] border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900 font-mono-tabular"
+                      />
+                      <span className="text-xs text-neutral-600 font-medium">
+                        Menit (Standar: 5 Menit)
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

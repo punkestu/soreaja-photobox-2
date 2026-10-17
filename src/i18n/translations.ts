@@ -23,6 +23,12 @@ export const TRANSLATIONS = {
       continue: 'Lanjut',
       cancel: 'Batal',
     },
+    sessionTimer: {
+      timeRemaining: 'Waktu Sesi',
+      expiredTitle: 'Waktu Sesi Berakhir!',
+      expiredDesc: 'Waktu sesi photobox Anda telah habis. Anda tetap dapat melanjutkan dan menyelesaikan sesi foto tanpa terhenti.',
+      continueBtn: 'Lanjutkan Sesi',
+    },
     // Idle Screen
     idle: {
       readyBadge: 'Pilih Bingkai · Pose Otomatis · Cetak Instan & Scan QR Google Drive',
@@ -271,6 +277,12 @@ export const TRANSLATIONS = {
       retake: 'Retake',
       continue: 'Next',
       cancel: 'Cancel',
+    },
+    sessionTimer: {
+      timeRemaining: 'Session Time',
+      expiredTitle: 'Session Time Expired!',
+      expiredDesc: 'Your photobox session time has expired. You may continue and complete your photo session without interruption.',
+      continueBtn: 'Continue Session',
     },
     // Idle Screen
     idle: {
