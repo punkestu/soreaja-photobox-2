@@ -11,6 +11,8 @@ export const FrameSelectionScreen: React.FC = () => {
   const [frames, setFrames] = useState<FrameMetadata[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const isScrollingRef = useRef(false);
 
   const carouselRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -127,19 +129,30 @@ export const FrameSelectionScreen: React.FC = () => {
 
   // Snap and commit selection only when sliding has completely stopped
   const snapToSettledFrame = useCallback(() => {
-    if (isProgrammaticScrollRef.current || frames.length === 0) return;
+    if (isProgrammaticScrollRef.current || frames.length === 0) {
+      setIsScrolling(false);
+      isScrollingRef.current = false;
+      return;
+    }
     const finalTarget = getClosestFrameIndex();
     setActiveIndex(finalTarget);
     if (frames[finalTarget]) {
       setSelectedFrame(frames[finalTarget]);
     }
     scrollToIndex(finalTarget, true);
+    setIsScrolling(false);
+    isScrollingRef.current = false;
   }, [getClosestFrameIndex, frames, setSelectedFrame, scrollToIndex]);
 
   // Pure fluid scrolling without React state churn or re-rendering while in motion
   const handleScroll = useCallback(() => {
     // If this is a programmatic scroll (e.g. arrow button), do not trigger settle
     if (isProgrammaticScrollRef.current) return;
+
+    if (!isScrollingRef.current) {
+      isScrollingRef.current = true;
+      setIsScrolling(true);
+    }
 
     // Clear any pending settle timer
     if (settleTimeoutRef.current) {
@@ -151,7 +164,7 @@ export const FrameSelectionScreen: React.FC = () => {
       if (!isPointerDownRef.current) {
         snapToSettledFrame();
       }
-    }, 160);
+    }, 180);
   }, [snapToSettledFrame]);
 
   // Listen for native scrollend event where supported
@@ -175,6 +188,8 @@ export const FrameSelectionScreen: React.FC = () => {
     cancelMomentum();
     const nextIndex = Math.min(frames.length - 1, activeIndex + 1);
     if (nextIndex !== activeIndex) {
+      setIsScrolling(false);
+      isScrollingRef.current = false;
       setActiveIndex(nextIndex);
       if (frames[nextIndex]) {
         setSelectedFrame(frames[nextIndex]);
@@ -187,6 +202,8 @@ export const FrameSelectionScreen: React.FC = () => {
     cancelMomentum();
     const prevIndex = Math.max(0, activeIndex - 1);
     if (prevIndex !== activeIndex) {
+      setIsScrolling(false);
+      isScrollingRef.current = false;
       setActiveIndex(prevIndex);
       if (frames[prevIndex]) {
         setSelectedFrame(frames[prevIndex]);
@@ -269,6 +286,10 @@ export const FrameSelectionScreen: React.FC = () => {
       const dx = e.clientX - startXRef.current;
       if (Math.abs(dx) > 6) {
         hasMovedRef.current = true;
+        if (!isScrollingRef.current) {
+          isScrollingRef.current = true;
+          setIsScrolling(true);
+        }
       }
 
       // 1:1 instantaneous drag tracking on compositor
@@ -323,33 +344,49 @@ export const FrameSelectionScreen: React.FC = () => {
   };
 
   const handleCardClick = (frame: FrameMetadata, index: number) => {
-    if (hasMovedRef.current) return; // Ignore drag release click
+    // Instantly halt any ongoing momentum or track scrolling
     cancelMomentum();
+    if (settleTimeoutRef.current) {
+      clearTimeout(settleTimeoutRef.current);
+    }
+    const container = carouselRef.current;
+    if (container) {
+      const currentScroll = container.scrollLeft;
+      container.scrollTo({ left: currentScroll, behavior: 'auto' });
+    }
+
+    const wasScrolling = isScrollingRef.current || hasMovedRef.current;
+    hasMovedRef.current = false;
+    isScrollingRef.current = false;
+    setIsScrolling(false);
+
+    // Stop and center clicked frame, committing it as selected
     setActiveIndex(index);
     setSelectedFrame(frame);
-    if (index === activeIndex) {
+    scrollToIndex(index, true);
+
+    // If card was already stationary and active before this click, proceed to camera
+    if (!wasScrolling && index === activeIndex) {
       handleSelectFrame(frame);
-    } else {
-      scrollToIndex(index, true);
     }
   };
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3 sm:py-5 flex flex-col justify-between select-none min-h-[calc(100vh-70px)]">
+    <div className="flex-1 min-h-0 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-2 sm:py-3 flex flex-col justify-between select-none h-full overflow-hidden">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 sm:gap-3 pb-3 border-b border-white/5 shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pb-2 border-b border-white/5 shrink-0">
         <div>
-          <div className="text-xs sm:text-sm font-mono-tabular text-zinc-400 flex items-center gap-2 mb-1">
+          <div className="text-xs font-mono-tabular text-zinc-400 flex items-center gap-2 mb-0.5">
             <span className="text-[var(--theme-accent,#E11D48)] font-bold">{t.frameSelect.stageBadge}</span>
             <span aria-hidden="true">·</span>
             <span>🖼️ {t.frameSelect.title}</span>
             <span aria-hidden="true">·</span>
             <span>{frames.length} {t.frameSelect.framesAvailable}</span>
           </div>
-          <h1 className="font-display text-xl sm:text-2xl md:text-3xl font-extrabold text-[#F4F4F0]">
+          <h1 className="font-display text-lg sm:text-xl md:text-2xl font-extrabold text-[#F4F4F0]">
             {t.frameSelect.title}
           </h1>
-          <p className="text-xs sm:text-sm text-zinc-400 mt-0.5">
+          <p className="text-xs text-zinc-400 mt-0.5 hidden sm:block">
             {t.frameSelect.subtitle}
           </p>
         </div>
@@ -357,7 +394,7 @@ export const FrameSelectionScreen: React.FC = () => {
         <button
           type="button"
           onClick={() => navigate('/app/idle')}
-          className="min-h-[44px] px-4 py-2 text-xs sm:text-sm font-semibold text-zinc-300 bg-zinc-900/90 active:scale-95 hover:bg-zinc-800 rounded-xl transition-all whitespace-nowrap self-start sm:self-auto cursor-pointer border border-zinc-800 shadow-sm flex items-center gap-1.5"
+          className="min-h-[40px] px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-zinc-300 bg-zinc-900/90 active:scale-95 hover:bg-zinc-800 rounded-xl transition-all whitespace-nowrap self-start sm:self-auto cursor-pointer border border-zinc-800 shadow-sm flex items-center gap-1.5"
         >
           <span>←</span>
           <span>{t.nav.backToStart}</span>
@@ -373,14 +410,14 @@ export const FrameSelectionScreen: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="relative flex-1 w-full flex flex-col justify-center py-2 sm:py-4 my-auto">
+        <div className="relative flex-1 min-h-0 w-full flex flex-col justify-center py-1 sm:py-2 my-auto overflow-hidden">
           {/* Side Navigation Arrow Buttons - Pressing Next / Prev actively selects the frame */}
           <button
             type="button"
             onClick={handlePrev}
             disabled={activeIndex === 0}
             aria-label={t.frameSelect.prevFrame || 'Previous frame'}
-            className={`absolute left-1 sm:left-3 md:left-5 top-1/2 -translate-y-1/2 z-20 w-11 h-11 sm:w-13 sm:h-13 rounded-full flex items-center justify-center transition-all duration-200 border shadow-2xl backdrop-blur-md cursor-pointer ${
+            className={`absolute left-1 sm:left-3 md:left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-200 border shadow-2xl backdrop-blur-md cursor-pointer ${
               activeIndex === 0
                 ? 'opacity-20 pointer-events-none bg-zinc-900/40 border-zinc-800 text-zinc-600'
                 : 'bg-zinc-900/90 hover:bg-zinc-800 text-white border-white/15 active:scale-90 hover:scale-105 hover:border-[var(--theme-accent,#E11D48)]/50 hover:shadow-[0_0_20px_rgba(225,29,72,0.3)]'
@@ -396,7 +433,7 @@ export const FrameSelectionScreen: React.FC = () => {
             onClick={handleNext}
             disabled={activeIndex === frames.length - 1}
             aria-label={t.frameSelect.nextFrame || 'Next frame'}
-            className={`absolute right-1 sm:right-3 md:right-5 top-1/2 -translate-y-1/2 z-20 w-11 h-11 sm:w-13 sm:h-13 rounded-full flex items-center justify-center transition-all duration-200 border shadow-2xl backdrop-blur-md cursor-pointer ${
+            className={`absolute right-1 sm:right-3 md:right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-200 border shadow-2xl backdrop-blur-md cursor-pointer ${
               activeIndex === frames.length - 1
                 ? 'opacity-20 pointer-events-none bg-zinc-900/40 border-zinc-800 text-zinc-600'
                 : 'bg-zinc-900/90 hover:bg-zinc-800 text-white border-white/15 active:scale-90 hover:scale-105 hover:border-[var(--theme-accent,#E11D48)]/50 hover:shadow-[0_0_20px_rgba(225,29,72,0.3)]'
@@ -419,7 +456,7 @@ export const FrameSelectionScreen: React.FC = () => {
               WebkitOverflowScrolling: 'touch',
               overscrollBehaviorX: 'contain',
             }}
-            className="w-full flex items-center gap-5 sm:gap-7 md:gap-9 overflow-x-auto py-4 px-[calc(50vw-120px)] sm:px-[calc(50vw-145px)] md:px-[calc(50vw-160px)] lg:px-[calc(50%-160px)] touch-pan-x focus:outline-none cursor-grab active:cursor-grabbing will-change-scroll"
+            className="w-full flex items-center gap-4 sm:gap-6 md:gap-8 overflow-x-auto py-2 sm:py-3 px-[calc(50vw-120px)] sm:px-[calc(50vw-145px)] md:px-[calc(50vw-160px)] lg:px-[calc(50%-160px)] touch-pan-x focus:outline-none cursor-grab active:cursor-grabbing will-change-scroll"
             tabIndex={0}
             role="region"
             aria-label="Frame Templates Carousel"
@@ -445,14 +482,14 @@ export const FrameSelectionScreen: React.FC = () => {
                       handleCardClick(frame, index);
                     }
                   }}
-                  className={`w-[240px] sm:w-[280px] md:w-[310px] shrink-0 rounded-2xl flex flex-col justify-between transition-all duration-300 ease-out select-none border transform-gpu ${
+                  className={`w-[220px] sm:w-[250px] md:w-[280px] max-h-[58vh] shrink-0 rounded-2xl flex flex-col justify-between transition-all duration-300 ease-out select-none border transform-gpu ${
                     isActive
-                      ? 'scale-100 opacity-100 bg-zinc-900 border-[var(--theme-accent,#E11D48)] ring-2 ring-[var(--theme-accent,#E11D48)]/40 shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_35px_rgba(225,29,72,0.35)] p-4 sm:p-5 z-10'
-                      : 'scale-[0.9] sm:scale-[0.93] opacity-60 hover:opacity-85 bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700/80 p-4 sm:p-5 cursor-pointer z-0'
+                      ? 'scale-100 opacity-100 bg-zinc-900 border-[var(--theme-accent,#E11D48)] ring-2 ring-[var(--theme-accent,#E11D48)]/40 shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_35px_rgba(225,29,72,0.35)] p-3 sm:p-4 z-10'
+                      : 'scale-[0.9] sm:scale-[0.93] opacity-60 hover:opacity-85 bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700/80 p-3 sm:p-4 cursor-pointer z-0'
                   }`}
                 >
                   {/* Top Metadata: Poses count & Dimensions - Placed ABOVE artwork */}
-                  <div className="flex items-center justify-between pb-2 text-[11px] font-mono-tabular text-zinc-400 shrink-0">
+                  <div className="flex items-center justify-between pb-1.5 text-[11px] font-mono-tabular text-zinc-400 shrink-0">
                     <span className="font-bold text-white bg-black/60 px-2 py-0.5 rounded border border-white/10 shadow-sm">
                       {frame.photoCount} {t.frameSelect.poses}
                     </span>
@@ -468,7 +505,7 @@ export const FrameSelectionScreen: React.FC = () => {
                   </div>
 
                   {/* Frame Preview Container: Uncropped, completely visible vertical strip */}
-                  <div className="w-full bg-zinc-950/90 rounded-xl p-2.5 sm:p-3 flex items-center justify-center border border-zinc-800/80 shadow-inner relative group min-h-[360px] sm:min-h-[420px] max-h-[62vh]">
+                  <div className="w-full bg-zinc-950/90 rounded-xl p-2 flex items-center justify-center border border-zinc-800/80 shadow-inner relative group flex-1 min-h-[220px] max-h-[44vh]">
                     <img
                       src={frame.previewImg}
                       alt={`Pratinjau ${frame.name}`}
@@ -476,38 +513,53 @@ export const FrameSelectionScreen: React.FC = () => {
                       loading="lazy"
                       decoding="async"
                       draggable={false}
-                      className="h-full w-auto max-h-[58vh] max-w-full object-contain pointer-events-none drop-shadow-[0_12px_30px_rgba(0,0,0,0.8)] transition-transform duration-300 group-hover:scale-[1.01]"
+                      className="h-full w-auto max-h-[42vh] max-w-full object-contain pointer-events-none drop-shadow-[0_12px_30px_rgba(0,0,0,0.8)] transition-transform duration-300 group-hover:scale-[1.01]"
                     />
                   </div>
 
                   {/* Frame Title & Subtitle */}
-                  <div className="pt-3 pb-1 space-y-0.5 shrink-0 text-center">
-                    <h2 className="font-display text-base sm:text-lg font-bold text-[#F4F4F0] line-clamp-1">
+                  <div className="pt-2 pb-0.5 space-y-0.5 shrink-0 text-center">
+                    <h2 className="font-display text-sm sm:text-base font-bold text-[#F4F4F0] line-clamp-1">
                       {frame.name}
                     </h2>
                     {frame.subtitle && (
-                      <p className="text-xs text-zinc-400 line-clamp-1">
+                      <p className="text-[11px] text-zinc-400 line-clamp-1">
                         {frame.subtitle}
                       </p>
                     )}
                   </div>
 
                   {/* Action CTA */}
-                  <div className="pt-2 shrink-0">
+                  <div className="pt-1.5 shrink-0">
                     {isActive ? (
                       <button
                         type="button"
+                        disabled={isScrolling}
                         onClick={(e) => {
                           e.stopPropagation();
+                          if (isScrolling) return;
                           handleSelectFrame(frame);
                         }}
-                        className="w-full min-h-[46px] py-2.5 px-4 text-xs sm:text-sm font-bold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-[0.98] rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center justify-center gap-2"
+                        className={`w-full min-h-[42px] py-2 px-3 text-xs sm:text-sm font-bold text-white rounded-xl transition-all whitespace-nowrap shadow-lg flex items-center justify-center gap-2 ${
+                          isScrolling
+                            ? 'bg-zinc-800 text-zinc-400 border border-zinc-700/60 shadow-none cursor-default'
+                            : 'bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-[0.98] cursor-pointer'
+                        }`}
                       >
-                        <span>{t.frameSelect.selectAction}</span>
-                        <span>📸</span>
+                        {isScrolling ? (
+                          <>
+                            <span className="w-3.5 h-3.5 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin" />
+                            <span>{t.frameSelect.scrollingIndicator || 'Menggeser...'}</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>{t.frameSelect.selectAction}</span>
+                            <span>📸</span>
+                          </>
+                        )}
                       </button>
                     ) : (
-                      <div className="w-full min-h-[44px] py-2 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors flex items-center justify-center gap-1.5 border border-zinc-800/60 rounded-xl bg-zinc-950/40">
+                      <div className="w-full min-h-[40px] py-1.5 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors flex items-center justify-center gap-1.5 border border-zinc-800/60 rounded-xl bg-zinc-950/40">
                         <span>{t.frameSelect.tapToPreview}</span>
                       </div>
                     )}
@@ -518,7 +570,7 @@ export const FrameSelectionScreen: React.FC = () => {
           </div>
 
           {/* Dot Indicators & Carousel Counter */}
-          <div className="flex flex-col items-center justify-center gap-1.5 pt-3 shrink-0">
+          <div className="flex flex-col items-center justify-center gap-1 pt-1.5 shrink-0">
             <div
               className="flex items-center justify-center gap-2"
               role="tablist"

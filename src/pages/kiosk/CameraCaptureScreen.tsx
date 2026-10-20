@@ -43,6 +43,7 @@ export const CameraCaptureScreen: React.FC = () => {
   const [isFlashing, setIsFlashing] = useState<boolean>(false);
   const [isCapturingSequence, setIsCapturingSequence] = useState<boolean>(false);
   const [localShots, setLocalShots] = useState<string[]>(capturedPhotos);
+  const [showTools, setShowTools] = useState<boolean>(false);
 
   // Sync crop guide setting from IndexedDB app settings
   useEffect(() => {
@@ -414,9 +415,9 @@ export const CameraCaptureScreen: React.FC = () => {
   }, [slotAspect, cameraAspect]);
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto px-2 sm:px-4 md:px-6 py-2 flex flex-col justify-between gap-2.5 min-h-[calc(100dvh-4.5rem)] select-none">
-      {/* Top Breadcrumb & Minimalist Status */}
-      <div className="flex items-center justify-between text-xs sm:text-sm font-mono-tabular text-zinc-400 pb-0.5 px-1">
+    <div className="flex-1 min-h-0 w-full max-w-7xl mx-auto px-2 sm:px-4 py-1.5 sm:py-2 flex flex-col justify-between select-none h-full overflow-hidden">
+      {/* Top Header & Breadcrumb */}
+      <div className="flex items-center justify-between text-xs sm:text-sm font-mono-tabular text-zinc-400 pb-1 px-1 shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-[var(--theme-accent,#E11D48)] font-bold">{t.camera.stageBadge}</span>
           <span aria-hidden="true">·</span>
@@ -430,13 +431,22 @@ export const CameraCaptureScreen: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Tools Toggle Button */}
           <button
             type="button"
-            onClick={() => setUseSimulator((prev) => !prev)}
-            className="min-h-[44px] px-3.5 py-2 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-900/90 border border-zinc-700/80 active:scale-95 hover:border-zinc-500 rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
+            onClick={() => setShowTools((prev) => !prev)}
+            aria-expanded={showTools}
+            className={`min-h-[40px] px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5 border active:scale-95 ${
+              showTools
+                ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
+                : 'text-zinc-300 hover:text-white bg-zinc-900/90 hover:bg-zinc-800 border-zinc-700/80'
+            }`}
           >
-            <span>{useSimulator ? `🖥️ ${t.camera.sim}` : `📷 ${t.camera.webRtc}`}</span>
+            <span>⚙️</span>
+            <span>{showTools ? t.camera.closeTools : t.camera.tools}</span>
           </button>
+
+          {/* Back Button */}
           <button
             type="button"
             onClick={() => {
@@ -447,19 +457,19 @@ export const CameraCaptureScreen: React.FC = () => {
                 navigate('/app/frame-selection');
               }
             }}
-            className="min-h-[44px] px-3.5 py-2 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white bg-zinc-900/80 active:scale-95 border border-zinc-800 rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
+            className="min-h-[40px] px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white bg-zinc-900/80 active:scale-95 border border-zinc-800 rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
           >
             <span>{isRetakeMode ? t.camera.cancelRetake : t.camera.backToFrames}</span>
           </button>
         </div>
       </div>
 
-      {/* Hero Edge-to-Edge Spotlight Viewfinder */}
-      <div className="relative w-full flex-1 max-w-6xl mx-auto flex flex-col items-center justify-center">
-        {/* Spotlight Stage Viewport */}
+      {/* Hero Edge-to-Edge Spotlight Viewfinder (Claims maximum available vertical space) */}
+      <div className="relative flex-1 min-h-0 w-full flex items-center justify-center overflow-hidden py-1">
+        {/* Spotlight Stage Viewport with strict 4:3 aspect ratio fitted to available container space */}
         <div
           data-testid="camera-viewfinder"
-          className="relative aspect-[4/3] w-full max-h-[66vh] md:max-h-[70vh] lg:max-h-[74vh] bg-black rounded-3xl overflow-hidden shadow-[0_0_120px_rgba(0,0,0,0.98),0_0_60px_rgba(225,29,72,0.22)] ring-1 ring-white/20 border border-zinc-800/80 flex items-center justify-center group"
+          className="relative aspect-[4/3] h-full max-h-full max-w-full bg-black rounded-2xl sm:rounded-3xl overflow-hidden shadow-[0_0_120px_rgba(0,0,0,0.98),0_0_60px_rgba(225,29,72,0.22)] ring-1 ring-white/20 border border-zinc-800/80 flex items-center justify-center group"
         >
           {/* WebRTC Video Element */}
           <video
@@ -495,7 +505,7 @@ export const CameraCaptureScreen: React.FC = () => {
           />
 
           {/* Dynamic Crop Guide Mask & Framing Overlay */}
-          {showCropGuide ? (
+          {showCropGuide && (
             <div className="absolute inset-0 pointer-events-none z-10">
               {/* Left & Right Cropped Area Dark Masks */}
               {cropInfo.type === 'sides' && (
@@ -586,49 +596,29 @@ export const CameraCaptureScreen: React.FC = () => {
                 )}
               </div>
             </div>
-          ) : (
-            showGridLines && (
-              <div className="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3 opacity-20 z-10">
-                <div className="border-r border-b border-white" />
-                <div className="border-r border-b border-white" />
-                <div className="border-b border-white" />
-                <div className="border-r border-b border-white" />
-                <div className="border-r border-b border-white" />
-                <div className="border-b border-white" />
-                <div className="border-r border-white" />
-                <div className="border-r border-white" />
-                <div />
-              </div>
-            )
           )}
 
-          {/* Floating Minimalist Top Header (z-20) */}
-          <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex items-center justify-between text-xs font-mono-tabular text-white z-20 pointer-events-auto">
-            <span className="flex items-center gap-1.5 px-3 py-1.5 bg-black/70 backdrop-blur-md border border-white/10 rounded-full shadow-lg">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[11px] font-semibold">{cameraReady ? t.camera.live : t.camera.loading}</span>
-            </span>
-
-            <div className="flex items-center gap-2 px-4 py-1.5 bg-black/75 backdrop-blur-md border border-white/15 rounded-full shadow-xl">
-              <span className="text-[var(--theme-accent,#E11D48)] font-bold text-xs uppercase tracking-wider">
-                {isRetakeMode
-                  ? `${t.camera.retakeSlot} #${(retakeIndex ?? 0) + 1}`
-                  : `${t.camera.poseProgress} ${currentShotNumber} / ${totalShotsNeeded}`}
-              </span>
+          {!showCropGuide && showGridLines && (
+            <div className="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3 opacity-20 z-10">
+              <div className="border-r border-b border-white" />
+              <div className="border-r border-b border-white" />
+              <div className="border-b border-white" />
+              <div className="border-r border-b border-white" />
+              <div className="border-r border-b border-white" />
+              <div className="border-b border-white" />
+              <div className="border-r border-white" />
+              <div className="border-r border-white" />
+              <div />
             </div>
-
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-black/70 backdrop-blur-md border border-white/10 rounded-full text-[11px] text-zinc-300">
-              <span>{targetSlot.width}×{targetSlot.height}px</span>
-            </div>
-          </div>
+          )}
 
           {/* Countdown Big Center Overlay (z-30) */}
           {countdown !== null && (
             <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center pointer-events-none z-30">
-              <span className="font-display text-9xl sm:text-[140px] md:text-[180px] font-extrabold text-white tabular-nums drop-shadow-[0_10px_35px_rgba(0,0,0,0.95)] animate-pulse">
+              <span className="font-display text-8xl sm:text-[140px] md:text-[180px] font-extrabold text-white tabular-nums drop-shadow-[0_10px_35px_rgba(0,0,0,0.95)] animate-pulse">
                 {countdown}
               </span>
-              <p className="mt-2 text-base sm:text-lg font-mono-tabular text-zinc-200 uppercase tracking-widest drop-shadow font-bold">
+              <p className="mt-2 text-sm sm:text-base md:text-lg font-mono-tabular text-zinc-200 uppercase tracking-widest drop-shadow font-bold">
                 {t.camera.getReady}
               </p>
             </div>
@@ -639,10 +629,10 @@ export const CameraCaptureScreen: React.FC = () => {
             <div className="absolute inset-0 bg-white animate-flash pointer-events-none z-40" />
           )}
 
-          {/* Floating Minimalist Bottom Control Center (z-20) */}
-          <div className="absolute bottom-3 sm:bottom-4 md:bottom-5 left-3 sm:left-4 md:left-5 right-3 sm:right-4 md:right-5 z-20 flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3 pointer-events-auto">
-            {/* Captured Photos Floating Mini Tray */}
-            <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 bg-black/85 backdrop-blur-md border border-white/15 rounded-2xl shadow-2xl">
+          {/* Minimalist Bottom Bar: Captured Photo List & Shutter Controls (z-20) */}
+          <div className="absolute bottom-2.5 sm:bottom-4 left-2.5 sm:left-4 right-2.5 sm:right-4 z-20 flex items-center justify-between gap-2 pointer-events-auto">
+            {/* Captured Photos Mini Tray (Kept visible as requested) */}
+            <div className="flex items-center gap-1.5 p-1 sm:p-1.5 bg-black/85 backdrop-blur-md border border-white/15 rounded-2xl shadow-2xl">
               {Array.from({ length: totalShotsNeeded }).map((_, idx) => {
                 const shotSrc = localShots[idx];
                 const isCurrent = !isRetakeMode && idx === currentShotNumber - 1;
@@ -650,7 +640,7 @@ export const CameraCaptureScreen: React.FC = () => {
                 return (
                   <div
                     key={idx}
-                    className={`w-11 h-11 sm:w-13 sm:h-13 md:w-16 md:h-16 rounded-xl overflow-hidden relative bg-zinc-900/90 flex items-center justify-center transition-all ${
+                    className={`w-9 h-9 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl overflow-hidden relative bg-zinc-900/90 flex items-center justify-center transition-all ${
                       isTargetRetake || isCurrent
                         ? 'ring-2 ring-[var(--theme-accent,#E11D48)] shadow-[0_0_15px_rgba(225,29,72,0.6)] scale-105'
                         : 'opacity-70 hover:opacity-100'
@@ -663,7 +653,7 @@ export const CameraCaptureScreen: React.FC = () => {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <span className="text-[11px] sm:text-xs font-mono-tabular text-zinc-400 font-bold">
+                      <span className="text-[10px] sm:text-xs font-mono-tabular text-zinc-400 font-bold">
                         #{idx + 1}
                       </span>
                     )}
@@ -672,20 +662,20 @@ export const CameraCaptureScreen: React.FC = () => {
               })}
             </div>
 
-            {/* Spotlight Shutter Action Buttons - Tablet Optimized */}
-            <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* Shutter Action Buttons (Kept visible as requested) */}
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <button
                 type="button"
                 disabled={isCapturingSequence}
                 onClick={startCountdownSequence}
-                className="min-h-[56px] sm:min-h-[64px] md:min-h-[68px] px-6 sm:px-10 py-3 sm:py-3.5 text-sm sm:text-base md:text-lg font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-2xl transition-all whitespace-nowrap cursor-pointer shadow-[0_0_35px_rgba(225,29,72,0.75)] flex items-center gap-2.5 ring-2 ring-white/20"
+                className="min-h-[50px] sm:min-h-[60px] md:min-h-[64px] px-5 sm:px-8 md:px-10 py-2.5 sm:py-3 text-sm sm:text-base md:text-lg font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-2xl transition-all whitespace-nowrap cursor-pointer shadow-[0_0_35px_rgba(225,29,72,0.75)] flex items-center gap-2 ring-2 ring-white/20"
               >
-                <span className="text-lg sm:text-xl">📸</span>
+                <span className="text-base sm:text-lg">📸</span>
                 <span>
                   {isCapturingSequence
                     ? `⏱️ ${countdown ?? '...'}`
                     : isRetakeMode
-                    ? `↺ ${t.nav.retake} #${(retakeIndex ?? 0) + 1}`
+                    ? `↺ Retake #${(retakeIndex ?? 0) + 1}`
                     : `${t.camera.startSequence} (${settings?.countdownSeconds || 3}s)`}
                 </span>
               </button>
@@ -693,87 +683,162 @@ export const CameraCaptureScreen: React.FC = () => {
               <button
                 type="button"
                 onClick={handleInstantCapture}
-                className="min-h-[56px] sm:min-h-[64px] md:min-h-[68px] px-3.5 sm:px-5 py-3 text-xs sm:text-sm font-bold text-zinc-200 bg-black/85 hover:bg-zinc-800 active:scale-95 backdrop-blur-md border border-white/15 rounded-2xl transition-all whitespace-nowrap cursor-pointer shadow-xl flex items-center gap-1.5"
+                className="min-h-[50px] sm:min-h-[60px] md:min-h-[64px] px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-bold text-zinc-200 bg-black/85 hover:bg-zinc-800 active:scale-95 backdrop-blur-md border border-white/15 rounded-2xl transition-all whitespace-nowrap cursor-pointer shadow-xl flex items-center gap-1.5"
                 title={t.camera.instantCapture}
               >
                 <span>⚡</span>
-                <span className="hidden sm:inline">{t.camera.instantCapture}</span>
-              </button>
-            </div>
-
-            {/* Quick Floating Toggles - Tablet 48px Touch Targets */}
-            <div className="flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 bg-black/85 backdrop-blur-md border border-white/15 rounded-2xl shadow-2xl">
-              <button
-                type="button"
-                onClick={() => setShowCropGuide((prev) => !prev)}
-                className={`min-h-[46px] min-w-[46px] px-3 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
-                  showCropGuide
-                    ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-                title={t.camera.cropToggle}
-              >
-                <span>📐</span>
-                <span className="hidden md:inline">{t.camera.cropToggle}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowGridLines((prev) => !prev)}
-                className={`min-h-[46px] min-w-[46px] px-3 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
-                  showGridLines
-                    ? 'bg-zinc-700 text-white shadow-sm'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-                title={t.camera.gridToggle}
-              >
-                <span>⊞</span>
-                <span className="hidden md:inline">{t.camera.gridToggle}</span>
+                <span className="hidden md:inline">{t.camera.instantCapture}</span>
               </button>
             </div>
           </div>
-        </div>
 
-        {/* Dynamic Crop Warning Chip below Spotlight */}
-        {cropInfo.isCropped && showCropGuide && (
-          <div className="mt-3 w-full flex items-center justify-between gap-3 px-4 py-2 bg-zinc-900/90 border border-zinc-800/80 rounded-xl text-xs text-zinc-300">
-            <span className="flex items-center gap-2">
-              <span className="text-amber-400 font-bold shrink-0">ℹ {t.camera.compositionGuide}</span>
-              <span>
-                <strong>{activeFrame.name}</strong> ({targetSlot.width}×{targetSlot.height}px).
-                {" "}{cropInfo.label}
-              </span>
-            </span>
-            <span className="text-[11px] font-mono-tabular text-zinc-500 shrink-0">
-              Slot #{activeSlotIndex + 1}
-            </span>
-          </div>
-        )}
+          {/* Toggleable Clean Camera Tools Modal / Drawer (Revealed only when requested) */}
+          {showTools && (
+            <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-md p-4 sm:p-6 flex flex-col justify-between animate-in fade-in duration-200 pointer-events-auto">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                    <span>⚙️</span>
+                    <span>{t.camera.tools}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 border border-white/10 rounded-full text-[11px] text-zinc-300">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>{cameraReady ? t.camera.live : t.camera.loading}</span>
+                  </span>
+                  <span className="hidden sm:inline text-xs font-mono-tabular text-zinc-400">
+                    {targetSlot.width}×{targetSlot.height}px
+                  </span>
+                </div>
 
-        {/* Studio Simulator Pose Picker */}
-        {useSimulator && (
-          <div className="mt-2 w-full flex flex-wrap items-center justify-between gap-2 bg-zinc-900/80 border border-zinc-800 rounded-xl p-2.5">
-            <span className="text-xs text-zinc-400 pl-1 font-mono-tabular">
-              Preset Simulator Studio:
-            </span>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {STUDIO_PORTRAITS.map((pose, idx) => (
                 <button
-                  key={pose.id}
                   type="button"
-                  onClick={() => setActivePoseIdx(idx)}
-                  className={`px-2.5 py-1 text-xs font-mono-tabular rounded-lg transition-colors cursor-pointer ${
-                    activePoseIdx === idx
-                      ? 'bg-white text-zinc-950 font-bold shadow-sm'
-                      : 'bg-zinc-800/90 text-zinc-300 hover:bg-zinc-700'
-                  }`}
+                  onClick={() => setShowTools(false)}
+                  className="px-3 py-1.5 text-xs font-bold text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-all cursor-pointer border border-zinc-700"
                 >
-                  Pose 0{idx + 1}
+                  ✕ {t.camera.closeTools}
                 </button>
-              ))}
+              </div>
+
+              <div className="flex-1 overflow-y-auto py-3 space-y-3 sm:space-y-4">
+                {/* Source Selection & Aids */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="bg-zinc-900/90 rounded-xl p-3 border border-zinc-800 space-y-2">
+                    <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider block">
+                      Sumber Kamera:
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setUseSimulator(false)}
+                        className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${
+                          !useSimulator
+                            ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
+                            : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+                        }`}
+                      >
+                        📷 {t.camera.webRtc}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setUseSimulator(true)}
+                        className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${
+                          useSimulator
+                            ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
+                            : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+                        }`}
+                      >
+                        🖥️ {t.camera.sim}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-zinc-900/90 rounded-xl p-3 border border-zinc-800 space-y-2">
+                    <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider block">
+                      Bantuan Framing:
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowCropGuide((prev) => !prev)}
+                        className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${
+                          showCropGuide
+                            ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
+                            : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+                        }`}
+                      >
+                        📐 {t.camera.cropToggle}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowGridLines((prev) => !prev)}
+                        className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${
+                          showGridLines
+                            ? 'bg-zinc-700 text-white border-zinc-600'
+                            : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+                        }`}
+                      >
+                        ⊞ {t.camera.gridToggle}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Composition Guide Info */}
+                {cropInfo.isCropped && (
+                  <div className="bg-amber-950/40 border border-amber-500/40 rounded-xl p-3 text-xs text-amber-200 flex items-start gap-2.5">
+                    <span className="text-base leading-none">ℹ️</span>
+                    <div>
+                      <strong className="text-amber-300 block mb-0.5">{t.camera.compositionGuide}</strong>
+                      <p>
+                        Bingkai <strong>{activeFrame.name}</strong> ({targetSlot.width}×{targetSlot.height}px). {cropInfo.label}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Studio Simulator Pose Picker (only when simulator active) */}
+                {useSimulator && (
+                  <div className="bg-zinc-900/90 rounded-xl p-3 border border-zinc-800 space-y-2">
+                    <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider block">
+                      {t.camera.presetSimulator}
+                    </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {STUDIO_PORTRAITS.map((pose, idx) => (
+                        <button
+                          key={pose.id}
+                          type="button"
+                          onClick={() => setActivePoseIdx(idx)}
+                          className={`p-2 text-xs font-mono-tabular rounded-xl border flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                            activePoseIdx === idx
+                              ? 'bg-white text-zinc-950 font-bold border-white shadow-md scale-102'
+                              : 'bg-zinc-950/80 text-zinc-300 border-zinc-800 hover:border-zinc-700'
+                          }`}
+                        >
+                          <img
+                            src={pose.src}
+                            alt={pose.label}
+                            className="w-12 h-12 object-cover rounded-lg"
+                          />
+                          <span>Pose 0{idx + 1}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-2 border-t border-white/10 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowTools(false)}
+                  className="px-5 py-2 text-xs sm:text-sm font-bold bg-[var(--theme-accent,#E11D48)] text-white rounded-xl shadow-lg cursor-pointer"
+                >
+                  ✓ Selesai & Kembali ke Kamera
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

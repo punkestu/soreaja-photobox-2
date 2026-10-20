@@ -140,7 +140,7 @@ export const IdleScreen: React.FC = () => {
       onClick={handleStart}
       role="region"
       aria-label={t.idle.touchPrompt}
-      className="flex-1 w-full min-h-screen relative flex items-center justify-center overflow-hidden cursor-pointer select-none bg-[#09090B]"
+      className="flex-1 min-h-0 w-full h-full relative flex items-center justify-center overflow-hidden cursor-pointer select-none bg-[#09090B]"
     >
       {/* Editorial Studio Backdrop Image with Configurable Overlay */}
       <img

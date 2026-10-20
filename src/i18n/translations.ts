@@ -70,6 +70,8 @@ export const TRANSLATIONS = {
       stageBadge: 'Tahap 03/06',
       live: 'LIVE',
       loading: 'MEMUAT',
+      tools: 'Opsi & Alat',
+      closeTools: 'Tutup',
       sim: 'Sim',
       webRtc: 'Live',
       posesNeeded: 'Pose Diperlukan',
@@ -158,6 +160,10 @@ export const TRANSLATIONS = {
       rotate: 'Putar 45°',
       deleteSticker: 'Hapus Stiker',
       deselectSticker: 'Selesai',
+      zoomIn: 'Perbesar (+)',
+      zoomOut: 'Perkecil (-)',
+      zoomReset: 'Fit Layar',
+      zoomScrollHint: 'Gulir untuk melihat seluruh strip',
     },
     // Print Result Screen
     printResult: {
@@ -354,6 +360,8 @@ export const TRANSLATIONS = {
       stageBadge: 'Stage 03/06',
       live: 'LIVE',
       loading: 'LOADING',
+      tools: 'Camera Tools',
+      closeTools: 'Close',
       sim: 'Sim',
       webRtc: 'Live',
       posesNeeded: 'Poses Required',
@@ -442,6 +450,10 @@ export const TRANSLATIONS = {
       rotate: 'Rotate 45°',
       deleteSticker: 'Delete Sticker',
       deselectSticker: 'Done',
+      zoomIn: 'Zoom In (+)',
+      zoomOut: 'Zoom Out (-)',
+      zoomReset: 'Fit Screen',
+      zoomScrollHint: 'Scroll or drag to view full strip',
     },
     // Print Result Screen
     printResult: {

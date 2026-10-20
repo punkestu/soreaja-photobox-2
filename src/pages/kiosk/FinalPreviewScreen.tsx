@@ -53,6 +53,134 @@ export const FinalPreviewScreen: React.FC = () => {
   const [selectedStickerId, setSelectedStickerId] = useState<string | null>(null);
   const [stickerHistory, setStickerHistory] = useState<PlacedSticker[][]>([]);
 
+  // Zoom & Pan state for inspecting strip details
+  const [zoomLevel, setZoomLevel] = useState<number>(1.0);
+  const [baseFitHeight, setBaseFitHeight] = useState<number>(520);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isPanningRef = useRef<boolean>(false);
+  const panStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number }>({
+    x: 0,
+    y: 0,
+    scrollLeft: 0,
+    scrollTop: 0,
+  });
+  const [isPanning, setIsPanning] = useState<boolean>(false);
+  const initialPinchDistRef = useRef<number | null>(null);
+  const initialPinchZoomRef = useRef<number>(1.0);
+
+  const ZOOM_STEPS = [1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0];
+
+  // Auto-calibrate base fit height to container dimensions
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const updateHeight = () => {
+      const h = container.clientHeight;
+      if (h > 100) {
+        setBaseFitHeight(Math.max(340, h - 20));
+      }
+    };
+
+    updateHeight();
+    const observer = new ResizeObserver(() => updateHeight());
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, []);
+
+  const handleZoomIn = () => {
+    setZoomLevel((curr) => {
+      const next = ZOOM_STEPS.find((s) => s > curr + 0.05);
+      return next ?? 3.0;
+    });
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel((curr) => {
+      const prev = [...ZOOM_STEPS].reverse().find((s) => s < curr - 0.05);
+      return prev ?? 1.0;
+    });
+  };
+
+  const handleResetZoom = () => {
+    setZoomLevel(1.0);
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Drag to pan when zoomed in
+  const handlePanMouseDown = (e: React.MouseEvent) => {
+    if (zoomLevel <= 1.0 || e.button !== 0) return;
+    if ((e.target as HTMLElement).closest('[data-sticker-item]')) return;
+
+    isPanningRef.current = true;
+    setIsPanning(true);
+    panStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      scrollLeft: scrollContainerRef.current?.scrollLeft || 0,
+      scrollTop: scrollContainerRef.current?.scrollTop || 0,
+    };
+  };
+
+  const handlePanMouseMove = (e: React.MouseEvent) => {
+    if (!isPanningRef.current || !scrollContainerRef.current) return;
+    const dx = e.clientX - panStartRef.current.x;
+    const dy = e.clientY - panStartRef.current.y;
+    scrollContainerRef.current.scrollLeft = panStartRef.current.scrollLeft - dx;
+    scrollContainerRef.current.scrollTop = panStartRef.current.scrollTop - dy;
+  };
+
+  const handlePanMouseUp = () => {
+    isPanningRef.current = false;
+    setIsPanning(false);
+  };
+
+  // Touch 2-finger pinch to zoom
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      initialPinchDistRef.current = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      initialPinchZoomRef.current = zoomLevel;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && initialPinchDistRef.current !== null) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const currentDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      const scaleFactor = currentDist / initialPinchDistRef.current;
+      const targetZoom = Math.min(
+        3.0,
+        Math.max(1.0, Number((initialPinchZoomRef.current * scaleFactor).toFixed(2)))
+      );
+      setZoomLevel(targetZoom);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    initialPinchDistRef.current = null;
+  };
+
+  // Wheel zoom with Ctrl or trackpad pinch
+  const handleWheel = (e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.15 : -0.15;
+      setZoomLevel((prev) => Math.min(3.0, Math.max(1.0, Number((prev + delta).toFixed(2)))));
+    }
+  };
+
+  // Double click to toggle between fit and 1.75x zoom
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('[data-sticker-item]')) return;
+    setZoomLevel((prev) => (prev > 1.05 ? 1.0 : 1.75));
+  };
+
   const settings = useLiveQuery(() => db.settings.get('app_settings'), []);
   const activeFrame = selectedFrame || DEFAULT_FRAMES[0];
 
@@ -229,29 +357,29 @@ export const FinalPreviewScreen: React.FC = () => {
   const selectedSticker = placedStickers.find((s) => s.id === selectedStickerId);
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-8 space-y-6 md:space-y-8 select-none">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-white/5">
+    <div className="flex-1 min-h-0 w-full max-w-7xl mx-auto px-3 sm:px-6 py-2 sm:py-3 flex flex-col justify-between select-none h-full overflow-hidden">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pb-2 border-b border-white/5 shrink-0">
         <div>
-          <div className="text-xs sm:text-sm font-mono-tabular text-zinc-400 flex items-center gap-2 mb-1.5">
+          <div className="text-xs font-mono-tabular text-zinc-400 flex items-center gap-2 mb-0.5">
             <span className="text-[var(--theme-accent,#E11D48)] font-bold">{t.preview.stageBadge}</span>
             <span aria-hidden="true">·</span>
             <span>🎨 Layout Frame</span>
             <span aria-hidden="true">·</span>
             <span>🖼️ {activeFrame.name}</span>
           </div>
-          <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#F4F4F0]">
+          <h1 className="font-display text-lg sm:text-xl md:text-2xl lg:text-3xl font-extrabold text-[#F4F4F0]">
             {t.preview.title}
           </h1>
-          <p className="text-xs sm:text-sm md:text-base text-zinc-400 mt-1">
+          <p className="text-xs text-zinc-400 mt-0.5 hidden sm:block">
             {t.preview.subtitle}
           </p>
         </div>
 
-        <div className="flex items-center justify-end gap-2 sm:gap-2.5 flex-wrap">
+        <div className="flex items-center justify-end gap-2 flex-wrap">
           <button
             type="button"
             onClick={() => navigate('/app/review-photos')}
-            className="min-h-[46px] sm:min-h-[50px] px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-sm flex items-center gap-1.5"
+            className="min-h-[40px] px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-sm flex items-center gap-1.5"
             title={t.nav.retake}
           >
             <span>↺</span>
@@ -262,7 +390,7 @@ export const FinalPreviewScreen: React.FC = () => {
             type="button"
             disabled={!activeDisplayImage}
             onClick={handleDownloadActive}
-            className="min-h-[46px] sm:min-h-[50px] px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-sm flex items-center gap-1.5"
+            className="min-h-[40px] px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-sm flex items-center gap-1.5"
             title={t.preview.download}
           >
             <span>📥</span>
@@ -273,7 +401,7 @@ export const FinalPreviewScreen: React.FC = () => {
             type="button"
             disabled={isCompositing || !finalLayoutBase64}
             onClick={() => navigate('/app/print-result')}
-            className="min-h-[46px] sm:min-h-[50px] px-6 sm:px-7 py-2.5 text-xs sm:text-sm md:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center gap-2"
+            className="min-h-[40px] px-5 py-1.5 text-xs sm:text-sm md:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center gap-2"
           >
             <span>{t.preview.continueToPrint}</span>
             <span>🖨️</span>
@@ -281,46 +409,53 @@ export const FinalPreviewScreen: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 items-start">
+      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4 md:gap-5 items-stretch overflow-hidden my-auto py-1">
         {/* Final Composite Preview - Tablet 7 Cols */}
-        <div className="md:col-span-7 bg-zinc-900/80 rounded-2xl p-5 sm:p-6 flex flex-col items-center justify-center min-h-[480px] shadow-2xl space-y-4 border border-zinc-800/70">
-          {/* Ratio detection & layout tabs if it is vertical long strip */}
-          {isVertical && (
-            <div className="w-full space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2 bg-zinc-950/70 p-2 rounded-xl border border-zinc-800">
-                <div className="flex items-center gap-1.5 p-1 bg-zinc-900 rounded-lg">
-                  <button
-                    type="button"
-                    onClick={() => setPreviewMode('single')}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
-                      previewMode === 'single'
-                        ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    📱 {t.preview.singleStrip}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPreviewMode('double');
-                      setSelectedStickerId(null);
-                    }}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
-                      previewMode === 'double'
-                        ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    <span>👥 {t.preview.doubleStrip}</span>
-                    <span className="text-[10px] px-1 py-0.2 bg-white/20 text-white rounded font-mono">
-                      4R
-                    </span>
-                  </button>
-                </div>
+        <div className="md:col-span-7 bg-zinc-900/80 rounded-2xl p-3 sm:p-4 flex flex-col items-center justify-between shadow-2xl border border-zinc-800/70 h-full overflow-hidden">
+          {/* Top Controls Toolbar: Single/Double Switcher & Zoom Controls */}
+          <div className="w-full space-y-2 shrink-0 pb-1">
+            <div className="flex flex-wrap items-center justify-between gap-2 bg-zinc-950/70 p-1.5 rounded-xl border border-zinc-800">
+              {/* Left Side: Frame Format Controls */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {isVertical ? (
+                  <div className="flex items-center gap-1.5 p-1 bg-zinc-900 rounded-lg">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewMode('single')}
+                      className={`px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                        previewMode === 'single'
+                          ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      📱 {t.preview.singleStrip}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreviewMode('double');
+                        setSelectedStickerId(null);
+                      }}
+                      className={`px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
+                        previewMode === 'double'
+                          ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      <span>👥 {t.preview.doubleStrip}</span>
+                      <span className="text-[10px] px-1 py-0.2 bg-white/20 text-white rounded font-mono">
+                        4R
+                      </span>
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-xs font-mono-tabular text-zinc-400 pl-2">
+                    🖼️ {activeFrame.name}
+                  </span>
+                )}
 
                 {previewMode === 'double' && (
-                  <label className="flex items-center gap-1.5 text-xs text-zinc-300 pr-2 cursor-pointer select-none bg-zinc-900/90 px-2.5 py-1.5 rounded-lg border border-zinc-800">
+                  <label className="flex items-center gap-1.5 text-xs text-zinc-300 pr-1 cursor-pointer select-none bg-zinc-900/90 px-2 py-1 rounded-lg border border-zinc-800">
                     <input
                       type="checkbox"
                       checked={showCutLine}
@@ -330,18 +465,60 @@ export const FinalPreviewScreen: React.FC = () => {
                     <span className="font-semibold text-zinc-200">✂️ {t.preview.cutLine}</span>
                   </label>
                 )}
+              </div>
 
-                {previewMode === 'double' && placedStickers.length > 0 && (
-                  <span className="text-[11px] text-zinc-400 font-mono-tabular">
-                    ✨ {placedStickers.length} stiker diduplikasi di kedua strip
-                  </span>
+              {/* Right Side: Zoom In / Zoom Out / Fit Toolbar */}
+              <div
+                className="flex items-center gap-1 bg-zinc-900/90 p-1 rounded-lg border border-zinc-800 text-xs shadow-sm"
+                role="toolbar"
+                aria-label="Zoom Controls"
+              >
+                <button
+                  type="button"
+                  onClick={handleZoomOut}
+                  disabled={zoomLevel <= 1.0}
+                  title={t.preview.zoomOut}
+                  aria-label={t.preview.zoomOut}
+                  className="w-7 h-7 flex items-center justify-center rounded font-bold text-zinc-300 hover:text-white hover:bg-zinc-800 active:scale-95 disabled:opacity-30 disabled:pointer-events-none cursor-pointer transition-all"
+                >
+                  －
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResetZoom}
+                  title={t.preview.zoomReset}
+                  className="px-2 h-7 flex items-center justify-center rounded font-mono font-bold text-xs text-zinc-200 hover:text-white hover:bg-zinc-800 active:scale-95 cursor-pointer transition-all"
+                >
+                  {Math.round(zoomLevel * 100)}%
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleZoomIn}
+                  disabled={zoomLevel >= 3.0}
+                  title={t.preview.zoomIn}
+                  aria-label={t.preview.zoomIn}
+                  className="w-7 h-7 flex items-center justify-center rounded font-bold text-zinc-300 hover:text-white hover:bg-zinc-800 active:scale-95 disabled:opacity-30 disabled:pointer-events-none cursor-pointer transition-all"
+                >
+                  ＋
+                </button>
+
+                {zoomLevel > 1.0 && (
+                  <button
+                    type="button"
+                    onClick={handleResetZoom}
+                    className="px-2 py-1 text-[11px] font-semibold text-[var(--theme-accent,#E11D48)] bg-[var(--theme-accent,#E11D48)]/15 hover:bg-[var(--theme-accent,#E11D48)]/25 rounded border border-[var(--theme-accent,#E11D48)]/30 active:scale-95 cursor-pointer transition-all"
+                  >
+                    ⛶ {t.preview.zoomReset}
+                  </button>
                 )}
               </div>
             </div>
-          )}
+          </div>
 
           {isCompositing && !finalLayoutBase64 ? (
-            <div className="text-center space-y-3 py-16">
+            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-3 py-12">
               <p className="text-sm font-mono-tabular text-zinc-300">
                 {t.preview.rendering}
               </p>
@@ -350,30 +527,70 @@ export const FinalPreviewScreen: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-2 w-full">
-              {/* Canvas Preview Container with Interactive Sticker Overlay */}
-              <div className="relative inline-block max-h-[580px] max-w-full">
-                <img
-                  data-testid="final-composite-image"
-                  src={activeDisplayImage || finalLayoutBase64 || ''}
-                  alt={`Hasil Akhir Bingkai ${activeFrame.name}`}
-                  className="max-h-[580px] w-auto object-contain rounded-xl shadow-2xl block"
-                />
-
-                {/* Interactive Sticker Studio Layer (only on single strip view for 1:1 precision) */}
-                {previewMode === 'single' && (
-                  <InteractiveStickerCanvas
-                    stickers={placedStickers}
-                    onStickersChange={(newStickers) => setPlacedStickers(newStickers)}
-                    selectedStickerId={selectedStickerId}
-                    onSelectSticker={(id) => setSelectedStickerId(id)}
-                    themeColor={settings?.themeColor}
-                    isInteractive={activeTab === 'stickers'}
+            <div className="flex-1 min-h-0 w-full flex flex-col items-center justify-between gap-1 overflow-hidden">
+              {/* Scrollable & Zoomable Strip Container */}
+              <div
+                ref={scrollContainerRef}
+                onMouseDown={handlePanMouseDown}
+                onMouseMove={handlePanMouseMove}
+                onMouseUp={handlePanMouseUp}
+                onMouseLeave={handlePanMouseUp}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onWheel={handleWheel}
+                onDoubleClick={handleDoubleClick}
+                className="relative flex-1 min-h-0 w-full overflow-auto flex select-none p-2 sm:p-3 custom-scrollbar rounded-xl bg-zinc-950/40"
+                style={{
+                  cursor: zoomLevel > 1.0 ? (isPanning ? 'grabbing' : 'grab') : 'default',
+                  WebkitOverflowScrolling: 'touch',
+                }}
+              >
+                {/* Scaled Strip Content Centered with CSS Margin Auto */}
+                <div
+                  className="relative m-auto flex items-center justify-center transition-all duration-150 ease-out"
+                  style={{
+                    height: zoomLevel === 1.0 ? '100%' : `${Math.round(baseFitHeight * zoomLevel)}px`,
+                    maxHeight: zoomLevel === 1.0 ? '100%' : 'none',
+                  }}
+                >
+                  <img
+                    data-testid="final-composite-image"
+                    src={activeDisplayImage || finalLayoutBase64 || ''}
+                    alt={`Hasil Akhir Bingkai ${activeFrame.name}`}
+                    className="w-auto max-w-none rounded-xl shadow-2xl block"
+                    style={{
+                      height: zoomLevel === 1.0 ? '100%' : `${Math.round(baseFitHeight * zoomLevel)}px`,
+                      maxHeight: zoomLevel === 1.0 ? 'calc(100vh - 14rem)' : 'none',
+                      objectFit: 'contain',
+                    }}
+                    draggable={false}
                   />
+
+                  {/* Interactive Sticker Studio Layer (only on single strip view for 1:1 precision) */}
+                  {previewMode === 'single' && (
+                    <InteractiveStickerCanvas
+                      stickers={placedStickers}
+                      onStickersChange={(newStickers) => setPlacedStickers(newStickers)}
+                      selectedStickerId={selectedStickerId}
+                      onSelectSticker={(id) => setSelectedStickerId(id)}
+                      themeColor={settings?.themeColor}
+                      isInteractive={activeTab === 'stickers'}
+                    />
+                  )}
+                </div>
+
+                {/* Floating Scroll & Zoom Guidance Chip when zoomed in */}
+                {zoomLevel > 1.0 && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none px-3.5 py-1.5 bg-black/85 backdrop-blur-md rounded-full border border-white/20 text-xs text-zinc-200 font-mono-tabular shadow-2xl flex items-center gap-1.5 z-20 animate-in fade-in duration-200">
+                    <span className="text-sm">↕️</span>
+                    <span className="font-semibold">{t.preview.zoomScrollHint}</span>
+                  </div>
                 )}
               </div>
 
-              <div className="flex items-center justify-between w-full px-2 text-[11px] font-mono-tabular text-zinc-400">
+              {/* Bottom Footer Info */}
+              <div className="flex items-center justify-between w-full px-2 pt-1 text-[11px] font-mono-tabular text-zinc-400 shrink-0">
                 <span>
                   {isVertical && previewMode === 'double'
                     ? `${t.preview.formatDouble} (${activeFrame.canvasWidth ? activeFrame.canvasWidth * 2 : 960}×${activeFrame.canvasHeight || 1440}px)`
@@ -400,13 +617,13 @@ export const FinalPreviewScreen: React.FC = () => {
         </div>
 
         {/* Tone Filter & Sticker Controls - Tablet 5 Cols */}
-        <div className="md:col-span-5 bg-zinc-900/80 rounded-2xl p-5 sm:p-6 space-y-5 sm:space-y-6 shadow-xl border border-zinc-800/70">
+        <div className="md:col-span-5 bg-zinc-900/80 rounded-2xl p-3 sm:p-4 shadow-xl border border-zinc-800/70 h-full flex flex-col justify-between overflow-hidden">
           {/* Main Mode Tabs Switcher */}
-          <div className="grid grid-cols-2 p-1 bg-zinc-950 rounded-xl border border-zinc-800">
+          <div className="grid grid-cols-2 p-1 bg-zinc-950 rounded-xl border border-zinc-800 shrink-0 mb-2">
             <button
               type="button"
               onClick={() => setActiveTab('stickers')}
-              className={`py-2 px-3 text-xs sm:text-sm font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+              className={`py-1.5 px-3 text-xs sm:text-sm font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                 activeTab === 'stickers'
                   ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-md'
                   : 'text-zinc-400 hover:text-white'
@@ -424,7 +641,7 @@ export const FinalPreviewScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => setActiveTab('filters')}
-              className={`py-2 px-3 text-xs sm:text-sm font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+              className={`py-1.5 px-3 text-xs sm:text-sm font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                 activeTab === 'filters'
                   ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-md'
                   : 'text-zinc-400 hover:text-white'
@@ -434,6 +651,9 @@ export const FinalPreviewScreen: React.FC = () => {
               <span>{t.preview.tabFilters}</span>
             </button>
           </div>
+
+          {/* Internal scrollable container for tab body */}
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3">
 
           {/* TAB 1: INTERACTIVE STICKER STUDIO */}
           {activeTab === 'stickers' && (
@@ -666,13 +886,15 @@ export const FinalPreviewScreen: React.FC = () => {
             </div>
           )}
 
+          </div>
+
           {/* Action CTA Buttons */}
-          <div className="pt-2 space-y-3">
+          <div className="pt-2 shrink-0 space-y-2 border-t border-white/5">
             <button
               type="button"
               disabled={isCompositing || !finalLayoutBase64}
               onClick={() => navigate('/app/print-result')}
-              className="w-full min-h-[52px] sm:min-h-[56px] py-3.5 px-6 text-sm sm:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center justify-center gap-2"
+              className="w-full min-h-[46px] py-2.5 px-4 text-xs sm:text-sm font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center justify-center gap-2"
             >
               <span>{t.preview.continueToPrint}</span>
               <span>🖨️</span>
@@ -681,7 +903,7 @@ export const FinalPreviewScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate('/app/review-photos')}
-              className="w-full min-h-[46px] py-2.5 px-4 text-xs sm:text-sm font-semibold text-zinc-300 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer flex items-center justify-center gap-2"
+              className="w-full min-h-[40px] py-1.5 px-3 text-xs font-semibold text-zinc-300 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer flex items-center justify-center gap-2"
             >
               <span>↺</span>
               <span>{t.nav.retake}</span>

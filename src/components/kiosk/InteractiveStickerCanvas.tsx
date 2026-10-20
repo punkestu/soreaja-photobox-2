@@ -256,8 +256,7 @@ export const InteractiveStickerCanvas: React.FC<InteractiveStickerCanvasProps> =
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="absolute inset-0 w-full h-full overflow-hidden select-none pointer-events-auto touch-none"
-      style={{ cursor: isInteractive ? 'crosshair' : 'default' }}
+      className="absolute inset-0 w-full h-full overflow-hidden select-none pointer-events-none"
     >
       {stickers.map((sticker) => {
         const isSelected = selectedStickerId === sticker.id;
@@ -269,6 +268,7 @@ export const InteractiveStickerCanvas: React.FC<InteractiveStickerCanvasProps> =
         return (
           <div
             key={sticker.id}
+            data-sticker-item="true"
             onPointerDown={(e) => handleStickerPointerDown(e, sticker)}
             style={{
               left: leftPercent,
@@ -276,7 +276,7 @@ export const InteractiveStickerCanvas: React.FC<InteractiveStickerCanvasProps> =
               transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${scale})`,
               transformOrigin: 'center center',
             }}
-            className={`absolute flex items-center justify-center cursor-move transition-shadow duration-150 ${
+            className={`absolute flex items-center justify-center cursor-move transition-shadow duration-150 pointer-events-auto ${
               isSelected ? 'z-30' : 'z-20'
             }`}
           >

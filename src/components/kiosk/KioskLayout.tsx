@@ -8,6 +8,8 @@ export const KioskLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const {
+    selectedFrame,
+    capturedPhotos,
     resetSession,
     language,
     setLanguage,
@@ -17,6 +19,7 @@ export const KioskLayout: React.FC = () => {
     isSessionExpiredAlertOpen,
     dismissSessionExpiredAlert,
     startSessionTimer,
+    addExtraSessionTime,
   } = usePhotobox();
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
@@ -60,18 +63,39 @@ export const KioskLayout: React.FC = () => {
     }
   };
 
+  const canAutoFinish =
+    !!selectedFrame && capturedPhotos.length >= selectedFrame.photoCount;
+
+  const handleAutoFinish = () => {
+    dismissSessionExpiredAlert();
+    navigate('/app/print-result');
+  };
+
+  const handleAddExtraTime = () => {
+    addExtraSessionTime(2);
+  };
+
   const handleRestart = () => {
     resetSession();
     navigate('/app/idle');
   };
 
+  const isScrollablePage =
+    location.pathname.includes('/review-photos') || location.pathname.includes('/print-result');
+
   return (
-    <div className="min-h-screen w-full bg-[#0A0A0B] text-[#F4F4F0] flex flex-col overflow-x-hidden selection:bg-[var(--theme-accent,#E11D48)] selection:text-white">
+    <div
+      className={`w-full bg-[#0A0A0B] text-[#F4F4F0] flex flex-col selection:bg-[var(--theme-accent,#E11D48)] selection:text-white ${
+        isScrollablePage
+          ? 'min-h-screen overflow-x-hidden'
+          : 'h-screen h-[100dvh] max-h-[100dvh] overflow-hidden'
+      }`}
+    >
       <OfflineIndicator />
 
       {/* Top Bar: Seamless studio navigation & session monitor */}
       <header
-        className={`flex items-center justify-between px-4 sm:px-6 md:px-8 py-3 z-30 transition-all duration-300 ${
+        className={`flex items-center justify-between px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 z-30 shrink-0 transition-all duration-300 ${
           isIdleScreen
             ? 'absolute top-0 left-0 right-0 bg-transparent'
             : 'sticky top-0 bg-[#0A0A0B]/95 backdrop-blur-md border-b border-white/5'
@@ -184,15 +208,15 @@ export const KioskLayout: React.FC = () => {
           >
             {isFullscreen ? (
               <>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 9H4m0 0v5m0-5l6 6m5-6h5m0 0v5m0-5l-6 6m6 5h-5m0 0v5m0-5l6-6m-11 5H4m0 0v-5m0 5l6-6" />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
                 </svg>
                 <span className="hidden md:inline">{t.nav.exitFullscreen}</span>
               </>
             ) : (
               <>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
                 </svg>
                 <span className="hidden md:inline">{t.nav.fullscreen}</span>
               </>
@@ -223,13 +247,17 @@ export const KioskLayout: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col w-full h-full">
+      <main
+        className={`flex-1 w-full ${
+          isScrollablePage ? 'overflow-y-auto' : 'overflow-hidden flex flex-col min-h-0'
+        }`}
+      >
         <Outlet />
       </main>
 
-      {/* Session Expired Alert Modal (Non-destructive: alerts guest with sound, does not auto-end session) */}
+      {/* Session Expired Alert Modal (Smart Dual Confirmations: Auto Finish or Add Extra Time) */}
       {isSessionExpiredAlertOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
           <div
             role="alertdialog"
             aria-modal="true"
@@ -240,21 +268,51 @@ export const KioskLayout: React.FC = () => {
             <div className="w-16 h-16 rounded-2xl bg-[var(--theme-accent,#E11D48)]/15 border border-[var(--theme-accent,#E11D48)]/40 flex items-center justify-center text-3xl shadow-inner animate-bounce">
               ⏰
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <h3 id="session-expired-title" className="font-display text-xl sm:text-2xl font-extrabold text-[#F4F4F0]">
                 {t.sessionTimer.expiredTitle}
               </h3>
-              <p id="session-expired-desc" className="text-sm text-zinc-300 leading-relaxed">
+              <p id="session-expired-desc" className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
                 {t.sessionTimer.expiredDesc}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={dismissSessionExpiredAlert}
-              className="w-full min-h-[48px] py-3 px-6 text-sm font-bold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all shadow-lg cursor-pointer"
-            >
-              {t.sessionTimer.continueBtn}
-            </button>
+
+            <div className="w-full flex flex-col gap-2.5 pt-2">
+              {canAutoFinish ? (
+                <button
+                  type="button"
+                  onClick={handleAutoFinish}
+                  className="w-full min-h-[48px] py-3 px-6 text-xs sm:text-sm font-bold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all shadow-lg cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <span>🏁</span>
+                  <span>{t.sessionTimer.autoFinishBtn}</span>
+                </button>
+              ) : (
+                <div className="w-full py-2.5 px-3 bg-zinc-950/80 rounded-xl border border-zinc-800 text-xs text-zinc-400">
+                  <span>ℹ️ {t.sessionTimer.incompleteNotice}</span>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={handleAddExtraTime}
+                className="w-full min-h-[46px] py-2.5 px-6 text-xs sm:text-sm font-bold text-zinc-100 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-xl transition-all shadow-md cursor-pointer border border-zinc-700/80 flex items-center justify-center gap-2"
+              >
+                <span>⏳</span>
+                <span>{t.sessionTimer.addExtraTimeBtn}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  dismissSessionExpiredAlert();
+                  handleRestart();
+                }}
+                className="w-full py-2 text-xs font-semibold text-zinc-400 hover:text-zinc-200 cursor-pointer transition-colors"
+              >
+                {t.sessionTimer.restartBtn}
+              </button>
+            </div>
           </div>
         </div>
       )}
