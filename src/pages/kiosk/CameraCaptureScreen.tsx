@@ -5,6 +5,11 @@ import { db } from '../../db';
 import { usePhotobox } from '../../context/PhotoboxContext';
 import { DEFAULT_FRAMES, STUDIO_PORTRAITS } from '../../data/defaultFrames';
 import { playShutterSound } from '../../services/shutterAudio';
+import { CropGuideOverlay, type CropInfo } from '../../components/kiosk/camera/CropGuideOverlay';
+import { CountdownOverlay } from '../../components/kiosk/camera/CountdownOverlay';
+import { PhotoTray } from '../../components/kiosk/camera/PhotoTray';
+import { ShutterControls } from '../../components/kiosk/camera/ShutterControls';
+import { CameraToolsModal } from '../../components/kiosk/camera/CameraToolsModal';
 
 export const CameraCaptureScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -28,6 +33,11 @@ export const CameraCaptureScreen: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const simulatorImagesRef = useRef<HTMLImageElement[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Timer tracking to prevent memory leaks and unmounted component updates
+  const timeoutIdsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  const intervalIdsRef = useRef<Set<ReturnType<typeof setInterval>>>(new Set());
 
   const [useSimulator, setUseSimulator] = useState<boolean>(false);
   const [cameraReady, setCameraReady] = useState<boolean>(false);
@@ -44,6 +54,43 @@ export const CameraCaptureScreen: React.FC = () => {
   const [isCapturingSequence, setIsCapturingSequence] = useState<boolean>(false);
   const [localShots, setLocalShots] = useState<string[]>(capturedPhotos);
   const [showTools, setShowTools] = useState<boolean>(false);
+
+  // Safe timer helpers with automatic tracking
+  const safeSetTimeout = useCallback((fn: () => void, delayMs: number) => {
+    const id = setTimeout(() => {
+      timeoutIdsRef.current.delete(id);
+      fn();
+    }, delayMs);
+    timeoutIdsRef.current.add(id);
+    return id;
+  }, []);
+
+  const safeSetInterval = useCallback((fn: () => void, intervalMs: number) => {
+    const id = setInterval(fn, intervalMs);
+    intervalIdsRef.current.add(id);
+    return id;
+  }, []);
+
+  const clearRegisteredInterval = useCallback((id: ReturnType<typeof setInterval> | null) => {
+    if (id !== null) {
+      clearInterval(id);
+      intervalIdsRef.current.delete(id);
+    }
+  }, []);
+
+  const clearAllTimers = useCallback(() => {
+    timeoutIdsRef.current.forEach((id) => clearTimeout(id));
+    timeoutIdsRef.current.clear();
+    intervalIdsRef.current.forEach((id) => clearInterval(id));
+    intervalIdsRef.current.clear();
+  }, []);
+
+  // Cleanup all timers on unmount
+  useEffect(() => {
+    return () => {
+      clearAllTimers();
+    };
+  }, [clearAllTimers]);
 
   // Sync crop guide setting from IndexedDB app settings
   useEffect(() => {
@@ -84,23 +131,30 @@ export const CameraCaptureScreen: React.FC = () => {
     simulatorImagesRef.current = loaded;
   }, []);
 
-  // Initialize WebRTC or fallback to Studio Simulator
+  // Initialize WebRTC or release stream on simulator mode / unmount
   useEffect(() => {
     let cancelled = false;
 
+    // If simulator mode is active, release hardware camera tracks immediately
+    if (useSimulator || settings?.cameraSourceMode === 'simulator') {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+      setCameraReady(true);
+      return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setUseSimulator(true);
+      setCameraReady(true);
+      return;
+    }
+
     const initCamera = async () => {
-      if (settings?.cameraSourceMode === 'simulator') {
-        setUseSimulator(true);
-        setCameraReady(true);
-        return;
-      }
-
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setUseSimulator(true);
-        setCameraReady(true);
-        return;
-      }
-
       try {
         const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -119,9 +173,8 @@ export const CameraCaptureScreen: React.FC = () => {
         streamRef.current = mediaStream;
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
-          await videoRef.current.play().catch(() => { });
+          await videoRef.current.play().catch(() => {});
         }
-        setUseSimulator(false);
         setCameraReady(true);
       } catch {
         if (!cancelled) {
@@ -140,17 +193,29 @@ export const CameraCaptureScreen: React.FC = () => {
         streamRef.current = null;
       }
     };
-  }, [settings?.cameraSourceMode]);
+  }, [useSimulator, settings?.cameraSourceMode]);
 
+  // Recycled canvas generator to eliminate DOM allocation overhead
+  const getRecycledCanvas = useCallback((width: number, height: number): HTMLCanvasElement => {
+    if (!canvasRef.current) {
+      canvasRef.current = document.createElement('canvas');
+    }
+    const canvas = canvasRef.current;
+    if (canvas.width !== width) canvas.width = width;
+    if (canvas.height !== height) canvas.height = height;
+    return canvas;
+  }, []);
+
+  // Capture single photo snapshot with recycled canvas and ultra-fast JPEG encoding
   const captureSinglePhoto = useCallback(
     (shotIndexZeroBased: number): string => {
-      const canvas = document.createElement('canvas');
       const width = 800;
       const height = 600;
-      canvas.width = width;
-      canvas.height = height;
+      const canvas = getRecycledCanvas(width, height);
       const ctx = canvas.getContext('2d');
       if (!ctx) return '';
+
+      ctx.clearRect(0, 0, width, height);
 
       const shouldMirror = settings?.mirrorCamera !== false;
       const videoEl = videoRef.current;
@@ -210,20 +275,22 @@ export const CameraCaptureScreen: React.FC = () => {
         }
       }
 
-      return canvas.toDataURL('image/png', 0.92);
+      // JPEG at 0.92 gives ~5x faster encoding and ~8x smaller base64 payloads
+      return canvas.toDataURL('image/jpeg', 0.92);
     },
-    [settings?.mirrorCamera, useSimulator]
+    [getRecycledCanvas, settings?.mirrorCamera, useSimulator]
   );
 
   // Instant capture handler (captures remaining or retake shot immediately)
   const handleInstantCapture = useCallback(() => {
+    clearAllTimers();
     setIsCapturingSequence(false);
     setCountdown(null);
     setIsFlashing(true);
     if (settings?.enableShutterSound !== false) {
       playShutterSound();
     }
-    setTimeout(() => setIsFlashing(false), 300);
+    safeSetTimeout(() => setIsFlashing(false), 300);
 
     if (isRetakeMode && retakeIndex !== null) {
       // Sesuai TSD 4.2.3: Ambil 1 foto, timpa array capturedPhotos pada index tersebut, set retakeIndex kembali null
@@ -245,9 +312,11 @@ export const CameraCaptureScreen: React.FC = () => {
   }, [
     activePoseIdx,
     captureSinglePhoto,
+    clearAllTimers,
     isRetakeMode,
     navigate,
     retakeIndex,
+    safeSetTimeout,
     setCapturedPhotos,
     setRetakeIndex,
     settings?.enableShutterSound,
@@ -258,6 +327,7 @@ export const CameraCaptureScreen: React.FC = () => {
   // Timed Countdown Capture Sequence (TSD 4.2.3)
   const startCountdownSequence = useCallback(() => {
     if (isCapturingSequence) return;
+    clearAllTimers();
     setIsCapturingSequence(true);
 
     const secondsPerShot = settings?.countdownSeconds || 3;
@@ -265,18 +335,19 @@ export const CameraCaptureScreen: React.FC = () => {
     if (isRetakeMode && retakeIndex !== null) {
       let timer = secondsPerShot;
       setCountdown(timer);
-      const interval = setInterval(() => {
+      let intervalId: ReturnType<typeof setInterval> | null = null;
+      intervalId = safeSetInterval(() => {
         timer -= 1;
         if (timer > 0) {
           setCountdown(timer);
         } else {
-          clearInterval(interval);
+          clearRegisteredInterval(intervalId);
           setCountdown(null);
           setIsFlashing(true);
           if (settings?.enableShutterSound !== false) {
             playShutterSound();
           }
-          setTimeout(() => setIsFlashing(false), 300);
+          safeSetTimeout(() => setIsFlashing(false), 300);
           const newPhoto = captureSinglePhoto(activePoseIdx);
           updatePhotoAtIndex(retakeIndex, newPhoto);
           setRetakeIndex(null);
@@ -297,18 +368,19 @@ export const CameraCaptureScreen: React.FC = () => {
       let timer = secondsPerShot;
       setCountdown(timer);
 
-      const interval = setInterval(() => {
+      let intervalId: ReturnType<typeof setInterval> | null = null;
+      intervalId = safeSetInterval(() => {
         timer -= 1;
         if (timer > 0) {
           setCountdown(timer);
         } else {
-          clearInterval(interval);
+          clearRegisteredInterval(intervalId);
           setCountdown(null);
           setIsFlashing(true);
           if (settings?.enableShutterSound !== false) {
             playShutterSound();
           }
-          setTimeout(() => setIsFlashing(false), 300);
+          safeSetTimeout(() => setIsFlashing(false), 300);
 
           const snap = captureSinglePhoto(currentIdx);
           accumulated.push(snap);
@@ -318,10 +390,10 @@ export const CameraCaptureScreen: React.FC = () => {
 
           currentIdx += 1;
           if (currentIdx < totalShotsNeeded) {
-            setTimeout(runNextShot, 600);
+            safeSetTimeout(runNextShot, 600);
           } else {
             setIsCapturingSequence(false);
-            setTimeout(() => {
+            safeSetTimeout(() => {
               navigate('/app/review-photos');
             }, 450);
           }
@@ -333,38 +405,80 @@ export const CameraCaptureScreen: React.FC = () => {
   }, [
     activePoseIdx,
     captureSinglePhoto,
+    clearAllTimers,
+    clearRegisteredInterval,
     isCapturingSequence,
     isRetakeMode,
     navigate,
     retakeIndex,
+    safeSetInterval,
+    safeSetTimeout,
     setCapturedPhotos,
     setRetakeIndex,
     settings?.countdownSeconds,
+    settings?.enableShutterSound,
     totalShotsNeeded,
     updatePhotoAtIndex,
   ]);
 
+  // Clean back navigation handler with full timer cancellation
+  const handleBack = useCallback(() => {
+    clearAllTimers();
+    setIsCapturingSequence(false);
+    setCountdown(null);
+    if (isRetakeMode) {
+      setRetakeIndex(null);
+      navigate('/app/review-photos');
+    } else {
+      navigate('/app/frame-selection');
+    }
+  }, [clearAllTimers, isRetakeMode, navigate, setRetakeIndex]);
+
+  // Keyboard shortcut for kiosk operation (Space/Enter to trigger, Esc to close tools)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+      if (e.code === 'Space' || e.code === 'Enter') {
+        e.preventDefault();
+        if (!isCapturingSequence && !showTools) {
+          startCountdownSequence();
+        }
+      } else if (e.code === 'Escape' && showTools) {
+        e.preventDefault();
+        setShowTools(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isCapturingSequence, showTools, startCountdownSequence]);
+
   const currentPortrait =
     STUDIO_PORTRAITS[activePoseIdx % STUDIO_PORTRAITS.length] || STUDIO_PORTRAITS[0];
 
-  const activeSlotIndex =
-    isRetakeMode && retakeIndex !== null
-      ? retakeIndex
-      : Math.min(localShots.length, totalShotsNeeded - 1);
+  const activeSlotIndex = useMemo(() => {
+    if (isRetakeMode && retakeIndex !== null) return retakeIndex;
+    return Math.min(localShots.length, totalShotsNeeded - 1);
+  }, [isRetakeMode, retakeIndex, localShots.length, totalShotsNeeded]);
 
-  const targetSlot =
-    activeFrame.positions[activeSlotIndex] ||
-    activeFrame.positions[0] || {
-      x: 0,
-      y: 0,
-      width: 400,
-      height: 300,
-    };
+  const targetSlot = useMemo(() => {
+    return (
+      activeFrame.positions[activeSlotIndex] ||
+      activeFrame.positions[0] || {
+        x: 0,
+        y: 0,
+        width: 400,
+        height: 300,
+      }
+    );
+  }, [activeFrame, activeSlotIndex]);
 
   const cameraAspect = 4 / 3;
   const slotAspect = targetSlot.width / targetSlot.height;
 
-  const cropInfo = useMemo(() => {
+  const cropInfo: CropInfo = useMemo(() => {
     const diff = slotAspect - cameraAspect;
     if (diff < -0.015) {
       // Slot is narrower / more square than 4:3 (e.g. 500x480 = 1.04:1 vs 1.33:1)
@@ -436,10 +550,11 @@ export const CameraCaptureScreen: React.FC = () => {
             type="button"
             onClick={() => setShowTools((prev) => !prev)}
             aria-expanded={showTools}
-            className={`min-h-[40px] px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5 border active:scale-95 ${showTools
-              ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
-              : 'text-zinc-300 hover:text-white bg-zinc-900/90 hover:bg-zinc-800 border-zinc-700/80'
-              }`}
+            className={`min-h-[40px] px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5 border active:scale-95 ${
+              showTools
+                ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
+                : 'text-zinc-300 hover:text-white bg-zinc-900/90 hover:bg-zinc-800 border-zinc-700/80'
+            }`}
           >
             <span>⚙️</span>
             <span>{showTools ? t.camera.closeTools : t.camera.tools}</span>
@@ -448,14 +563,7 @@ export const CameraCaptureScreen: React.FC = () => {
           {/* Back Button */}
           <button
             type="button"
-            onClick={() => {
-              if (isRetakeMode) {
-                setRetakeIndex(null);
-                navigate('/app/review-photos');
-              } else {
-                navigate('/app/frame-selection');
-              }
-            }}
+            onClick={handleBack}
             className="min-h-[40px] px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white bg-zinc-900/80 active:scale-95 border border-zinc-800 rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
           >
             <span>{isRetakeMode ? t.camera.cancelRetake : t.camera.backToFrames}</span>
@@ -475,8 +583,9 @@ export const CameraCaptureScreen: React.FC = () => {
             ref={videoRef}
             playsInline
             muted
-            className={`w-full h-full object-cover ${useSimulator ? 'hidden' : 'block'
-              } ${settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''}`}
+            className={`w-full h-full object-cover ${
+              useSimulator ? 'hidden' : 'block'
+            } ${settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''}`}
           />
 
           {/* Studio Camera Simulator Fallback */}
@@ -485,8 +594,9 @@ export const CameraCaptureScreen: React.FC = () => {
               src={currentPortrait.src}
               alt={currentPortrait.label}
               referrerPolicy="no-referrer"
-              className={`w-full h-full object-cover transition-all duration-300 ${settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
-                }`}
+              className={`w-full h-full object-cover transition-all duration-300 ${
+                settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
+              }`}
             />
           )}
 
@@ -502,332 +612,62 @@ export const CameraCaptureScreen: React.FC = () => {
           />
 
           {/* Dynamic Crop Guide Mask & Framing Overlay */}
-          {showCropGuide && (
-            <div className="absolute inset-0 pointer-events-none z-10">
-              {/* Left & Right Cropped Area Dark Masks */}
-              {cropInfo.type === 'sides' && (
-                <>
-                  <div
-                    className="absolute top-0 bottom-0 left-0 bg-black/75 backdrop-blur-[1px] flex flex-col items-center justify-center border-r-2 border-dashed border-red-500/85 shadow-inner"
-                    style={{ width: `${cropInfo.leftPercent}%` }}
-                  >
-                    <div className="rotate-[-90deg] whitespace-nowrap text-[10px] font-mono tracking-widest text-red-300 font-bold uppercase select-none drop-shadow">
-                      ✂ Terpotong
-                    </div>
-                  </div>
-                  <div
-                    className="absolute top-0 bottom-0 right-0 bg-black/75 backdrop-blur-[1px] flex flex-col items-center justify-center border-l-2 border-dashed border-red-500/85 shadow-inner"
-                    style={{ width: `${cropInfo.leftPercent}%` }}
-                  >
-                    <div className="rotate-90 whitespace-nowrap text-[10px] font-mono tracking-widest text-red-300 font-bold uppercase select-none drop-shadow">
-                      ✂ Terpotong
-                    </div>
-                  </div>
-                </>
-              )}
+          <CropGuideOverlay
+            showCropGuide={showCropGuide}
+            showGridLines={showGridLines}
+            cropInfo={cropInfo}
+          />
 
-              {/* Top & Bottom Cropped Area Dark Masks */}
-              {cropInfo.type === 'topBottom' && (
-                <>
-                  <div
-                    className="absolute top-0 left-0 right-0 bg-black/75 backdrop-blur-[1px] flex items-center justify-center border-b-2 border-dashed border-red-500/85 shadow-inner"
-                    style={{ height: `${cropInfo.topPercent}%` }}
-                  >
-                    <span className="text-[10px] font-mono tracking-widest text-red-300 font-bold uppercase select-none drop-shadow">
-                      ✂ Area Terpotong Bingkai
-                    </span>
-                  </div>
-                  <div
-                    className="absolute bottom-0 left-0 right-0 bg-black/75 backdrop-blur-[1px] flex items-center justify-center border-t-2 border-dashed border-red-500/85 shadow-inner"
-                    style={{ height: `${cropInfo.topPercent}%` }}
-                  >
-                    <span className="text-[10px] font-mono tracking-widest text-red-300 font-bold uppercase select-none drop-shadow">
-                      ✂ Area Terpotong Bingkai
-                    </span>
-                  </div>
-                </>
-              )}
-
-              {/* Active Photo Framing Boundary */}
-              <div
-                className={`absolute transition-all duration-200 ${cropInfo.isCropped
-                  ? 'border-2 border-[var(--theme-accent,#E11D48)] shadow-[0_0_24px_rgba(225,29,72,0.45)]'
-                  : 'border-2 border-white/50'
-                  }`}
-                style={{
-                  left: `${cropInfo.leftPercent}%`,
-                  top: `${cropInfo.topPercent}%`,
-                  width: `${cropInfo.widthPercent}%`,
-                  height: `${cropInfo.heightPercent}%`,
-                }}
-              >
-                {/* Studio Viewfinder Corner Brackets */}
-                <div className="absolute -top-1 -left-1 w-6 h-6 border-t-[3px] border-l-[3px] border-[var(--theme-accent,#E11D48)] drop-shadow" />
-                <div className="absolute -top-1 -right-1 w-6 h-6 border-t-[3px] border-r-[3px] border-[var(--theme-accent,#E11D48)] drop-shadow" />
-                <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-[3px] border-l-[3px] border-[var(--theme-accent,#E11D48)] drop-shadow" />
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-[3px] border-r-[3px] border-[var(--theme-accent,#E11D48)] drop-shadow" />
-
-                {/* Center Crosshair Alignment Mark */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="relative w-8 h-8 opacity-40">
-                    <div className="absolute top-1/2 left-0 right-0 h-px bg-white -translate-y-1/2" />
-                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white -translate-x-1/2" />
-                    <div className="absolute inset-1.5 border border-white rounded-full" />
-                  </div>
-                </div>
-
-                {/* Rule-of-Thirds Grid inside the Active Crop Area */}
-                {showGridLines && (
-                  <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none opacity-20">
-                    <div className="border-r border-b border-white" />
-                    <div className="border-r border-b border-white" />
-                    <div className="border-b border-white" />
-                    <div className="border-r border-b border-white" />
-                    <div className="border-r border-b border-white" />
-                    <div className="border-b border-white" />
-                    <div className="border-r border-white" />
-                    <div className="border-r border-white" />
-                    <div />
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {!showCropGuide && showGridLines && (
-            <div className="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3 opacity-20 z-10">
-              <div className="border-r border-b border-white" />
-              <div className="border-r border-b border-white" />
-              <div className="border-b border-white" />
-              <div className="border-r border-b border-white" />
-              <div className="border-r border-b border-white" />
-              <div className="border-b border-white" />
-              <div className="border-r border-white" />
-              <div className="border-r border-white" />
-              <div />
-            </div>
-          )}
-
-          {/* Countdown Big Center Overlay (z-30) */}
-          {countdown !== null && (
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center pointer-events-none z-30">
-              <span className="font-display text-8xl sm:text-[140px] md:text-[180px] font-extrabold text-white tabular-nums drop-shadow-[0_10px_35px_rgba(0,0,0,0.95)] animate-pulse">
-                {countdown}
-              </span>
-              <p className="mt-2 text-sm sm:text-base md:text-lg font-mono-tabular text-zinc-200 uppercase tracking-widest drop-shadow font-bold">
-                {t.camera.getReady}
-              </p>
-            </div>
-          )}
-
-          {/* Flash Burst Effect (z-40) */}
-          {isFlashing && (
-            <div className="absolute inset-0 bg-white animate-flash pointer-events-none z-40" />
-          )}
+          {/* Countdown Big Center Overlay & Flash Burst Effect */}
+          <CountdownOverlay
+            countdown={countdown}
+            isFlashing={isFlashing}
+            getReadyText={t.camera.getReady}
+          />
 
           {/* Minimalist Bottom Bar: Captured Photo List & Shutter Controls (z-20) */}
           <div className="absolute bottom-2.5 sm:bottom-4 left-2.5 sm:left-4 right-2.5 sm:right-4 z-20 flex items-center justify-between gap-2 pointer-events-auto">
-            {/* Captured Photos Mini Tray (Kept visible as requested) */}
-            <div className="flex items-center gap-1.5 p-1 sm:p-1.5 bg-black/85 backdrop-blur-md border border-white/15 rounded-2xl shadow-2xl">
-              {Array.from({ length: totalShotsNeeded }).map((_, idx) => {
-                const shotSrc = localShots[idx];
-                const isCurrent = !isRetakeMode && idx === currentShotNumber - 1;
-                const isTargetRetake = isRetakeMode && retakeIndex === idx;
-                return (
-                  <div
-                    key={idx}
-                    className={`w-9 h-9 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl overflow-hidden relative bg-zinc-900/90 flex items-center justify-center transition-all ${isTargetRetake || isCurrent
-                      ? 'ring-2 ring-[var(--theme-accent,#E11D48)] shadow-[0_0_15px_rgba(225,29,72,0.6)] scale-105'
-                      : 'opacity-70 hover:opacity-100'
-                      }`}
-                  >
-                    {shotSrc ? (
-                      <img
-                        src={shotSrc}
-                        alt={`${t.camera.photoSlot} ${idx + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-[10px] sm:text-xs font-mono-tabular text-zinc-400 font-bold">
-                        #{idx + 1}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            {/* Captured Photos Mini Tray */}
+            <PhotoTray
+              totalShotsNeeded={totalShotsNeeded}
+              localShots={localShots}
+              currentShotNumber={currentShotNumber}
+              isRetakeMode={isRetakeMode}
+              retakeIndex={retakeIndex}
+              photoSlotText={t.camera.photoSlot}
+            />
 
-            {/* Shutter Action Buttons (Kept visible as requested) */}
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <button
-                type="button"
-                disabled={isCapturingSequence}
-                onClick={startCountdownSequence}
-                className="min-h-[50px] sm:min-h-[60px] md:min-h-[64px] px-5 sm:px-8 md:px-10 py-2.5 sm:py-3 text-sm sm:text-base md:text-lg font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-2xl transition-all whitespace-nowrap cursor-pointer shadow-[0_0_35px_rgba(225,29,72,0.75)] flex items-center gap-2 ring-2 ring-white/20"
-              >
-                <span className="text-base sm:text-lg">📸</span>
-                <span>
-                  {isCapturingSequence
-                    ? `⏱️ ${countdown ?? '...'}`
-                    : isRetakeMode
-                      ? `↺ Retake #${(retakeIndex ?? 0) + 1}`
-                      : `${t.camera.startSequence} (${settings?.countdownSeconds || 3}s)`}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleInstantCapture}
-                className="min-h-[50px] sm:min-h-[60px] md:min-h-[64px] px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-bold text-zinc-200 bg-black/85 hover:bg-zinc-800 active:scale-95 backdrop-blur-md border border-white/15 rounded-2xl transition-all whitespace-nowrap cursor-pointer shadow-xl flex items-center gap-1.5"
-                title={t.camera.instantCapture}
-              >
-                <span>⚡</span>
-                <span className="hidden md:inline">{t.camera.instantCapture}</span>
-              </button>
-            </div>
+            {/* Shutter Action Buttons */}
+            <ShutterControls
+              isCapturingSequence={isCapturingSequence}
+              isRetakeMode={isRetakeMode}
+              retakeIndex={retakeIndex}
+              countdown={countdown}
+              countdownSeconds={settings?.countdownSeconds || 3}
+              onStartSequence={startCountdownSequence}
+              onInstantCapture={handleInstantCapture}
+              t={t}
+            />
           </div>
 
-          {/* Toggleable Clean Camera Tools Modal / Drawer (Revealed only when requested) */}
-          {showTools && (
-            <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-md p-4 sm:p-6 flex flex-col justify-between animate-in fade-in duration-200 pointer-events-auto">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                    <span>⚙️</span>
-                    <span>{t.camera.tools}</span>
-                  </span>
-                  <span className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 border border-white/10 rounded-full text-[11px] text-zinc-300">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>{cameraReady ? t.camera.live : t.camera.loading}</span>
-                  </span>
-                  <span className="hidden sm:inline text-xs font-mono-tabular text-zinc-400">
-                    {targetSlot.width}×{targetSlot.height}px
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setShowTools(false)}
-                  className="px-3 py-1.5 text-xs font-bold text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-all cursor-pointer border border-zinc-700"
-                >
-                  ✕ {t.camera.closeTools}
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto py-3 space-y-3 sm:space-y-4">
-                {/* Source Selection & Aids */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="bg-zinc-900/90 rounded-xl p-3 border border-zinc-800 space-y-2">
-                    <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider block">
-                      Sumber Kamera:
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setUseSimulator(false)}
-                        className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${!useSimulator
-                          ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
-                          : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
-                          }`}
-                      >
-                        📷 {t.camera.webRtc}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setUseSimulator(true)}
-                        className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${useSimulator
-                          ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
-                          : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
-                          }`}
-                      >
-                        🖥️ {t.camera.sim}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="bg-zinc-900/90 rounded-xl p-3 border border-zinc-800 space-y-2">
-                    <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider block">
-                      Bantuan Framing:
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowCropGuide((prev) => !prev)}
-                        className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${showCropGuide
-                          ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
-                          : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
-                          }`}
-                      >
-                        📐 {t.camera.cropToggle}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowGridLines((prev) => !prev)}
-                        className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${showGridLines
-                          ? 'bg-zinc-700 text-white border-zinc-600'
-                          : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
-                          }`}
-                      >
-                        ⊞ {t.camera.gridToggle}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Composition Guide Info */}
-                {cropInfo.isCropped && (
-                  <div className="bg-amber-950/40 border border-amber-500/40 rounded-xl p-3 text-xs text-amber-200 flex items-start gap-2.5">
-                    <span className="text-base leading-none">ℹ️</span>
-                    <div>
-                      <strong className="text-amber-300 block mb-0.5">{t.camera.compositionGuide}</strong>
-                      <p>
-                        Bingkai <strong>{activeFrame.name}</strong> ({targetSlot.width}×{targetSlot.height}px). {cropInfo.label}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Studio Simulator Pose Picker (only when simulator active) */}
-                {useSimulator && (
-                  <div className="bg-zinc-900/90 rounded-xl p-3 border border-zinc-800 space-y-2">
-                    <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider block">
-                      {t.camera.presetSimulator}
-                    </span>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {STUDIO_PORTRAITS.map((pose, idx) => (
-                        <button
-                          key={pose.id}
-                          type="button"
-                          onClick={() => setActivePoseIdx(idx)}
-                          className={`p-2 text-xs font-mono-tabular rounded-xl border flex flex-col items-center gap-1 transition-all cursor-pointer ${activePoseIdx === idx
-                            ? 'bg-white text-zinc-950 font-bold border-white shadow-md scale-102'
-                            : 'bg-zinc-950/80 text-zinc-300 border-zinc-800 hover:border-zinc-700'
-                            }`}
-                        >
-                          <img
-                            src={pose.src}
-                            alt={pose.label}
-                            className="w-12 h-12 object-cover rounded-lg"
-                          />
-                          <span>Pose 0{idx + 1}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="pt-2 border-t border-white/10 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowTools(false)}
-                  className="px-5 py-2 text-xs sm:text-sm font-bold bg-[var(--theme-accent,#E11D48)] text-white rounded-xl shadow-lg cursor-pointer"
-                >
-                  ✓ Selesai & Kembali ke Kamera
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Toggleable Clean Camera Tools Modal / Drawer */}
+          <CameraToolsModal
+            showTools={showTools}
+            onClose={() => setShowTools(false)}
+            cameraReady={cameraReady}
+            targetSlot={targetSlot}
+            activeFrameName={activeFrame.name}
+            useSimulator={useSimulator}
+            setUseSimulator={setUseSimulator}
+            showCropGuide={showCropGuide}
+            setShowCropGuide={setShowCropGuide}
+            showGridLines={showGridLines}
+            setShowGridLines={setShowGridLines}
+            cropInfo={cropInfo}
+            activePoseIdx={activePoseIdx}
+            setActivePoseIdx={setActivePoseIdx}
+            t={t}
+          />
         </div>
       </div>
     </div>
