@@ -165,8 +165,12 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 
 function getFilterCss(filter: PhotoFilter): string {
   switch (filter) {
+    case 'korean-clean':
+      return 'contrast(1.04) brightness(1.08) saturate(1.12)';
     case 'warm-sore':
       return 'sepia(0.22) saturate(1.25) contrast(1.06) brightness(1.02)';
+    case 'fuji-film':
+      return 'contrast(1.08) brightness(1.04) saturate(1.18) sepia(0.08) hue-rotate(-6deg)';
     case 'noir-bw':
       return 'grayscale(1) contrast(1.22) brightness(1.03)';
     case 'vintage-film':
@@ -290,7 +294,7 @@ export async function compositeFinalLayout(
     for (const sticker of placedStickers) {
       const sx = sticker.x * canvasWidth;
       const sy = sticker.y * canvasHeight;
-      const baseSize = Math.max(48, Math.min(canvasWidth, canvasHeight) * 0.12);
+      const baseSize = canvasWidth * 0.15;
       const size = baseSize * (sticker.scale || 1.0);
 
       ctx.save();
@@ -311,13 +315,14 @@ export async function compositeFinalLayout(
         // Stamp / Badge
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const fontSize = Math.round(size * 0.3);
+        const fontSize = Math.round(size * 0.32);
         ctx.font = `800 ${fontSize}px "Syne", sans-serif`;
         const textMetrics = ctx.measureText(sticker.content);
-        const padX = fontSize * 0.8;
-        const padY = fontSize * 0.5;
+        const padX = fontSize * 0.85;
+        const padY = fontSize * 0.45;
         const badgeW = textMetrics.width + padX * 2;
         const badgeH = fontSize + padY * 2;
+        const radius = Math.round(size * 0.12);
 
         ctx.fillStyle = themeColor || '#E11D48';
         ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
@@ -325,13 +330,13 @@ export async function compositeFinalLayout(
         ctx.shadowOffsetY = 4;
         ctx.beginPath();
         if (ctx.roundRect) {
-          ctx.roundRect(-badgeW / 2, -badgeH / 2, badgeW, badgeH, 10);
+          ctx.roundRect(-badgeW / 2, -badgeH / 2, badgeW, badgeH, radius);
         } else {
           ctx.rect(-badgeW / 2, -badgeH / 2, badgeW, badgeH);
         }
         ctx.fill();
 
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = Math.max(2, Math.round(size * 0.04));
         ctx.strokeStyle = '#FFFFFF';
         ctx.stroke();
 

@@ -16,7 +16,9 @@ import { InteractiveStickerCanvas } from '../../components/kiosk/InteractiveStic
 
 const FILTERS: { id: PhotoFilter; label: string; desc: string }[] = [
   { id: 'original', label: 'Original Studio', desc: 'Warna asli tangkapan kamera' },
+  { id: 'korean-clean', label: 'Korean Clean', desc: 'Tone cerah, jernih & lembut ala Korea' },
   { id: 'warm-sore', label: 'Warm Sore', desc: 'Tone keemasan hangat senja' },
+  { id: 'fuji-film', label: 'Fuji Pastel', desc: 'Analog pastel sentuhan cyan & hijau lembut' },
   { id: 'noir-bw', label: 'Editorial B&W', desc: 'Monokrom kontras tinggi' },
   { id: 'vintage-film', label: 'Analog 35mm', desc: 'Tone klasik sepia lembut' },
 ];
@@ -538,7 +540,7 @@ export const FinalPreviewScreen: React.FC = () => {
                 onTouchEnd={handleTouchEnd}
                 onWheel={handleWheel}
                 onDoubleClick={handleDoubleClick}
-                className="relative flex-1 min-h-0 w-full overflow-auto flex select-none p-2 sm:p-3 custom-scrollbar rounded-xl bg-zinc-950/40"
+                className="relative flex-1 min-h-0 w-full overflow-auto flex select-none p-4 sm:p-8 pb-16 sm:pb-24 custom-scrollbar rounded-xl bg-zinc-950/40"
                 style={{
                   cursor: zoomLevel > 1.0 ? (isPanning ? 'grabbing' : 'grab') : 'default',
                   WebkitOverflowScrolling: 'touch',
@@ -802,10 +804,12 @@ export const FinalPreviewScreen: React.FC = () => {
                     {t.preview.colorFiltersSubtitle}
                   </p>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-1">
                     {[
                       { id: 'original' as const, label: t.preview.filters.original, desc: t.preview.filters.originalDesc },
+                      { id: 'korean-clean' as const, label: t.preview.filters.koreanClean, desc: t.preview.filters.koreanCleanDesc },
                       { id: 'warm-sore' as const, label: t.preview.filters.warmSore, desc: t.preview.filters.warmSoreDesc },
+                      { id: 'fuji-film' as const, label: t.preview.filters.fujiFilm, desc: t.preview.filters.fujiFilmDesc },
                       { id: 'noir-bw' as const, label: t.preview.filters.noirBw, desc: t.preview.filters.noirBwDesc },
                       { id: 'vintage-film' as const, label: t.preview.filters.vintageFilm, desc: t.preview.filters.vintageFilmDesc },
                     ].map((f) => {
@@ -854,7 +858,7 @@ export const FinalPreviewScreen: React.FC = () => {
                   </div>
 
                   {showFrameStamps ? (
-                    <div className="space-y-1.5 pt-1">
+                    <div className="space-y-1.5 p-1">
                       <label
                         htmlFor="captionInput"
                         className="block text-xs sm:text-sm font-semibold text-zinc-300"

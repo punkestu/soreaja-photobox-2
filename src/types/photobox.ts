@@ -28,7 +28,7 @@ export interface StripRatioInfo {
   type: 'vertical-long-strip' | 'standard-portrait' | 'square' | 'landscape';
 }
 
-export type PhotoFilter = 'original' | 'warm-sore' | 'noir-bw' | 'vintage-film';
+export type PhotoFilter = 'original' | 'warm-sore' | 'noir-bw' | 'vintage-film' | 'korean-clean' | 'fuji-film';
 
 export type AppLanguage = 'id' | 'en';
 

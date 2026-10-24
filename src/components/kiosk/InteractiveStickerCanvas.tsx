@@ -37,6 +37,23 @@ export const InteractiveStickerCanvas: React.FC<InteractiveStickerCanvasProps> =
   const dragStateRef = useRef<DragState | null>(null);
   const [activeTouchCount, setActiveTouchCount] = useState<number>(0);
   const touchPinchRef = useRef<{ initialDist: number; initialAngle: number; initialScale: number; initialRot: number } | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(360);
+
+  // Synchronize on-screen rendered canvas width for exact 1:1 sticker sizing with compositor
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const updateSize = () => {
+      const w = el.clientWidth;
+      if (w > 0) setContainerWidth(w);
+    };
+
+    updateSize();
+    const ro = new ResizeObserver(updateSize);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Deselect when clicking empty space
   const handleContainerPointerDown = (e: React.PointerEvent) => {
@@ -50,6 +67,12 @@ export const InteractiveStickerCanvas: React.FC<InteractiveStickerCanvasProps> =
     if (!isInteractive) return;
     e.stopPropagation();
     onSelectSticker(sticker.id);
+
+    // Bring active sticker to top of rendering order so it always appears above others
+    if (stickers[stickers.length - 1]?.id !== sticker.id) {
+      const rest = stickers.filter((s) => s.id !== sticker.id);
+      onStickersChange([...rest, sticker]);
+    }
 
     const container = containerRef.current;
     if (!container) return;
@@ -122,8 +145,9 @@ export const InteractiveStickerCanvas: React.FC<InteractiveStickerCanvasProps> =
         const deltaX = (e.clientX - state.startX) / rect.width;
         const deltaY = (e.clientY - state.startY) / rect.height;
 
-        const newX = Math.max(0.04, Math.min(0.96, state.initialStickerX + deltaX));
-        const newY = Math.max(0.04, Math.min(0.96, state.initialStickerY + deltaY));
+        // Allow graceful overflow so stickers can be placed on or beyond edges
+        const newX = Math.max(-0.25, Math.min(1.25, state.initialStickerX + deltaX));
+        const newY = Math.max(-0.25, Math.min(1.25, state.initialStickerY + deltaY));
 
         onStickersChange(
           stickers.map((s) => (s.id === state.stickerId ? { ...s, x: newX, y: newY } : s))
@@ -256,7 +280,7 @@ export const InteractiveStickerCanvas: React.FC<InteractiveStickerCanvasProps> =
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="absolute inset-0 w-full h-full overflow-hidden select-none pointer-events-none"
+      className="absolute inset-0 w-full h-full overflow-visible z-40 select-none pointer-events-none"
     >
       {stickers.map((sticker) => {
         const isSelected = selectedStickerId === sticker.id;
@@ -264,6 +288,17 @@ export const InteractiveStickerCanvas: React.FC<InteractiveStickerCanvasProps> =
         const topPercent = `${sticker.y * 100}%`;
         const scale = sticker.scale || 1.0;
         const rotation = sticker.rotation || 0;
+        const isNearBottom = sticker.y > 0.8;
+        const toolbarPositionClass = isNearBottom ? '-top-14' : '-bottom-14';
+
+        // Proportional baseSize matching canvas compositor (15% of width at scale 1.0)
+        const baseSize = (containerWidth || 360) * 0.15;
+        const stickerPixelSize = baseSize * scale;
+        const badgeFontSize = Math.round(stickerPixelSize * 0.32);
+        const badgePadX = Math.round(badgeFontSize * 0.85);
+        const badgePadY = Math.round(badgeFontSize * 0.45);
+        const badgeRadius = Math.round(stickerPixelSize * 0.12);
+        const badgeBorderW = Math.max(2, Math.round(stickerPixelSize * 0.04));
 
         return (
           <div
@@ -273,22 +308,36 @@ export const InteractiveStickerCanvas: React.FC<InteractiveStickerCanvasProps> =
             style={{
               left: leftPercent,
               top: topPercent,
-              transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${scale})`,
+              transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
               transformOrigin: 'center center',
             }}
             className={`absolute flex items-center justify-center cursor-move transition-shadow duration-150 pointer-events-auto ${
-              isSelected ? 'z-30' : 'z-20'
+              isSelected ? 'z-50' : 'z-30'
             }`}
           >
             {/* Sticker Graphic Content */}
             {sticker.type === 'emoji' ? (
-              <span className="text-4xl sm:text-5xl md:text-6xl select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.65)] pointer-events-none">
+              <span
+                style={{
+                  fontSize: `${Math.round(stickerPixelSize)}px`,
+                  lineHeight: 1,
+                }}
+                className="select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.65)] pointer-events-none block"
+              >
                 {sticker.content}
               </span>
             ) : (
               <div
-                style={{ backgroundColor: themeColor }}
-                className="px-3.5 py-1.5 rounded-lg text-white font-extrabold text-xs sm:text-sm tracking-wider uppercase shadow-[0_4px_12px_rgba(0,0,0,0.6)] border-2 border-white select-none whitespace-nowrap pointer-events-none"
+                style={{
+                  backgroundColor: themeColor,
+                  fontSize: `${badgeFontSize}px`,
+                  padding: `${badgePadY}px ${badgePadX}px`,
+                  borderRadius: `${badgeRadius}px`,
+                  borderWidth: `${badgeBorderW}px`,
+                  borderColor: '#FFFFFF',
+                  lineHeight: 1.2,
+                }}
+                className="text-white font-extrabold tracking-wider uppercase shadow-[0_4px_12px_rgba(0,0,0,0.6)] select-none whitespace-nowrap pointer-events-none"
               >
                 {sticker.content}
               </div>
@@ -298,14 +347,14 @@ export const InteractiveStickerCanvas: React.FC<InteractiveStickerCanvasProps> =
             {isSelected && isInteractive && (
               <>
                 {/* Dashed Selection Bounding Box */}
-                <div className="absolute -inset-2.5 rounded-xl border-2 border-dashed border-white/90 shadow-[0_0_12px_rgba(225,29,72,0.8)] pointer-events-none" />
+                <div className="absolute -inset-2.5 rounded-xl border-2 border-dashed border-white/90 shadow-[0_0_12px_rgba(225,29,72,0.8)] pointer-events-none z-10" />
 
                 {/* Top-Right Delete Handle */}
                 <button
                   type="button"
                   onClick={(e) => handleDeleteSticker(sticker.id, e)}
                   aria-label="Delete sticker"
-                  className="absolute -top-4 -right-4 w-7 h-7 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white cursor-pointer active:scale-90 pointer-events-auto transition-transform"
+                  className="absolute -top-4 -right-4 w-7 h-7 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white cursor-pointer active:scale-90 pointer-events-auto transition-transform z-50"
                 >
                   ✕
                 </button>
@@ -315,7 +364,7 @@ export const InteractiveStickerCanvas: React.FC<InteractiveStickerCanvasProps> =
                   onPointerDown={(e) => handleTransformHandlePointerDown(e, sticker)}
                   aria-label="Transform handle"
                   title="Drag to resize and rotate"
-                  className="absolute -bottom-4 -right-4 w-7 h-7 rounded-full bg-white text-zinc-900 hover:bg-zinc-100 flex items-center justify-center text-xs font-black shadow-lg border-2 border-zinc-900 cursor-nwse-resize active:scale-95 pointer-events-auto"
+                  className="absolute -bottom-4 -right-4 w-7 h-7 rounded-full bg-white text-zinc-900 hover:bg-zinc-100 flex items-center justify-center text-xs font-black shadow-lg border-2 border-zinc-900 cursor-nwse-resize active:scale-95 pointer-events-auto z-50"
                 >
                   ⤢
                 </div>
@@ -323,7 +372,7 @@ export const InteractiveStickerCanvas: React.FC<InteractiveStickerCanvasProps> =
                 {/* Mini Quick Touch Floating Toolbar */}
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="absolute -bottom-13 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-zinc-950/95 px-2 py-1 rounded-full shadow-2xl border border-white/20 backdrop-blur-md pointer-events-auto whitespace-nowrap z-40"
+                  className={`absolute ${toolbarPositionClass} left-1/2 -translate-x-1/2 flex items-center gap-1 bg-zinc-950/95 px-2 py-1 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.8)] border border-white/20 backdrop-blur-md pointer-events-auto whitespace-nowrap z-50`}
                 >
                   <button
                     type="button"
