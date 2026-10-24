@@ -9,14 +9,15 @@ import { OfflineIndicator } from '../common/OfflineIndicator';
 
 export const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
-  const { language, setLanguage, t } = usePhotobox();
+  const { language, setLanguage, t, stopSessionTimer } = usePhotobox();
   const sessionCount = useLiveQuery(() => db.sessions.count(), []);
   const [frameCount, setFrameCount] = useState<number | null>(null);
 
   useEffect(() => {
+    stopSessionTimer();
     ensureDefaultSettings();
     fetchFramesMetadata().then((data) => setFrameCount(data.length));
-  }, []);
+  }, [stopSessionTimer]);
 
   return (
     <div className="min-h-screen bg-[#F4F4F0] text-[#111111] flex flex-col">

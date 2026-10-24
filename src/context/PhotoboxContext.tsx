@@ -28,9 +28,11 @@ interface PhotoboxContextValue extends PhotoboxState {
   sessionSecondsLeft: number;
   sessionDurationMinutes: number;
   isSessionTimerEnabled: boolean;
+  isSessionTimerRunning: boolean;
   isSessionExpiredAlertOpen: boolean;
   dismissSessionExpiredAlert: () => void;
   startSessionTimer: () => void;
+  stopSessionTimer: () => void;
   resetSessionTimer: () => void;
   addExtraSessionTime: (minutes?: number) => void;
 }
@@ -80,7 +82,7 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (existing) {
           db.settings.put({ ...existing, language: lang });
         }
-      }).catch(() => {});
+      }).catch(() => { });
     });
   }, []);
 
@@ -242,6 +244,11 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setIsSessionTimerRunning(true);
   }, []);
 
+  const stopSessionTimer = useCallback(() => {
+    setIsSessionTimerRunning(false);
+    setIsSessionExpiredAlertOpen(false);
+  }, []);
+
   const resetSessionTimer = useCallback(() => {
     setSessionSecondsLeft(sessionDurationMinutes * 60);
     setIsSessionExpiredAlertOpen(false);
@@ -297,7 +304,7 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       })
       .catch(() => {
         setSessionSecondsLeft(300);
-        setCustomCaption('SOREAJA — PHOTOBOX 2');
+        setCustomCaption('SOREAJA Pose');
         setShowFrameStamps(true);
       });
 
@@ -306,7 +313,7 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       saveTimeoutRef.current = null;
     }
 
-    db.activeSession.delete('current_active_session').catch(() => {});
+    db.activeSession.delete('current_active_session').catch(() => { });
   }, []);
 
   const resetAllData = useCallback(async () => {
@@ -372,9 +379,11 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         sessionSecondsLeft,
         sessionDurationMinutes,
         isSessionTimerEnabled,
+        isSessionTimerRunning,
         isSessionExpiredAlertOpen,
         dismissSessionExpiredAlert,
         startSessionTimer,
+        stopSessionTimer,
         resetSessionTimer,
         addExtraSessionTime,
       }}

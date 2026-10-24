@@ -49,6 +49,9 @@ export const TRANSLATIONS = {
       touchAnywhere: 'Sentuh layar di mana saja untuk mulai',
       viewSession: 'Lihat Sesi',
       allSessions: 'Galeri Sesi',
+      photoNowSaveLater: 'Foto sekarang simpan nanti',
+      cameraModeSwitch: 'Mode Kamera Standby',
+      standardModeSwitch: 'Mode Galeri Standby',
     },
     // Frame Selection Screen
     frameSelect: {
@@ -384,7 +387,7 @@ export const TRANSLATIONS = {
   },
   en: {
     // Top Bar & Steps
-    appName: 'SoreAja — Photobox',
+    appName: 'SoreAja Pose',
     steps: {
       step1: '1. Start',
       step2: '2. Frame',
@@ -430,6 +433,9 @@ export const TRANSLATIONS = {
       touchAnywhere: 'Tap anywhere on screen to start',
       viewSession: 'View Session',
       allSessions: 'Session Gallery',
+      photoNowSaveLater: 'Foto sekarang simpan nanti',
+      cameraModeSwitch: 'Fullscreen Camera Mode',
+      standardModeSwitch: 'Standard Idle Mode',
     },
     // Frame Selection Screen
     frameSelect: {

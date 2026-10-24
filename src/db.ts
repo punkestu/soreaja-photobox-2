@@ -82,6 +82,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   themeColor: '#E11D48',
   themePreset: 'crimson',
   language: 'id',
+  idleScreenMode: 'standard',
   updatedAt: new Date().toISOString(),
 };
 

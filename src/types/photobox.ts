@@ -56,6 +56,7 @@ export interface AppSettings {
   themeColor?: string; // Hex color e.g. '#E11D48'
   themePreset?: string; // 'crimson' | 'amber' | etc.
   language?: AppLanguage; // 'id' | 'en'
+  idleScreenMode?: 'standard' | 'fullscreen-camera'; // Mode layar tunggu standby
   updatedAt?: string;
 }
 

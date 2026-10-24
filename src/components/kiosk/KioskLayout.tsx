@@ -19,6 +19,7 @@ export const KioskLayout: React.FC = () => {
     isSessionExpiredAlertOpen,
     dismissSessionExpiredAlert,
     startSessionTimer,
+    stopSessionTimer,
     addExtraSessionTime,
   } = usePhotobox();
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -33,13 +34,29 @@ export const KioskLayout: React.FC = () => {
   ];
 
   const isIdleScreen = location.pathname === '/app/idle';
+  const isPrintResultScreen = location.pathname === '/app/print-result';
+  const isKioskActiveSession =
+    location.pathname.startsWith('/app/') && !isIdleScreen && !isPrintResultScreen;
 
-  // Automatically initiate session countdown timer when guest starts beyond idle screen
+  // Session countdown timer runs ONLY during active kiosk photo creation:
+  // - /app/frame-selection
+  // - /app/camera
+  // - /app/review-photos
+  // - /app/preview-final
+  // It stops when not in kiosk, on the idle screen, or on the print result page.
   useEffect(() => {
-    if (!isIdleScreen && location.pathname.startsWith('/app/')) {
+    if (isKioskActiveSession) {
       startSessionTimer();
+    } else {
+      stopSessionTimer();
     }
-  }, [isIdleScreen, location.pathname, startSessionTimer]);
+  }, [isKioskActiveSession, startSessionTimer, stopSessionTimer]);
+
+  useEffect(() => {
+    return () => {
+      stopSessionTimer();
+    };
+  }, [stopSessionTimer]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -108,7 +125,7 @@ export const KioskLayout: React.FC = () => {
           </Link>
 
           {/* Session Countdown Timer Widget */}
-          {isSessionTimerEnabled && !isIdleScreen && (
+          {isSessionTimerEnabled && isKioskActiveSession && (
             <div
               title={t.sessionTimer.timeRemaining}
               aria-label={t.sessionTimer.timeRemaining}

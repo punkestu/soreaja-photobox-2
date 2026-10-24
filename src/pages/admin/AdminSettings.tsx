@@ -68,6 +68,9 @@ export const AdminSettings: React.FC = () => {
   );
   const [customBackdropUrl, setCustomBackdropUrl] = useState<string>('');
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
+  const [idleScreenMode, setIdleScreenMode] = useState<'standard' | 'fullscreen-camera'>(
+    DEFAULT_APP_SETTINGS.idleScreenMode || 'standard'
+  );
 
   const [activeTab, setActiveTab] = useState<'appearance' | 'session' | 'hardware'>('appearance');
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -140,6 +143,9 @@ export const AdminSettings: React.FC = () => {
         }
         if (typeof data.kioskBackgroundOverlayOpacity === 'number') {
           setKioskBackgroundOverlayOpacity(data.kioskBackgroundOverlayOpacity);
+        }
+        if (data.idleScreenMode) {
+          setIdleScreenMode(data.idleScreenMode);
         }
       }
     });
@@ -343,6 +349,7 @@ export const AdminSettings: React.FC = () => {
       themePreset,
       kioskBackground,
       kioskBackgroundOverlayOpacity,
+      idleScreenMode,
       language,
       updatedAt: new Date().toISOString(),
     });
@@ -382,6 +389,7 @@ export const AdminSettings: React.FC = () => {
     setKioskBackground('');
     setKioskBackgroundOverlayOpacity(60);
     setCustomBackdropUrl('');
+    setIdleScreenMode(DEFAULT_APP_SETTINGS.idleScreenMode || 'standard');
     setUploadNotice(null);
     setTestApiResult(null);
     applyThemeColor('#E11D48');
@@ -752,6 +760,56 @@ export const AdminSettings: React.FC = () => {
                     className="w-full accent-neutral-900 cursor-pointer"
                   />
                 </div>
+
+                {/* 3. Mode Tampilan Layar Tunggu Standby */}
+                <div className="pt-4 border-t border-neutral-200 space-y-3">
+                  <div>
+                    <h2 className="text-sm font-bold text-neutral-900">
+                      3. Mode Tampilan Layar Standby Kiosk (/app/idle)
+                    </h2>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      Pilih format visual yang menyambut tamu saat photobox standby menunggu pengguna baru.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setIdleScreenMode('standard')}
+                      className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        idleScreenMode === 'standard'
+                          ? 'border-neutral-900 ring-2 ring-neutral-900 bg-neutral-900 text-white shadow-md'
+                          : 'border-neutral-200 bg-white hover:border-neutral-400 text-neutral-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-base">🖼️</span>
+                        <p className="text-xs font-bold">Mode Standar (Poster & Galeri)</p>
+                      </div>
+                      <p className={`text-[11px] ${idleScreenMode === 'standard' ? 'text-neutral-300' : 'text-neutral-500'}`}>
+                        Menampilkan poster studio, kolase sesi polaroid melayang, dan tombol sentuh besar.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setIdleScreenMode('fullscreen-camera')}
+                      className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        idleScreenMode === 'fullscreen-camera'
+                          ? 'border-neutral-900 ring-2 ring-neutral-900 bg-neutral-900 text-white shadow-md'
+                          : 'border-neutral-200 bg-white hover:border-neutral-400 text-neutral-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-base">📸</span>
+                        <p className="text-xs font-bold">Kamera Fullscreen ("Foto sekarang simpan nanti")</p>
+                      </div>
+                      <p className={`text-[11px] ${idleScreenMode === 'fullscreen-camera' ? 'text-neutral-300' : 'text-neutral-500'}`}>
+                        Layar penuh kamera live tanpa tombol/elemen lain kecuali teks "Foto sekarang simpan nanti".
+                      </p>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -829,7 +887,7 @@ export const AdminSettings: React.FC = () => {
                   maxLength={32}
                   value={defaultCaption}
                   onChange={(e) => setDefaultCaption(e.target.value)}
-                  placeholder="SOREAJA — PHOTOBOX 2"
+                  placeholder="SOREAJA Pose"
                   className="w-full px-3.5 py-2.5 text-sm bg-[#F4F4F0] border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900 font-mono-tabular"
                 />
                 <p className="text-xs text-neutral-500">
@@ -1304,7 +1362,7 @@ export const AdminSettings: React.FC = () => {
                   {studioName || 'SoreAja Studio — Booth 02'} · {eventName || 'SoreAja Sunset Session 2026'}
                 </p>
                 <h4 className="font-display text-base sm:text-lg font-extrabold text-[#F4F4F0] tracking-tight">
-                  SoreAja — Photobox
+                  SoreAja Pose
                 </h4>
                 <p className="font-serif-editorial italic text-xs text-zinc-300">
                   Abadikan momen sore terbaikmu

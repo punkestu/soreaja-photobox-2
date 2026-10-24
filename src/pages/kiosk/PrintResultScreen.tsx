@@ -34,6 +34,7 @@ export const PrintResultScreen: React.FC = () => {
     showFrameStamps,
     placedStickers,
     resetSession,
+    stopSessionTimer,
     isHydrated,
     language,
     t,
@@ -62,6 +63,7 @@ export const PrintResultScreen: React.FC = () => {
 
   // Sesuai TSD 4.2.6: Proses On-Mount
   useEffect(() => {
+    stopSessionTimer();
     if (!isHydrated) return;
     if (hasInitializedRef.current) return;
     hasInitializedRef.current = true;
