@@ -6,6 +6,7 @@ import { fetchFramesMetadata } from '../../data/defaultFrames';
 import { usePhotobox } from '../../context/PhotoboxContext';
 import { PWAInstallButton } from '../common/PWAInstallButton';
 import { OfflineIndicator } from '../common/OfflineIndicator';
+import { BrandLogo } from '../common/BrandLogo';
 
 export const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
@@ -26,9 +27,10 @@ export const AdminLayout: React.FC = () => {
       <header className="flex items-center justify-between px-6 py-4 bg-white border-b border-neutral-200 sticky top-0 z-30">
         <Link
           to="/admin/welcome"
-          className="font-display text-lg font-bold tracking-tight text-neutral-900 whitespace-nowrap"
+          className="font-display text-lg font-bold tracking-tight text-neutral-900 whitespace-nowrap flex items-center gap-2.5 active:scale-95 transition-transform"
         >
-          {t.appName}
+          <BrandLogo size="sm" showRing={true} className="ring-neutral-300" />
+          <span>{t.appName}</span>
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-3">
@@ -188,8 +190,14 @@ export const AdminLayout: React.FC = () => {
             </div>
           </div>
 
-          <div className="pt-4 border-t border-neutral-200/80 text-xs text-neutral-500 space-y-1">
-            <p className="font-semibold text-neutral-800">{t.admin.offlineReady}</p>
+          <div className="pt-4 border-t border-neutral-200/80 text-xs text-neutral-500 space-y-2">
+            <div className="flex items-center gap-2.5">
+              <BrandLogo size="xs" showRing={true} className="ring-neutral-300" />
+              <div>
+                <p className="font-semibold text-neutral-800 leading-tight">{t.admin.offlineReady}</p>
+                <p className="text-[10px] text-neutral-500 leading-tight">Photobox Studio System</p>
+              </div>
+            </div>
             <p>{t.admin.offlineReadyDesc}</p>
           </div>
         </aside>

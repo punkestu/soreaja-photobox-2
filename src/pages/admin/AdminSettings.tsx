@@ -12,6 +12,7 @@ import { playShutterSound } from '../../services/shutterAudio';
 import { testPrintApi, precacheAllFrameAssets } from '../../services/printServices';
 import { usePhotobox } from '../../context/PhotoboxContext';
 import { ResetAllDataModal } from '../../components/common/ResetAllDataModal';
+import { BrandLogo } from '../../components/common/BrandLogo';
 
 export const AdminSettings: React.FC = () => {
   const { language, setLanguage, t } = usePhotobox();
@@ -429,21 +430,24 @@ export const AdminSettings: React.FC = () => {
 
   return (
     <div className="space-y-8 max-w-5xl">
-      <div>
-        <div className="text-xs text-neutral-500 flex items-center gap-2 mb-2 font-mono-tabular">
-          <span>Konfigurasi Lokal</span>
-          <span aria-hidden="true">·</span>
-          <span>Dexie.js (PhotoboxDB)</span>
-          <span aria-hidden="true">·</span>
-          <span>Tabel: settings</span>
+      <div className="flex items-start gap-4">
+        <BrandLogo size="lg" showRing={true} className="ring-neutral-200 mt-1 shadow-xs" />
+        <div>
+          <div className="text-xs text-neutral-500 flex items-center gap-2 mb-2 font-mono-tabular">
+            <span>Konfigurasi Lokal</span>
+            <span aria-hidden="true">·</span>
+            <span>Dexie.js (PhotoboxDB)</span>
+            <span aria-hidden="true">·</span>
+            <span>Tabel: settings</span>
+          </div>
+          <h1 className="font-display text-2xl md:text-3xl font-bold text-neutral-900">
+            Pengaturan Studio, Tema & Latar Kiosk
+          </h1>
+          <p className="text-sm text-neutral-600 mt-1">
+            Kustomisasi identitas visual booth: tentukan warna tema aksen aplikasi, foto latar belakang
+            halaman awal kiosk, stempel cetakan bingkai, serta integrasi Google Drive.
+          </p>
         </div>
-        <h1 className="font-display text-2xl md:text-3xl font-bold text-neutral-900">
-          Pengaturan Studio, Tema & Latar Kiosk
-        </h1>
-        <p className="text-sm text-neutral-600 mt-1">
-          Kustomisasi identitas visual booth: tentukan warna tema aksen aplikasi, foto latar belakang
-          halaman awal kiosk, stempel cetakan bingkai, serta integrasi Google Drive.
-        </p>
       </div>
 
       {/* Navigation Tabs - Tablet Touch Friendly */}

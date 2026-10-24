@@ -4,6 +4,7 @@ import { fetchFramesMetadata } from '../../data/defaultFrames';
 import type { FrameMetadata } from '../../types/photobox';
 import { usePhotobox } from '../../context/PhotoboxContext';
 import { FrameDetailModal } from '../../components/admin/FrameDetailModal';
+import { BrandLogo } from '../../components/common/BrandLogo';
 
 export const AdminFrames: React.FC = () => {
   const navigate = useNavigate();
@@ -94,20 +95,23 @@ export const AdminFrames: React.FC = () => {
     <div className="space-y-8 max-w-6xl">
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="text-xs text-neutral-500 flex items-center gap-2 mb-1">
-            <Link to="/admin/welcome" className="hover:underline">
-              {t.admin.portalTitle}
-            </Link>
-            <span aria-hidden="true">/</span>
-            <span className="font-semibold text-neutral-800">{t.admin.framesCatalogTitle}</span>
+        <div className="flex items-center gap-3.5">
+          <BrandLogo size="md" showRing={true} className="ring-neutral-200 shadow-xs" />
+          <div>
+            <div className="text-xs text-neutral-500 flex items-center gap-2 mb-1">
+              <Link to="/admin/welcome" className="hover:underline">
+                {t.admin.portalTitle}
+              </Link>
+              <span aria-hidden="true">/</span>
+              <span className="font-semibold text-neutral-800">{t.admin.framesCatalogTitle}</span>
+            </div>
+            <h1 className="font-display text-2xl md:text-3xl font-bold tracking-tight text-neutral-900">
+              {t.admin.framesCatalogTitle}
+            </h1>
+            <p className="text-xs sm:text-sm text-neutral-500 mt-1">
+              {t.admin.framesCatalogSubtitle}
+            </p>
           </div>
-          <h1 className="font-display text-2xl md:text-3xl font-bold tracking-tight text-neutral-900">
-            {t.admin.framesCatalogTitle}
-          </h1>
-          <p className="text-xs sm:text-sm text-neutral-500 mt-1">
-            {t.admin.framesCatalogSubtitle}
-          </p>
         </div>
 
         <button

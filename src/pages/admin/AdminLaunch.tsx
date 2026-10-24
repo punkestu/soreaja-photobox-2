@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { printThermal, printColor, type PrintJobResult } from '../../services/printServices';
 import { usePhotobox } from '../../context/PhotoboxContext';
+import { BrandLogo } from '../../components/common/BrandLogo';
 
 export const AdminLaunch: React.FC = () => {
   const navigate = useNavigate();
@@ -55,16 +56,19 @@ export const AdminLaunch: React.FC = () => {
 
       {/* Primary Launch Card */}
       <section className="bg-neutral-900 text-white rounded-xl p-8 border border-neutral-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div className="space-y-2 max-w-xl">
-          <p className="text-xs font-mono-tabular text-neutral-400">
-            KIOSK DISPLAY · 100% OFFLINE READY
-          </p>
-          <h2 className="font-display text-2xl font-bold">
-            {t.admin.launchReadyTitle}
-          </h2>
-          <p className="text-sm text-neutral-300 leading-relaxed">
-            {t.admin.launchReadyDesc}
-          </p>
+        <div className="flex items-start gap-4 max-w-xl">
+          <BrandLogo size="lg" showRing={true} className="ring-white/30 shrink-0 shadow-lg mt-0.5" />
+          <div className="space-y-2">
+            <p className="text-xs font-mono-tabular text-neutral-400">
+              KIOSK DISPLAY · 100% OFFLINE READY
+            </p>
+            <h2 className="font-display text-2xl font-bold">
+              {t.admin.launchReadyTitle}
+            </h2>
+            <p className="text-sm text-neutral-300 leading-relaxed">
+              {t.admin.launchReadyDesc}
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row md:flex-col gap-3 shrink-0 w-full md:w-auto">

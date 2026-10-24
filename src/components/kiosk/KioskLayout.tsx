@@ -3,6 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { usePhotobox } from '../../context/PhotoboxContext';
 import { PWAInstallButton } from '../common/PWAInstallButton';
 import { OfflineIndicator } from '../common/OfflineIndicator';
+import { BrandLogo } from '../common/BrandLogo';
 
 export const KioskLayout: React.FC = () => {
   const location = useLocation();
@@ -119,9 +120,10 @@ export const KioskLayout: React.FC = () => {
         <div className="flex items-center gap-3 sm:gap-4">
           <Link
             to="/app/idle"
-            className="font-display text-lg sm:text-xl font-bold tracking-tight text-[#F4F4F0] hover:text-white whitespace-nowrap active:scale-95 transition-transform"
+            className="font-display text-lg sm:text-xl font-bold tracking-tight text-[#F4F4F0] hover:text-white whitespace-nowrap active:scale-95 transition-transform flex items-center gap-2.5"
           >
-            {t.appName}
+            <BrandLogo size="sm" />
+            <span>{t.appName}</span>
           </Link>
 
           {/* Session Countdown Timer Widget */}

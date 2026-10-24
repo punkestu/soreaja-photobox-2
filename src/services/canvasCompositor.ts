@@ -311,6 +311,42 @@ export async function compositeFinalLayout(
         ctx.shadowBlur = 8;
         ctx.shadowOffsetY = 4;
         ctx.fillText(sticker.content, 0, 0);
+      } else if (sticker.type === 'image') {
+        try {
+          const img = await loadImage(sticker.content);
+          const r = size / 2;
+
+          // Circular background with drop shadow
+          ctx.save();
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+          ctx.shadowBlur = 12;
+          ctx.shadowOffsetY = 4;
+          ctx.beginPath();
+          ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.fillStyle = '#481216';
+          ctx.fill();
+          ctx.restore();
+
+          // Circular clipped image
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.closePath();
+          ctx.clip();
+          ctx.drawImage(img, -r, -r, size, size);
+          ctx.restore();
+
+          // Crisp circular border outline
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.lineWidth = Math.max(3, Math.round(size * 0.04));
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.stroke();
+          ctx.restore();
+        } catch (err) {
+          console.warn('Failed to draw image sticker to canvas:', err);
+        }
       } else {
         // Stamp / Badge
         ctx.textAlign = 'center';

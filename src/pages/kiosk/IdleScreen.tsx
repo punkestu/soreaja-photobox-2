@@ -6,6 +6,7 @@ import { usePhotobox } from '../../context/PhotoboxContext';
 import { KIOSK_HERO_BACKDROP, STUDIO_PORTRAITS } from '../../data/defaultFrames';
 import { BACKDROP_PRESETS } from '../../data/themeConfig';
 import { SAMPLE_IDLE_STRIPS, type IdlePolaroidItem } from '../../data/sampleSessions';
+import { BrandLogo } from '../../components/common/BrandLogo';
 
 export const IdleScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -263,6 +264,14 @@ export const IdleScreen: React.FC = () => {
           </h1>
         </div>
 
+        {/* Discreet Studio Circular Logo Watermark */}
+        <div className="absolute top-5 left-5 z-20 flex items-center gap-2.5 bg-black/40 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/10 pointer-events-none select-none">
+          <BrandLogo size="xs" showRing={false} />
+          <span className="text-xs font-display font-bold tracking-wide text-white/90">
+            {settings?.studioName || 'SoreAja Studio'}
+          </span>
+        </div>
+
         {/* Discreet Operator Toggle back to Standard Mode */}
         <button
           type="button"
@@ -377,7 +386,13 @@ export const IdleScreen: React.FC = () => {
           </button>
         </div>
 
-        <div className="space-y-3 sm:space-y-4">
+        <div className="space-y-4 sm:space-y-5">
+          <div className="flex justify-center">
+            <BrandLogo
+              size="2xl"
+              className="shadow-[0_0_50px_rgba(225,29,72,0.45)] ring-4 ring-white/20 border-2 border-white/40 transition-transform duration-300 hover:scale-105 active:scale-95"
+            />
+          </div>
           <h1
             className="font-display text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold tracking-tight text-[#F4F4F0] drop-shadow-2xl"
             style={{ textWrap: 'balance' }}

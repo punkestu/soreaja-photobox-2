@@ -78,8 +78,8 @@ export interface SessionRecord {
 export interface PlacedSticker {
   id: string;
   stickerId: string;
-  content: string; // Emoji, SVG symbol, or text stamp
-  type: 'emoji' | 'stamp' | 'badge';
+  content: string; // Emoji, SVG symbol, text stamp, or image URL
+  type: 'emoji' | 'stamp' | 'badge' | 'image';
   x: number; // 0 to 1 normalized coordinate relative to canvas width
   y: number; // 0 to 1 normalized coordinate relative to canvas height
   scale: number; // 0.5 to 2.5 relative scale

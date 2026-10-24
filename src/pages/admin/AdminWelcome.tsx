@@ -9,6 +9,7 @@ import { downloadSingleFile } from '../../services/downloadService';
 import { printThermal, printColor } from '../../services/printServices';
 import { usePhotobox } from '../../context/PhotoboxContext';
 import { ResetAllDataModal } from '../../components/common/ResetAllDataModal';
+import { BrandLogo } from '../../components/common/BrandLogo';
 
 export const AdminWelcome: React.FC = () => {
   const navigate = useNavigate();
@@ -137,12 +138,15 @@ export const AdminWelcome: React.FC = () => {
       <section className="bg-white border border-neutral-200 rounded-xl p-6 md:p-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-7 space-y-4">
-            <div className="text-xs text-neutral-500 flex items-center gap-2">
-              <span>{t.admin.portalTitle}</span>
-              <span aria-hidden="true">·</span>
-              <span>Dexie.js (PhotoboxDB)</span>
-              <span aria-hidden="true">·</span>
-              <span>{t.admin.offlineReady}</span>
+            <div className="flex items-center gap-3">
+              <BrandLogo size="md" showRing={true} className="ring-neutral-200 shadow-xs" />
+              <div className="text-xs text-neutral-500 flex items-center gap-2">
+                <span>{t.admin.portalTitle}</span>
+                <span aria-hidden="true">·</span>
+                <span>Dexie.js (PhotoboxDB)</span>
+                <span aria-hidden="true">·</span>
+                <span>{t.admin.offlineReady}</span>
+              </div>
             </div>
 
             <h1
@@ -186,6 +190,9 @@ export const AdminWelcome: React.FC = () => {
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover opacity-90"
               />
+              <div className="absolute top-3 right-3 z-10">
+                <BrandLogo size="xs" showRing={true} className="ring-white/40 shadow-sm" />
+              </div>
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent flex flex-col justify-end p-4 text-white">
                 <p className="font-serif-editorial italic text-lg leading-snug">
                   {language === 'en'

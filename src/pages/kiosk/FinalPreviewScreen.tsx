@@ -723,6 +723,10 @@ export const FinalPreviewScreen: React.FC = () => {
                         <span className="text-2xl sm:text-3xl drop-shadow-sm group-hover:scale-110 transition-transform">
                           {sticker.content}
                         </span>
+                      ) : sticker.type === 'image' ? (
+                        <div className="w-9 h-9 rounded-full overflow-hidden border border-white/60 shadow-xs bg-[#481216] group-hover:scale-110 transition-transform">
+                          <img src={sticker.content} alt={sticker.label} className="w-full h-full object-cover rounded-full" />
+                        </div>
                       ) : (
                         <span className="text-[10px] font-black uppercase text-center tracking-tight leading-tight text-white/90">
                           {sticker.content}
@@ -739,9 +743,15 @@ export const FinalPreviewScreen: React.FC = () => {
                       <span className="font-bold text-white flex items-center gap-1.5">
                         <span>🎯</span>
                         <span>Stiker Terpilih:</span>
-                        <span className="text-[var(--theme-accent,#E11D48)]">
-                          {selectedSticker.type === 'emoji' ? selectedSticker.content : selectedSticker.content}
-                        </span>
+                        {selectedSticker.type === 'image' ? (
+                          <span className="inline-block w-4 h-4 rounded-full overflow-hidden border border-white/40 align-middle">
+                            <img src={selectedSticker.content} alt="Logo" className="w-full h-full object-cover rounded-full" />
+                          </span>
+                        ) : (
+                          <span className="text-[var(--theme-accent,#E11D48)]">
+                            {selectedSticker.content}
+                          </span>
+                        )}
                       </span>
                       <button
                         type="button"

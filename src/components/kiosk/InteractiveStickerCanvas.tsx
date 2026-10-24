@@ -326,6 +326,21 @@ export const InteractiveStickerCanvas: React.FC<InteractiveStickerCanvasProps> =
               >
                 {sticker.content}
               </span>
+            ) : sticker.type === 'image' ? (
+              <div
+                style={{
+                  width: `${Math.round(stickerPixelSize)}px`,
+                  height: `${Math.round(stickerPixelSize)}px`,
+                }}
+                className="rounded-full overflow-hidden shadow-[0_6px_16px_rgba(0,0,0,0.7)] ring-2 ring-white/95 border border-white/40 pointer-events-none select-none bg-[#481216] flex items-center justify-center"
+              >
+                <img
+                  src={sticker.content}
+                  alt="Sticker"
+                  className="w-full h-full object-cover rounded-full pointer-events-none select-none"
+                  draggable={false}
+                />
+              </div>
             ) : (
               <div
                 style={{
