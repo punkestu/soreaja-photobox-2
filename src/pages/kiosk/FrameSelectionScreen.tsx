@@ -142,18 +142,17 @@ export const FrameSelectionScreen: React.FC = () => {
     return closestIndex;
   }, [filteredFrames.length]);
 
-  // Programmatically center a card with smooth animation
+  // Programmatically center a card with smooth animation using accurate getBoundingClientRect delta
   const scrollToIndex = useCallback(
     (index: number, smooth = true) => {
       const container = carouselRef.current;
       const targetEl = itemRefs.current[index];
       if (!container || !targetEl) return;
 
-      const containerWidth = container.offsetWidth;
-      const targetLeft = targetEl.offsetLeft;
-      const targetWidth = targetEl.offsetWidth;
-
-      const targetScrollLeft = targetLeft - containerWidth / 2 + targetWidth / 2;
+      const containerRect = container.getBoundingClientRect();
+      const targetRect = targetEl.getBoundingClientRect();
+      const delta = (targetRect.left + targetRect.width / 2) - (containerRect.left + containerRect.width / 2);
+      const targetScrollLeft = Math.max(0, container.scrollLeft + delta);
 
       if (programmaticTimerRef.current) {
         clearTimeout(programmaticTimerRef.current);
@@ -166,17 +165,18 @@ export const FrameSelectionScreen: React.FC = () => {
       programmaticTargetRef.current = index;
 
       container.scrollTo({
-        left: Math.max(0, targetScrollLeft),
+        left: targetScrollLeft,
         behavior: smooth ? 'smooth' : 'auto',
       });
       setActiveIndex(index);
 
+      // Generous buffer so handleScroll never interrupts smooth scroll before it finishes
       programmaticTimerRef.current = setTimeout(() => {
         isProgrammaticScrollRef.current = false;
         programmaticTargetRef.current = null;
         setIsScrolling(false);
         isScrollingRef.current = false;
-      }, smooth ? 320 : 50);
+      }, smooth ? 650 : 80);
     },
     []
   );
@@ -277,6 +277,7 @@ export const FrameSelectionScreen: React.FC = () => {
 
   // Auto-snap and commit selection when scrolling has completely stopped
   const snapToSettledFrame = useCallback(() => {
+    // If programmatic scroll, dragging, or empty, never override
     if (isPointerDownRef.current || isProgrammaticScrollRef.current || filteredFrames.length === 0) {
       setIsScrolling(false);
       isScrollingRef.current = false;
@@ -284,15 +285,35 @@ export const FrameSelectionScreen: React.FC = () => {
     }
     const finalTarget = getClosestFrameIndex();
     if (finalTarget >= 0 && finalTarget < filteredFrames.length) {
-      setActiveIndex(finalTarget);
-      if (filteredFrames[finalTarget]) {
-        setSelectedFrame(filteredFrames[finalTarget]);
+      if (finalTarget !== activeIndex) {
+        setActiveIndex(finalTarget);
+        if (filteredFrames[finalTarget]) {
+          setSelectedFrame(filteredFrames[finalTarget]);
+        }
       }
-      scrollToIndex(finalTarget, true);
+
+      // Gentle alignment only if not perfectly centered (do not cause ongoing scroll bounce)
+      const container = carouselRef.current;
+      const targetEl = itemRefs.current[finalTarget];
+      if (container && targetEl) {
+        const containerRect = container.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
+        const delta = (targetRect.left + targetRect.width / 2) - (containerRect.left + containerRect.width / 2);
+        if (Math.abs(delta) > 5) {
+          isProgrammaticScrollRef.current = true;
+          container.scrollTo({
+            left: Math.max(0, container.scrollLeft + delta),
+            behavior: 'smooth',
+          });
+          setTimeout(() => {
+            isProgrammaticScrollRef.current = false;
+          }, 350);
+        }
+      }
     }
     setIsScrolling(false);
     isScrollingRef.current = false;
-  }, [getClosestFrameIndex, filteredFrames, setSelectedFrame, scrollToIndex]);
+  }, [getClosestFrameIndex, filteredFrames, setSelectedFrame, activeIndex]);
 
   // Pure fluid scrolling with instantaneous auto-snap when scroll stops
   const handleScroll = useCallback(() => {
@@ -311,12 +332,12 @@ export const FrameSelectionScreen: React.FC = () => {
       clearTimeout(settleTimeoutRef.current);
     }
 
-    // Automatically snap to the nearest centered frame as soon as scrolling stops (65ms debounce)
+    // Automatically snap to the nearest centered frame as soon as scrolling stops
     settleTimeoutRef.current = setTimeout(() => {
       if (!isPointerDownRef.current && !isProgrammaticScrollRef.current) {
         snapToSettledFrame();
       }
-    }, 65);
+    }, 100);
   }, [snapToSettledFrame]);
 
   // Listen for native scrollend event where supported for instant snapping
@@ -723,7 +744,7 @@ export const FrameSelectionScreen: React.FC = () => {
               overscrollBehaviorX: 'contain',
               willChange: 'scroll-position',
             }}
-            className="w-full flex items-center gap-4 sm:gap-6 md:gap-8 overflow-x-auto py-2 sm:py-3 px-[calc(50vw-120px)] sm:px-[calc(50vw-145px)] md:px-[calc(50vw-160px)] lg:px-[calc(50%-160px)] touch-pan-x focus:outline-none cursor-grab active:cursor-grabbing"
+            className="w-full relative flex items-center gap-4 sm:gap-6 md:gap-8 overflow-x-auto py-2 sm:py-3 px-[calc(50vw-120px)] sm:px-[calc(50vw-145px)] md:px-[calc(50vw-160px)] lg:px-[calc(50%-160px)] touch-pan-x focus:outline-none cursor-grab active:cursor-grabbing"
             tabIndex={0}
             role="region"
             aria-label="Frame Templates Carousel"
@@ -813,38 +834,21 @@ export const FrameSelectionScreen: React.FC = () => {
 
                   {/* Action CTA */}
                   <div className="pt-1.5 shrink-0">
-                    {isActive ? (
-                      <button
-                        type="button"
-                        disabled={isScrolling}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (isScrolling) return;
-                          handleSelectFrame(frame);
-                        }}
-                        className={`w-full min-h-[42px] py-2 px-3 text-xs sm:text-sm font-bold text-white rounded-xl transition-all whitespace-nowrap shadow-lg flex items-center justify-center gap-2 ${
-                          isScrolling
-                            ? 'bg-zinc-800 text-zinc-400 border border-zinc-700/60 shadow-none cursor-default'
-                            : 'bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-[0.98] cursor-pointer'
-                        }`}
-                      >
-                        {isScrolling ? (
-                          <>
-                            <span className="w-3.5 h-3.5 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin" />
-                            <span>{t.frameSelect.scrollingIndicator || 'Menggeser...'}</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>{t.frameSelect.selectAction}</span>
-                            <span>📸</span>
-                          </>
-                        )}
-                      </button>
-                    ) : (
-                      <div className="w-full min-h-[40px] py-1.5 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors flex items-center justify-center gap-1.5 border border-zinc-800/60 rounded-xl bg-zinc-950/40">
-                        <span>{t.frameSelect.tapToPreview}</span>
-                      </div>
-                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectFrame(frame);
+                      }}
+                      className={`w-full min-h-[42px] py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition-all whitespace-nowrap shadow-lg flex items-center justify-center gap-2 cursor-pointer ${
+                        isActive
+                          ? 'bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] text-white shadow-[0_0_20px_rgba(225,29,72,0.4)] ring-2 ring-[var(--theme-accent,#E11D48)]/50 active:scale-[0.98]'
+                          : 'bg-zinc-800/90 hover:bg-[var(--theme-accent,#E11D48)] text-zinc-300 hover:text-white border border-zinc-700/80 active:scale-[0.98]'
+                      }`}
+                    >
+                      <span>{t.frameSelect.selectAction}</span>
+                      <span>📸</span>
+                    </button>
                   </div>
                 </div>
               );
