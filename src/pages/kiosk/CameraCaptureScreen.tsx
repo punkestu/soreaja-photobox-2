@@ -102,9 +102,14 @@ export const CameraCaptureScreen: React.FC = () => {
   // Sync localShots when capturedPhotos are restored from IndexedDB
   useEffect(() => {
     setLocalShots(capturedPhotos);
-    if (!isRetakeMode && capturedPhotos.length > 0 && capturedPhotos.length < totalShotsNeeded) {
-      setCurrentShotNumber(capturedPhotos.length + 1);
-      setActivePoseIdx(capturedPhotos.length % STUDIO_PORTRAITS.length);
+    if (!isRetakeMode) {
+      if (capturedPhotos.length === 0) {
+        setCurrentShotNumber(1);
+        setActivePoseIdx(0);
+      } else if (capturedPhotos.length < totalShotsNeeded) {
+        setCurrentShotNumber(capturedPhotos.length + 1);
+        setActivePoseIdx(capturedPhotos.length % STUDIO_PORTRAITS.length);
+      }
     }
   }, [capturedPhotos, isRetakeMode, totalShotsNeeded]);
 
@@ -625,9 +630,8 @@ export const CameraCaptureScreen: React.FC = () => {
             getReadyText={t.camera.getReady}
           />
 
-          {/* Minimalist Bottom Bar: Captured Photo List & Shutter Controls (z-20) */}
-          <div className="absolute bottom-2.5 sm:bottom-4 left-2.5 sm:left-4 right-2.5 sm:right-4 z-20 flex items-center justify-between gap-2 pointer-events-auto">
-            {/* Captured Photos Mini Tray */}
+          {/* Top Bar: Captured Photo List Preview (z-20) */}
+          <div className="absolute top-2.5 sm:top-4 left-1/2 -translate-x-1/2 z-20 pointer-events-auto flex items-center justify-center max-w-[95%]">
             <PhotoTray
               totalShotsNeeded={totalShotsNeeded}
               localShots={localShots}
@@ -636,8 +640,10 @@ export const CameraCaptureScreen: React.FC = () => {
               retakeIndex={retakeIndex}
               photoSlotText={t.camera.photoSlot}
             />
+          </div>
 
-            {/* Shutter Action Buttons */}
+          {/* Bottom Bar: Shutter Controls (z-20) */}
+          <div className="absolute bottom-2.5 sm:bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center pointer-events-auto">
             <ShutterControls
               isCapturingSequence={isCapturingSequence}
               isRetakeMode={isRetakeMode}
