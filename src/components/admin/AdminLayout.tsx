@@ -1,6 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom';
-import { ensureDefaultSettings } from '../../db';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db, ensureDefaultSettings } from '../../db';
+import { fetchFramesMetadata } from '../../data/defaultFrames';
 import { usePhotobox } from '../../context/PhotoboxContext';
 import { PWAInstallButton } from '../common/PWAInstallButton';
 import { OfflineIndicator } from '../common/OfflineIndicator';
@@ -8,9 +10,12 @@ import { OfflineIndicator } from '../common/OfflineIndicator';
 export const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
   const { language, setLanguage, t } = usePhotobox();
+  const sessionCount = useLiveQuery(() => db.sessions.count(), []);
+  const [frameCount, setFrameCount] = useState<number | null>(null);
 
   useEffect(() => {
     ensureDefaultSettings();
+    fetchFramesMetadata().then((data) => setFrameCount(data.length));
   }, []);
 
   return (
@@ -91,6 +96,44 @@ export const AdminLayout: React.FC = () => {
                   }
                 >
                   {t.admin.summaryStatus}
+                </NavLink>
+                <NavLink
+                  to="/admin/frames"
+                  className={({ isActive }) =>
+                    `min-h-[44px] flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap active:scale-95 ${isActive
+                      ? 'bg-neutral-900 text-white shadow-sm'
+                      : 'text-neutral-700 hover:bg-neutral-200/70'
+                    }`
+                  }
+                >
+                  <span>{t.admin.summaryFrames}</span>
+                  {typeof frameCount === 'number' && (
+                    <span className="ml-2 text-xs font-mono-tabular px-2 py-0.5 rounded-full bg-neutral-200 text-neutral-600">
+                      {frameCount}
+                    </span>
+                  )}
+                </NavLink>
+                <NavLink
+                  to="/admin/sessions"
+                  className={({ isActive }) =>
+                    `min-h-[44px] flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap active:scale-95 ${isActive
+                      ? 'bg-neutral-900 text-white shadow-sm'
+                      : 'text-neutral-700 hover:bg-neutral-200/70'
+                    }`
+                  }
+                >
+                  <span>{t.admin.summarySessions}</span>
+                  {typeof sessionCount === 'number' && (
+                    <span
+                      className={`ml-2 text-xs font-mono-tabular px-2 py-0.5 rounded-full ${
+                        sessionCount > 0
+                          ? 'bg-[var(--theme-accent,#E11D48)] text-white'
+                          : 'bg-neutral-200 text-neutral-600'
+                      }`}
+                    >
+                      {sessionCount}
+                    </span>
+                  )}
                 </NavLink>
                 <NavLink
                   to="/admin/settings"

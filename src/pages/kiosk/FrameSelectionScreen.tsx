@@ -514,11 +514,11 @@ export const FrameSelectionScreen: React.FC = () => {
         finalLayoutBase64: null,
         doubleStripBase64: null,
         selectedFilter: 'original',
-        customCaption: 'SOREAJA — PHOTOBOX 2',
+        customCaption: 'SOREAJA — Pose',
         showFrameStamps: true,
         placedStickers: [],
         updatedAt: Date.now(),
-      }).catch(() => {});
+      }).catch(() => { });
     } catch {
       // ignore storage errors
     }
@@ -595,17 +595,15 @@ export const FrameSelectionScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => handleFilterChange('all')}
-              className={`h-7 sm:h-7.5 px-2 sm:px-2.5 rounded-md font-medium transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
-                activeFilter === 'all'
+              className={`h-7 sm:h-7.5 px-2 sm:px-2.5 rounded-md font-medium transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${activeFilter === 'all'
                   ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm font-bold'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
-              }`}
+                }`}
             >
               <span>{t.frameSelect.filterAll}</span>
               <span
-                className={`text-[9px] sm:text-[10px] font-mono-tabular px-1 sm:px-1.5 py-0.2 rounded-full ${
-                  activeFilter === 'all' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'
-                }`}
+                className={`text-[9px] sm:text-[10px] font-mono-tabular px-1 sm:px-1.5 py-0.2 rounded-full ${activeFilter === 'all' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'
+                  }`}
               >
                 {frames.length}
               </span>
@@ -614,18 +612,16 @@ export const FrameSelectionScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => handleFilterChange('single')}
-              className={`h-7 sm:h-7.5 px-2 sm:px-2.5 rounded-md font-medium transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
-                activeFilter === 'single'
+              className={`h-7 sm:h-7.5 px-2 sm:px-2.5 rounded-md font-medium transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${activeFilter === 'single'
                   ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm font-bold'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
-              }`}
+                }`}
             >
               <span className="text-[11px]">📱</span>
               <span>{t.frameSelect.filterSingleStrip}</span>
               <span
-                className={`text-[9px] sm:text-[10px] font-mono-tabular px-1 sm:px-1.5 py-0.2 rounded-full ${
-                  activeFilter === 'single' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'
-                }`}
+                className={`text-[9px] sm:text-[10px] font-mono-tabular px-1 sm:px-1.5 py-0.2 rounded-full ${activeFilter === 'single' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'
+                  }`}
               >
                 {singleCount}
               </span>
@@ -634,18 +630,16 @@ export const FrameSelectionScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => handleFilterChange('double')}
-              className={`h-7 sm:h-7.5 px-2 sm:px-2.5 rounded-md font-medium transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
-                activeFilter === 'double'
+              className={`h-7 sm:h-7.5 px-2 sm:px-2.5 rounded-md font-medium transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${activeFilter === 'double'
                   ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm font-bold'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
-              }`}
+                }`}
             >
               <span className="text-[11px]">👥</span>
               <span>{t.frameSelect.filterDoubleStrip}</span>
               <span
-                className={`text-[9px] sm:text-[10px] font-mono-tabular px-1 sm:px-1.5 py-0.2 rounded-full ${
-                  activeFilter === 'double' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'
-                }`}
+                className={`text-[9px] sm:text-[10px] font-mono-tabular px-1 sm:px-1.5 py-0.2 rounded-full ${activeFilter === 'double' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'
+                  }`}
               >
                 {doubleCount}
               </span>
@@ -691,11 +685,10 @@ export const FrameSelectionScreen: React.FC = () => {
             onClick={handlePrev}
             disabled={focusedIndex === 0}
             aria-label={t.frameSelect.prevFrame || 'Previous frame'}
-            className={`absolute left-1 sm:left-3 md:left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-200 border shadow-2xl backdrop-blur-md cursor-pointer ${
-              focusedIndex === 0
+            className={`absolute left-1 sm:left-3 md:left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-200 border shadow-2xl backdrop-blur-md cursor-pointer ${focusedIndex === 0
                 ? 'opacity-20 pointer-events-none bg-zinc-900/40 border-zinc-800 text-zinc-600'
                 : 'bg-zinc-900/90 hover:bg-zinc-800 text-white border-white/15 active:scale-90 hover:scale-105 hover:border-[var(--theme-accent,#E11D48)]/50 hover:shadow-[0_0_20px_rgba(225,29,72,0.3)]'
-            }`}
+              }`}
           >
             <svg className="w-5 h-5 sm:w-6 sm:h-6 stroke-current" fill="none" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
@@ -707,11 +700,10 @@ export const FrameSelectionScreen: React.FC = () => {
             onClick={handleNext}
             disabled={focusedIndex === filteredFrames.length - 1}
             aria-label={t.frameSelect.nextFrame || 'Next frame'}
-            className={`absolute right-1 sm:right-3 md:right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-200 border shadow-2xl backdrop-blur-md cursor-pointer ${
-              focusedIndex === filteredFrames.length - 1
+            className={`absolute right-1 sm:right-3 md:right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-200 border shadow-2xl backdrop-blur-md cursor-pointer ${focusedIndex === filteredFrames.length - 1
                 ? 'opacity-20 pointer-events-none bg-zinc-900/40 border-zinc-800 text-zinc-600'
                 : 'bg-zinc-900/90 hover:bg-zinc-800 text-white border-white/15 active:scale-90 hover:scale-105 hover:border-[var(--theme-accent,#E11D48)]/50 hover:shadow-[0_0_20px_rgba(225,29,72,0.3)]'
-            }`}
+              }`}
           >
             <svg className="w-5 h-5 sm:w-6 sm:h-6 stroke-current" fill="none" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
@@ -763,11 +755,10 @@ export const FrameSelectionScreen: React.FC = () => {
                       handleCardClick(frame, index);
                     }
                   }}
-                  className={`w-[220px] sm:w-[250px] md:w-[280px] max-h-[58vh] shrink-0 rounded-2xl flex flex-col justify-between p-3 sm:p-3.5 select-none border transform-gpu outline-none focus-visible:ring-4 focus-visible:ring-[var(--theme-accent,#E11D48)]/60 transition-[transform,opacity,border-color,box-shadow] duration-200 ease-out will-change-[transform,opacity] ${
-                    isFocused
+                  className={`w-[220px] sm:w-[250px] md:w-[280px] max-h-[58vh] shrink-0 rounded-2xl flex flex-col justify-between p-3 sm:p-3.5 select-none border transform-gpu outline-none focus-visible:ring-4 focus-visible:ring-[var(--theme-accent,#E11D48)]/60 transition-[transform,opacity,border-color,box-shadow] duration-200 ease-out will-change-[transform,opacity] ${isFocused
                       ? 'scale-100 opacity-100 bg-zinc-900 border-[var(--theme-accent,#E11D48)] ring-2 ring-[var(--theme-accent,#E11D48)]/40 shadow-[0_16px_40px_rgba(0,0,0,0.8),0_0_25px_rgba(225,29,72,0.3)] z-10'
                       : 'scale-[0.94] opacity-65 hover:opacity-85 bg-zinc-900/70 border-zinc-800/80 hover:border-zinc-700/80 cursor-pointer z-0'
-                  }`}
+                    }`}
                 >
                   {/* Top Metadata: Poses count, Strip Format Badge & Active indicator */}
                   <div className="flex items-center justify-between pb-1.5 text-[11px] font-mono-tabular text-zinc-400 shrink-0 gap-1.5">
@@ -776,11 +767,10 @@ export const FrameSelectionScreen: React.FC = () => {
                         {frame.photoCount} {t.frameSelect.poses}
                       </span>
                       <span
-                        className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border shrink-0 ${
-                          isDoubleWidth
+                        className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border shrink-0 ${isDoubleWidth
                             ? 'text-amber-300 bg-amber-500/15 border-amber-500/30'
                             : 'text-sky-300 bg-sky-500/15 border-sky-500/30'
-                        }`}
+                          }`}
                       >
                         {isDoubleWidth ? `👥 ${t.frameSelect.doubleStripBadge}` : `📱 ${t.frameSelect.singleStripBadge}`}
                       </span>
@@ -830,11 +820,10 @@ export const FrameSelectionScreen: React.FC = () => {
                         e.stopPropagation();
                         handleSelectFrame(frame);
                       }}
-                      className={`w-full min-h-[42px] py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition-all whitespace-nowrap shadow-lg flex items-center justify-center gap-2 cursor-pointer ${
-                        isFocused || isSelected
+                      className={`w-full min-h-[42px] py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition-all whitespace-nowrap shadow-lg flex items-center justify-center gap-2 cursor-pointer ${isFocused || isSelected
                           ? 'bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] text-white shadow-[0_0_20px_rgba(225,29,72,0.4)] ring-2 ring-[var(--theme-accent,#E11D48)]/50 active:scale-[0.98]'
                           : 'bg-zinc-800/90 hover:bg-[var(--theme-accent,#E11D48)] text-zinc-300 hover:text-white border border-zinc-700/80 active:scale-[0.98]'
-                      }`}
+                        }`}
                     >
                       <span>{t.frameSelect.selectAction}</span>
                       <span>📸</span>
@@ -865,11 +854,10 @@ export const FrameSelectionScreen: React.FC = () => {
                       setFocusedIndex(idx);
                       scrollToIndex(idx, true);
                     }}
-                    className={`transition-all duration-300 rounded-full cursor-pointer shrink-0 ${
-                      isDotActive
+                    className={`transition-all duration-300 rounded-full cursor-pointer shrink-0 ${isDotActive
                         ? 'w-7 sm:w-8 h-2 bg-[var(--theme-accent,#E11D48)] shadow-[0_0_12px_rgba(225,29,72,0.6)]'
                         : 'w-1.5 sm:w-2 h-1.5 sm:h-2 bg-zinc-700 hover:bg-zinc-500'
-                    }`}
+                      }`}
                   />
                 );
               })}

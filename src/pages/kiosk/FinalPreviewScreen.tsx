@@ -422,11 +422,10 @@ export const FinalPreviewScreen: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setPreviewMode('single')}
-                      className={`px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
-                        previewMode === 'single'
-                          ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
-                          : 'text-zinc-400 hover:text-white'
-                      }`}
+                      className={`px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${previewMode === 'single'
+                        ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
+                        : 'text-zinc-400 hover:text-white'
+                        }`}
                     >
                       📱 {t.preview.singleStrip}
                     </button>
@@ -436,11 +435,10 @@ export const FinalPreviewScreen: React.FC = () => {
                         setPreviewMode('double');
                         setSelectedStickerId(null);
                       }}
-                      className={`px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
-                        previewMode === 'double'
-                          ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
-                          : 'text-zinc-400 hover:text-white'
-                      }`}
+                      className={`px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${previewMode === 'double'
+                        ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
+                        : 'text-zinc-400 hover:text-white'
+                        }`}
                     >
                       <span>👥 {t.preview.doubleStrip}</span>
                       <span className="text-[10px] px-1 py-0.2 bg-white/20 text-white rounded font-mono">
@@ -586,14 +584,6 @@ export const FinalPreviewScreen: React.FC = () => {
                     />
                   )}
                 </div>
-
-                {/* Floating Scroll & Zoom Guidance Chip when zoomed in */}
-                {zoomLevel > 1.0 && (
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none px-3.5 py-1.5 bg-black/85 backdrop-blur-md rounded-full border border-white/20 text-xs text-zinc-200 font-mono-tabular shadow-2xl flex items-center gap-1.5 z-20 animate-in fade-in duration-200">
-                    <span className="text-sm">↕️</span>
-                    <span className="font-semibold">{t.preview.zoomScrollHint}</span>
-                  </div>
-                )}
               </div>
 
               {/* Bottom Footer Info */}
@@ -630,11 +620,10 @@ export const FinalPreviewScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => setActiveTab('stickers')}
-              className={`py-1.5 px-3 text-xs sm:text-sm font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                activeTab === 'stickers'
-                  ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-md'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
+              className={`py-1.5 px-3 text-xs sm:text-sm font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${activeTab === 'stickers'
+                ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-md'
+                : 'text-zinc-400 hover:text-white'
+                }`}
             >
               <span>✨</span>
               <span>{t.preview.tabStickers}</span>
@@ -648,11 +637,10 @@ export const FinalPreviewScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => setActiveTab('filters')}
-              className={`py-1.5 px-3 text-xs sm:text-sm font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                activeTab === 'filters'
-                  ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-md'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
+              className={`py-1.5 px-3 text-xs sm:text-sm font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${activeTab === 'filters'
+                ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-md'
+                : 'text-zinc-400 hover:text-white'
+                }`}
             >
               <span>🎨</span>
               <span>{t.preview.tabFilters}</span>
@@ -662,236 +650,234 @@ export const FinalPreviewScreen: React.FC = () => {
           {/* Internal scrollable container for tab body */}
           <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3">
 
-          {/* TAB 1: INTERACTIVE STICKER STUDIO */}
-          {activeTab === 'stickers' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="font-display text-base sm:text-lg font-bold text-[#F4F4F0] flex items-center gap-2">
-                    <span>✨</span>
-                    <span>{t.preview.stickerPaletteTitle}</span>
-                  </h2>
-                  <p className="text-xs text-zinc-400 mt-0.5">
-                    {t.preview.addStickerHint}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    disabled={stickerHistory.length === 0}
-                    onClick={handleUndoSticker}
-                    className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 disabled:opacity-40 transition-all cursor-pointer"
-                    title={t.preview.undoSticker}
-                  >
-                    ↩ {t.preview.undoSticker}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={placedStickers.length === 0}
-                    onClick={handleClearStickers}
-                    className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-950/80 hover:bg-rose-900 text-rose-300 disabled:opacity-40 transition-all cursor-pointer border border-rose-800/40"
-                    title={t.preview.clearStickers}
-                  >
-                    🗑️ {t.preview.clearStickers}
-                  </button>
-                </div>
-              </div>
-
-              {/* Categorized Packs Bar */}
-              <div className="flex items-center gap-1.5 bg-zinc-950 p-1 rounded-xl border border-zinc-800 overflow-x-auto scrollbar-none">
-                {[
-                  { id: 'sparkles' as const, label: t.preview.stickersCategorySparkles },
-                  { id: 'hearts_y2k' as const, label: t.preview.stickersCategoryHearts },
-                  { id: 'stamps' as const, label: t.preview.stickersCategoryStamps },
-                ].map((cat) => (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => setActiveStickerCategory(cat.id)}
-                    className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg whitespace-nowrap transition-all cursor-pointer ${
-                      activeStickerCategory === cat.id
-                        ? 'bg-zinc-800 text-white shadow-sm ring-1 ring-white/20'
-                        : 'text-zinc-400 hover:text-zinc-200'
-                    }`}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Sticker Grid Palette */}
-              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2.5 p-3 bg-zinc-950/90 rounded-xl border border-zinc-800/70 max-h-[220px] overflow-y-auto">
-                {filteredStickers.map((sticker) => (
-                  <button
-                    key={sticker.id}
-                    type="button"
-                    onClick={() => handleAddSticker(sticker)}
-                    className="aspect-square flex items-center justify-center p-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 hover:scale-105 active:scale-95 transition-all border border-zinc-800/60 shadow-sm cursor-pointer group"
-                    title={`Add ${sticker.label}`}
-                  >
-                    {sticker.type === 'emoji' ? (
-                      <span className="text-2xl sm:text-3xl drop-shadow-sm group-hover:scale-110 transition-transform">
-                        {sticker.content}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-black uppercase text-center tracking-tight leading-tight text-white/90">
-                        {sticker.content}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              {/* Interaction Tip or Selected Sticker Controls */}
-              {selectedSticker ? (
-                <div className="p-3 bg-zinc-950 rounded-xl border border-[var(--theme-accent,#E11D48)]/50 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-white flex items-center gap-1.5">
-                      <span>🎯</span>
-                      <span>Stiker Terpilih:</span>
-                      <span className="text-[var(--theme-accent,#E11D48)]">
-                        {selectedSticker.type === 'emoji' ? selectedSticker.content : selectedSticker.content}
-                      </span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedStickerId(null)}
-                      className="text-zinc-400 hover:text-white text-xs underline cursor-pointer"
-                    >
-                      {t.preview.deselectSticker}
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-4 gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => handleScaleActive(0.15)}
-                      className="py-1.5 px-2 bg-zinc-800 hover:bg-zinc-700 text-xs font-bold rounded-lg text-white transition-all active:scale-95 cursor-pointer"
-                    >
-                      {t.preview.scaleUp}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleScaleActive(-0.15)}
-                      className="py-1.5 px-2 bg-zinc-800 hover:bg-zinc-700 text-xs font-bold rounded-lg text-white transition-all active:scale-95 cursor-pointer"
-                    >
-                      {t.preview.scaleDown}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleRotateActive(45)}
-                      className="py-1.5 px-2 bg-zinc-800 hover:bg-zinc-700 text-xs font-bold rounded-lg text-white transition-all active:scale-95 cursor-pointer"
-                    >
-                      {t.preview.rotate}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleDeleteActive}
-                      className="py-1.5 px-2 bg-rose-900/80 hover:bg-rose-800 text-xs font-bold rounded-lg text-rose-200 transition-all active:scale-95 cursor-pointer"
-                    >
-                      {t.preview.deleteSticker}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-3 bg-zinc-950/60 rounded-xl border border-zinc-800/60 text-xs text-zinc-400 flex items-start gap-2.5">
-                  <span className="text-base">💡</span>
-                  <span>{t.preview.dragStickerHint}</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* TAB 2: TONE FILTERS & CAPTION CONTROLS */}
-          {activeTab === 'filters' && (
-            <div className="space-y-4">
-              <div className="space-y-3">
-                <h2 className="font-display text-base sm:text-lg font-bold text-[#F4F4F0] flex items-center gap-2">
-                  <span>🎨</span>
-                  <span>{t.preview.colorFiltersTitle}</span>
-                </h2>
-                <p className="text-xs sm:text-sm text-zinc-400">
-                  {t.preview.colorFiltersSubtitle}
-                </p>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                  {[
-                    { id: 'original' as const, label: t.preview.filters.original, desc: t.preview.filters.originalDesc },
-                    { id: 'warm-sore' as const, label: t.preview.filters.warmSore, desc: t.preview.filters.warmSoreDesc },
-                    { id: 'noir-bw' as const, label: t.preview.filters.noirBw, desc: t.preview.filters.noirBwDesc },
-                    { id: 'vintage-film' as const, label: t.preview.filters.vintageFilm, desc: t.preview.filters.vintageFilmDesc },
-                  ].map((f) => {
-                    const isActive = selectedFilter === f.id;
-                    return (
-                      <button
-                        key={f.id}
-                        type="button"
-                        onClick={() => setSelectedFilter(f.id)}
-                        className={`min-h-[52px] p-3.5 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer ${
-                          isActive
-                            ? 'bg-[var(--theme-accent,#E11D48)]/15 ring-2 ring-[var(--theme-accent,#E11D48)] text-white shadow-md'
-                            : 'bg-zinc-950/80 text-zinc-300 hover:bg-zinc-800 border border-zinc-800/60'
-                        }`}
-                      >
-                        <p className="text-xs sm:text-sm font-bold">{f.label}</p>
-                        <p className="text-[11px] text-zinc-400 mt-0.5">{f.desc}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Stempel Teks Bingkai Toggle & Caption */}
-              <div className="pt-2 space-y-3 border-t border-zinc-800/60">
+            {/* TAB 1: INTERACTIVE STICKER STUDIO */}
+            {activeTab === 'stickers' && (
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs sm:text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
-                      <span>🏷️</span>
-                      <span>{t.preview.frameStampsTitle}</span>
-                    </p>
-                    <p className="text-[11px] text-zinc-400">
-                      {t.preview.frameStampsSubtitle}
+                    <h2 className="font-display text-base sm:text-lg font-bold text-[#F4F4F0] flex items-center gap-2">
+                      <span>✨</span>
+                      <span>{t.preview.stickerPaletteTitle}</span>
+                    </h2>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      {t.preview.addStickerHint}
                     </p>
                   </div>
-                  <label className="min-h-[44px] flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={showFrameStamps}
-                      onChange={(e) => setShowFrameStamps(e.target.checked)}
-                      className="w-4 h-4 accent-[var(--theme-accent,#E11D48)] rounded cursor-pointer"
-                    />
-                    <span className="text-xs sm:text-sm font-mono-tabular text-zinc-300">
-                      {showFrameStamps ? t.preview.showStamp : t.preview.hideStamp}
-                    </span>
-                  </label>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      disabled={stickerHistory.length === 0}
+                      onClick={handleUndoSticker}
+                      className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 disabled:opacity-40 transition-all cursor-pointer"
+                      title={t.preview.undoSticker}
+                    >
+                      ↩ {t.preview.undoSticker}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={placedStickers.length === 0}
+                      onClick={handleClearStickers}
+                      className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-950/80 hover:bg-rose-900 text-rose-300 disabled:opacity-40 transition-all cursor-pointer border border-rose-800/40"
+                      title={t.preview.clearStickers}
+                    >
+                      🗑️ {t.preview.clearStickers}
+                    </button>
+                  </div>
                 </div>
 
-                {showFrameStamps ? (
-                  <div className="space-y-1.5 pt-1">
-                    <label
-                      htmlFor="captionInput"
-                      className="block text-xs sm:text-sm font-semibold text-zinc-300"
+                {/* Categorized Packs Bar */}
+                <div className="flex items-center gap-1.5 bg-zinc-950 p-1 rounded-xl border border-zinc-800 overflow-x-auto scrollbar-none">
+                  {[
+                    { id: 'sparkles' as const, label: t.preview.stickersCategorySparkles },
+                    { id: 'hearts_y2k' as const, label: t.preview.stickersCategoryHearts },
+                    { id: 'stamps' as const, label: t.preview.stickersCategoryStamps },
+                  ].map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setActiveStickerCategory(cat.id)}
+                      className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg whitespace-nowrap transition-all cursor-pointer ${activeStickerCategory === cat.id
+                        ? 'bg-zinc-800 text-white shadow-sm ring-1 ring-white/20'
+                        : 'text-zinc-400 hover:text-zinc-200'
+                        }`}
                     >
-                      ✍️ {t.preview.bottomCaptionLabel}
-                    </label>
-                    <input
-                      id="captionInput"
-                      type="text"
-                      maxLength={32}
-                      value={customCaption}
-                      onChange={(e) => setCustomCaption(e.target.value)}
-                      className="w-full px-4 py-2.5 text-sm sm:text-base bg-zinc-950 rounded-xl text-white focus:outline-none ring-1 ring-zinc-700 focus:ring-[var(--theme-accent,#E11D48)] font-mono-tabular"
-                    />
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Sticker Grid Palette */}
+                <div className="grid grid-cols-4 sm:grid-cols-5 gap-2.5 p-3 bg-zinc-950/90 rounded-xl border border-zinc-800/70 max-h-[220px] overflow-y-auto">
+                  {filteredStickers.map((sticker) => (
+                    <button
+                      key={sticker.id}
+                      type="button"
+                      onClick={() => handleAddSticker(sticker)}
+                      className="aspect-square flex items-center justify-center p-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 hover:scale-105 active:scale-95 transition-all border border-zinc-800/60 shadow-sm cursor-pointer group"
+                      title={`Add ${sticker.label}`}
+                    >
+                      {sticker.type === 'emoji' ? (
+                        <span className="text-2xl sm:text-3xl drop-shadow-sm group-hover:scale-110 transition-transform">
+                          {sticker.content}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-black uppercase text-center tracking-tight leading-tight text-white/90">
+                          {sticker.content}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Interaction Tip or Selected Sticker Controls */}
+                {selectedSticker ? (
+                  <div className="p-3 bg-zinc-950 rounded-xl border border-[var(--theme-accent,#E11D48)]/50 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-white flex items-center gap-1.5">
+                        <span>🎯</span>
+                        <span>Stiker Terpilih:</span>
+                        <span className="text-[var(--theme-accent,#E11D48)]">
+                          {selectedSticker.type === 'emoji' ? selectedSticker.content : selectedSticker.content}
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedStickerId(null)}
+                        className="text-zinc-400 hover:text-white text-xs underline cursor-pointer"
+                      >
+                        {t.preview.deselectSticker}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleScaleActive(0.15)}
+                        className="py-1.5 px-2 bg-zinc-800 hover:bg-zinc-700 text-xs font-bold rounded-lg text-white transition-all active:scale-95 cursor-pointer"
+                      >
+                        {t.preview.scaleUp}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleScaleActive(-0.15)}
+                        className="py-1.5 px-2 bg-zinc-800 hover:bg-zinc-700 text-xs font-bold rounded-lg text-white transition-all active:scale-95 cursor-pointer"
+                      >
+                        {t.preview.scaleDown}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRotateActive(45)}
+                        className="py-1.5 px-2 bg-zinc-800 hover:bg-zinc-700 text-xs font-bold rounded-lg text-white transition-all active:scale-95 cursor-pointer"
+                      >
+                        {t.preview.rotate}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDeleteActive}
+                        className="py-1.5 px-2 bg-rose-900/80 hover:bg-rose-800 text-xs font-bold rounded-lg text-rose-200 transition-all active:scale-95 cursor-pointer"
+                      >
+                        {t.preview.deleteSticker}
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  <p className="text-[11px] text-zinc-400 bg-zinc-950/90 p-3 rounded-xl">
-                    {t.preview.cleanModeNotice}
-                  </p>
+                  <div className="p-3 bg-zinc-950/60 rounded-xl border border-zinc-800/60 text-xs text-zinc-400 flex items-start gap-2.5">
+                    <span className="text-base">💡</span>
+                    <span>{t.preview.dragStickerHint}</span>
+                  </div>
                 )}
               </div>
-            </div>
-          )}
+            )}
+
+            {/* TAB 2: TONE FILTERS & CAPTION CONTROLS */}
+            {activeTab === 'filters' && (
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  <h2 className="font-display text-base sm:text-lg font-bold text-[#F4F4F0] flex items-center gap-2">
+                    <span>🎨</span>
+                    <span>{t.preview.colorFiltersTitle}</span>
+                  </h2>
+                  <p className="text-xs sm:text-sm text-zinc-400">
+                    {t.preview.colorFiltersSubtitle}
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                    {[
+                      { id: 'original' as const, label: t.preview.filters.original, desc: t.preview.filters.originalDesc },
+                      { id: 'warm-sore' as const, label: t.preview.filters.warmSore, desc: t.preview.filters.warmSoreDesc },
+                      { id: 'noir-bw' as const, label: t.preview.filters.noirBw, desc: t.preview.filters.noirBwDesc },
+                      { id: 'vintage-film' as const, label: t.preview.filters.vintageFilm, desc: t.preview.filters.vintageFilmDesc },
+                    ].map((f) => {
+                      const isActive = selectedFilter === f.id;
+                      return (
+                        <button
+                          key={f.id}
+                          type="button"
+                          onClick={() => setSelectedFilter(f.id)}
+                          className={`min-h-[52px] p-3.5 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer ${isActive
+                            ? 'bg-[var(--theme-accent,#E11D48)]/15 ring-2 ring-[var(--theme-accent,#E11D48)] text-white shadow-md'
+                            : 'bg-zinc-950/80 text-zinc-300 hover:bg-zinc-800 border border-zinc-800/60'
+                            }`}
+                        >
+                          <p className="text-xs sm:text-sm font-bold">{f.label}</p>
+                          <p className="text-[11px] text-zinc-400 mt-0.5">{f.desc}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Stempel Teks Bingkai Toggle & Caption */}
+                <div className="pt-2 space-y-3 border-t border-zinc-800/60">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs sm:text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
+                        <span>🏷️</span>
+                        <span>{t.preview.frameStampsTitle}</span>
+                      </p>
+                      <p className="text-[11px] text-zinc-400">
+                        {t.preview.frameStampsSubtitle}
+                      </p>
+                    </div>
+                    <label className="min-h-[44px] flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={showFrameStamps}
+                        onChange={(e) => setShowFrameStamps(e.target.checked)}
+                        className="w-4 h-4 accent-[var(--theme-accent,#E11D48)] rounded cursor-pointer"
+                      />
+                      <span className="text-xs sm:text-sm font-mono-tabular text-zinc-300">
+                        {showFrameStamps ? t.preview.showStamp : t.preview.hideStamp}
+                      </span>
+                    </label>
+                  </div>
+
+                  {showFrameStamps ? (
+                    <div className="space-y-1.5 pt-1">
+                      <label
+                        htmlFor="captionInput"
+                        className="block text-xs sm:text-sm font-semibold text-zinc-300"
+                      >
+                        ✍️ {t.preview.bottomCaptionLabel}
+                      </label>
+                      <input
+                        id="captionInput"
+                        type="text"
+                        maxLength={32}
+                        value={customCaption}
+                        onChange={(e) => setCustomCaption(e.target.value)}
+                        className="w-full px-4 py-2.5 text-sm sm:text-base bg-zinc-950 rounded-xl text-white focus:outline-none ring-1 ring-zinc-700 focus:ring-[var(--theme-accent,#E11D48)] font-mono-tabular"
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-zinc-400 bg-zinc-950/90 p-3 rounded-xl">
+                      {t.preview.cleanModeNotice}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
           </div>
 

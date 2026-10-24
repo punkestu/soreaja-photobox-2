@@ -1,6 +1,10 @@
 {
-  "name": "SoreAja - Photobox 2",
+  "name": "SoreAja.Pose",
   "description": "Offline-first web photobox system with studio frame compositing, automated WebRTC capture, animated GIF generation, QR code Google Drive sharing, and thermal/color printing simulation.",
-  "requestFramePermissions": ["camera"],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

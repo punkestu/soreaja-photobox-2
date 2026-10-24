@@ -17,6 +17,8 @@ import { AdminLayout } from './components/admin/AdminLayout';
 import { AdminWelcome } from './pages/admin/AdminWelcome';
 import { AdminSettings } from './pages/admin/AdminSettings';
 import { AdminLaunch } from './pages/admin/AdminLaunch';
+import { AdminSessionsGallery } from './pages/admin/AdminSessionsGallery';
+import { AdminFrames } from './pages/admin/AdminFrames';
 import { KioskLayout } from './components/kiosk/KioskLayout';
 import { IdleScreen } from './pages/kiosk/IdleScreen';
 import { FrameSelectionScreen } from './pages/kiosk/FrameSelectionScreen';
@@ -110,6 +112,8 @@ export default function App() {
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Navigate to="/admin/welcome" replace />} />
             <Route path="welcome" element={<AdminWelcome />} />
+            <Route path="frames" element={<AdminFrames />} />
+            <Route path="sessions" element={<AdminSessionsGallery />} />
             <Route path="settings" element={<AdminSettings />} />
             <Route path="launch" element={<AdminLaunch />} />
           </Route>

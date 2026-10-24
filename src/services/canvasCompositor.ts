@@ -181,7 +181,7 @@ export async function compositeFinalLayout(
   capturedPhotos: string[],
   frame: FrameMetadata,
   filter: PhotoFilter = 'original',
-  customCaption = 'SOREAJA — PHOTOBOX 2',
+  customCaption = 'SOREAJA — Pose',
   showStamps = true,
   themeColor?: string,
   placedStickers: PlacedSticker[] = []
@@ -261,11 +261,6 @@ export async function compositeFinalLayout(
     const textColor = isDark ? '#F4F4F0' : '#18181B';
     const mutedColor = isDark ? '#A1A1AA' : '#52525B';
     const accentColor = themeColor || (isWarm ? '#C2410C' : '#E11D48');
-
-    // Top Header Metadata
-    ctx.fillStyle = textColor;
-    ctx.font = '700 18px "Syne", sans-serif';
-    ctx.fillText('SOREAJA — PHOTOBOX 2', 50, 72);
 
     ctx.fillStyle = mutedColor;
     ctx.font = '500 12px "JetBrains Mono", monospace';
