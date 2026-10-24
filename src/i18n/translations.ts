@@ -64,6 +64,11 @@ export const TRANSLATIONS = {
       prevFrame: 'Bingkai sebelumnya',
       nextFrame: 'Bingkai berikutnya',
       scrollingIndicator: 'Menggeser...',
+      filterAll: 'Semua',
+      filterSingleStrip: 'Single 2x6',
+      filterDoubleStrip: 'Double 4R',
+      singleStripBadge: 'Single',
+      doubleStripBadge: 'Full 4R',
     },
     // Camera Screen
     camera: {
@@ -354,6 +359,11 @@ export const TRANSLATIONS = {
       prevFrame: 'Previous frame',
       nextFrame: 'Next frame',
       scrollingIndicator: 'Scrolling...',
+      filterAll: 'All',
+      filterSingleStrip: 'Single 2x6',
+      filterDoubleStrip: 'Double 4R',
+      singleStripBadge: 'Single',
+      doubleStripBadge: 'Full 4R',
     },
     // Camera Screen
     camera: {
