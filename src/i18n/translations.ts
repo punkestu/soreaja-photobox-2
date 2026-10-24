@@ -220,8 +220,8 @@ export const TRANSLATIONS = {
       languageDesc: 'Pilih bahasa tampilan untuk seluruh aplikasi kiosk dan portal admin.',
       langId: 'Bahasa Indonesia',
       langEn: 'English',
-      langIdDesc: 'Tampilan lengkap dalam Bahasa Indonesia (Bawaan)',
-      langEnDesc: 'Full interface in English for international visitors and events',
+      langIdDesc: '',
+      langEnDesc: '',
       // Appearance Section
       themeColorTitle: 'Aksen Warna Kiosk',
       themeColorDesc: 'Pilih palet warna yang menjadi identitas visual studio dan photobox.',
@@ -254,7 +254,7 @@ export const TRANSLATIONS = {
       navDashboard: 'Dashboard',
       navSettings: 'Pengaturan Drive & Studio',
       navLaunch: 'Peluncuran Kiosk',
-      navOpenKiosk: 'Buka Sesi Photobox',
+      navOpenKiosk: 'Mulai Sesi',
       sidebarSystem: 'Manajemen Sistem',
       sidebarShortcuts: 'Pintasan Layar Pelanggan',
       sidebarIdle: 'Layar Utama (/app/idle)',
@@ -293,7 +293,20 @@ export const TRANSLATIONS = {
       testingColorBtn: 'Menghubungkan Printer Warna...',
       testThermalBtn: 'Test Cetak Thermal',
       testColorBtn: 'Test Cetak Warna',
-      resetDefaults: 'Kembalikan Pengaturan Bawaan',
+      resetDefaults: 'Reset',
+      resetAllData: 'Reset Semua Data',
+      resetAllDataDesc: 'Hapus seluruh riwayat foto sesi, sesi aktif, dan kembalikan seluruh pengaturan ke standar awal.',
+      resetAllDataModalTitle: 'Reset Semua Data Sistem?',
+      resetAllDataModalWarning: 'Tindakan ini permanen dan tidak dapat dibatalkan. Seluruh data lokal berikut akan dihapus secara total:',
+      resetAllDataModalItem1: 'Seluruh riwayat sesi foto dan arsip strip di IndexedDB',
+      resetAllDataModalItem2: 'Sesi aktif pemotretan yang sedang berlangsung',
+      resetAllDataModalItem3: 'Pengaturan kustom studio, printer, backdrop, dan tema kembali ke standar awal pabrik',
+      resetAllDataModalItem4: 'Cache navigasi dan data penyimpanan lokal browser',
+      resetAllDataConfirmBtn: 'Ya, Reset Semua Data',
+      resetAllDataCancelBtn: 'Batal',
+      resetAllDataSuccess: 'Semua data dan pengaturan sistem berhasil di-reset ke kondisi awal.',
+      dangerZoneTitle: 'Zona Bahaya & Pemeliharaan Sistem',
+      dangerZoneDesc: 'Opsi pemeliharaan untuk mengosongkan seluruh data lokal photobox sebelum event baru dimulai.',
     },
   },
   en: {
@@ -515,8 +528,8 @@ export const TRANSLATIONS = {
       languageDesc: 'Choose the interface language for the entire kiosk and admin portal.',
       langId: 'Bahasa Indonesia',
       langEn: 'English',
-      langIdDesc: 'Full interface in Indonesian (Default)',
-      langEnDesc: 'Full interface in English for international visitors and events',
+      langIdDesc: '',
+      langEnDesc: '',
       // Appearance Section
       themeColorTitle: 'Kiosk Accent Color',
       themeColorDesc: 'Select the color palette defining the studio and photobox visual identity.',
@@ -549,7 +562,7 @@ export const TRANSLATIONS = {
       navDashboard: 'Dashboard',
       navSettings: 'Drive & Studio Settings',
       navLaunch: 'Launch Kiosk',
-      navOpenKiosk: 'Launch Photobox Session',
+      navOpenKiosk: 'Launch Session',
       sidebarSystem: 'System Management',
       sidebarShortcuts: 'Customer Screen Shortcuts',
       sidebarIdle: 'Idle Screen (/app/idle)',
@@ -588,17 +601,30 @@ export const TRANSLATIONS = {
       testingColorBtn: 'Connecting Color Printer...',
       testThermalBtn: 'Test Thermal Print',
       testColorBtn: 'Test Color Print',
-      resetDefaults: 'Reset to Default Settings',
+      resetDefaults: 'Reset',
+      resetAllData: 'Reset All Data',
+      resetAllDataDesc: 'Wipe all session photo history, active sessions, and restore all settings to default values.',
+      resetAllDataModalTitle: 'Reset All System Data?',
+      resetAllDataModalWarning: 'This action is permanent and cannot be undone. The following local data will be completely erased:',
+      resetAllDataModalItem1: 'All session photo records and strips stored in IndexedDB',
+      resetAllDataModalItem2: 'Any active photo session in progress',
+      resetAllDataModalItem3: 'Custom studio, printer, backdrop, and theme settings restored to factory defaults',
+      resetAllDataModalItem4: 'Local navigation cache and browser storage',
+      resetAllDataConfirmBtn: 'Yes, Reset All Data',
+      resetAllDataCancelBtn: 'Cancel',
+      resetAllDataSuccess: 'All data and system settings have been successfully reset to factory defaults.',
+      dangerZoneTitle: 'Danger Zone & System Maintenance',
+      dangerZoneDesc: 'Maintenance options to clear all local photobox storage before starting a new event.',
     },
   },
 } as const;
 
 type DeepString<T> = {
   [K in keyof T]: T[K] extends string
-    ? string
-    : T[K] extends object
-    ? DeepString<T[K]>
-    : T[K];
+  ? string
+  : T[K] extends object
+  ? DeepString<T[K]>
+  : T[K];
 };
 
 export type TranslationDictionary = DeepString<typeof TRANSLATIONS.id>;

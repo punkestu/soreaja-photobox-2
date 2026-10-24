@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../../db';
+import { db, clearActiveSession } from '../../db';
 import { usePhotobox } from '../../context/PhotoboxContext';
 import { KIOSK_HERO_BACKDROP } from '../../data/defaultFrames';
 import { BACKDROP_PRESETS } from '../../data/themeConfig';
@@ -86,6 +86,7 @@ export const IdleScreen: React.FC = () => {
       }
     }
     resetSession();
+    await clearActiveSession();
     navigate('/app/frame-selection');
   };
 

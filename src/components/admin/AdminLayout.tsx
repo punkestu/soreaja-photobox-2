@@ -25,48 +25,6 @@ export const AdminLayout: React.FC = () => {
           {t.appName}
         </Link>
 
-        <nav
-          aria-label="Navigasi Utama Admin"
-          className="hidden md:flex items-center gap-8 text-sm font-medium text-neutral-600"
-        >
-          <NavLink
-            to="/admin/welcome"
-            className={({ isActive }) =>
-              `py-1 transition-colors whitespace-nowrap ${
-                isActive
-                  ? 'text-neutral-900 font-semibold border-b-2 border-[var(--theme-accent,#E11D48)]'
-                  : 'hover:text-neutral-900'
-              }`
-            }
-          >
-            {t.admin.navDashboard}
-          </NavLink>
-          <NavLink
-            to="/admin/settings"
-            className={({ isActive }) =>
-              `py-1 transition-colors whitespace-nowrap ${
-                isActive
-                  ? 'text-neutral-900 font-semibold border-b-2 border-[var(--theme-accent,#E11D48)]'
-                  : 'hover:text-neutral-900'
-              }`
-            }
-          >
-            {t.admin.navSettings}
-          </NavLink>
-          <NavLink
-            to="/admin/launch"
-            className={({ isActive }) =>
-              `py-1 transition-colors whitespace-nowrap ${
-                isActive
-                  ? 'text-neutral-900 font-semibold border-b-2 border-[var(--theme-accent,#E11D48)]'
-                  : 'hover:text-neutral-900'
-              }`
-            }
-          >
-            {t.admin.navLaunch}
-          </NavLink>
-        </nav>
-
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Admin Language Switcher Segmented Control */}
           <div
@@ -78,11 +36,10 @@ export const AdminLayout: React.FC = () => {
               type="button"
               onClick={() => setLanguage('id')}
               aria-label="Bahasa Indonesia"
-              className={`min-h-[38px] px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer active:scale-95 ${
-                language === 'id'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:text-neutral-900'
-              }`}
+              className={`min-h-[38px] px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer active:scale-95 ${language === 'id'
+                ? 'bg-neutral-900 text-white shadow-xs'
+                : 'text-neutral-600 hover:text-neutral-900'
+                }`}
             >
               🇮🇩 ID
             </button>
@@ -90,11 +47,10 @@ export const AdminLayout: React.FC = () => {
               type="button"
               onClick={() => setLanguage('en')}
               aria-label="English"
-              className={`min-h-[38px] px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer active:scale-95 ${
-                language === 'en'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:text-neutral-900'
-              }`}
+              className={`min-h-[38px] px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer active:scale-95 ${language === 'en'
+                ? 'bg-neutral-900 text-white shadow-xs'
+                : 'text-neutral-600 hover:text-neutral-900'
+                }`}
             >
               🇬🇧 EN
             </button>
@@ -128,10 +84,9 @@ export const AdminLayout: React.FC = () => {
                 <NavLink
                   to="/admin/welcome"
                   className={({ isActive }) =>
-                    `min-h-[44px] flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap active:scale-95 ${
-                      isActive
-                        ? 'bg-neutral-900 text-white shadow-sm'
-                        : 'text-neutral-700 hover:bg-neutral-200/70'
+                    `min-h-[44px] flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap active:scale-95 ${isActive
+                      ? 'bg-neutral-900 text-white shadow-sm'
+                      : 'text-neutral-700 hover:bg-neutral-200/70'
                     }`
                   }
                 >
@@ -140,10 +95,9 @@ export const AdminLayout: React.FC = () => {
                 <NavLink
                   to="/admin/settings"
                   className={({ isActive }) =>
-                    `min-h-[44px] flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap active:scale-95 ${
-                      isActive
-                        ? 'bg-neutral-900 text-white shadow-sm'
-                        : 'text-neutral-700 hover:bg-neutral-200/70'
+                    `min-h-[44px] flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap active:scale-95 ${isActive
+                      ? 'bg-neutral-900 text-white shadow-sm'
+                      : 'text-neutral-700 hover:bg-neutral-200/70'
                     }`
                   }
                 >
@@ -152,10 +106,9 @@ export const AdminLayout: React.FC = () => {
                 <NavLink
                   to="/admin/launch"
                   className={({ isActive }) =>
-                    `min-h-[44px] flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap active:scale-95 ${
-                      isActive
-                        ? 'bg-neutral-900 text-white shadow-sm'
-                        : 'text-neutral-700 hover:bg-neutral-200/70'
+                    `min-h-[44px] flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap active:scale-95 ${isActive
+                      ? 'bg-neutral-900 text-white shadow-sm'
+                      : 'text-neutral-700 hover:bg-neutral-200/70'
                     }`
                   }
                 >

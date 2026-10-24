@@ -8,6 +8,7 @@ import type { FrameMetadata, SessionRecord } from '../../types/photobox';
 import { downloadSingleFile } from '../../services/downloadService';
 import { printThermal, printColor } from '../../services/printServices';
 import { usePhotobox } from '../../context/PhotoboxContext';
+import { ResetAllDataModal } from '../../components/common/ResetAllDataModal';
 
 export const AdminWelcome: React.FC = () => {
   const navigate = useNavigate();
@@ -21,6 +22,8 @@ export const AdminWelcome: React.FC = () => {
     message: string;
     isError: boolean;
   } | null>(null);
+  const [showResetAllModal, setShowResetAllModal] = useState(false);
+  const [notification, setNotification] = useState<string | null>(null);
 
   const settings = useLiveQuery(() => db.settings.get('app_settings'), []);
   const sessions = useLiveQuery(
@@ -110,6 +113,25 @@ export const AdminWelcome: React.FC = () => {
 
   return (
     <div className="space-y-10 max-w-5xl">
+      {notification && (
+        <div
+          role="status"
+          className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm font-semibold text-emerald-900 flex items-center justify-between shadow-xs animate-in fade-in"
+        >
+          <div className="flex items-center gap-2">
+            <span>✅</span>
+            <span>{notification}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNotification(null)}
+            className="text-xs text-emerald-700 hover:text-emerald-900 underline cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Hero Banner & Executive Summary */}
       <section className="bg-white border border-neutral-200 rounded-xl p-6 md:p-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
@@ -370,15 +392,17 @@ export const AdminWelcome: React.FC = () => {
                 : 'Arsip sesi terakhir yang tersimpan di IndexedDB perangkat ini.'}
             </p>
           </div>
-          {sessions && sessions.length > 0 && (
-            <button
-              type="button"
-              onClick={handleClearHistory}
-              className="px-3 py-1.5 text-xs font-medium text-neutral-600 hover:text-[#DC2626] border border-neutral-200 rounded-md transition-colors whitespace-nowrap cursor-pointer"
-            >
-              {t.admin.clearHistory}
-            </button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {sessions && sessions.length > 0 && (
+              <button
+                type="button"
+                onClick={handleClearHistory}
+                className="px-3 py-1.5 text-xs font-medium text-neutral-600 hover:text-[#DC2626] border border-neutral-200 rounded-md transition-colors whitespace-nowrap cursor-pointer"
+              >
+                {t.admin.clearHistory}
+              </button>
+            )}
+          </div>
         </div>
 
         {!sessions || sessions.length === 0 ? (
@@ -483,8 +507,8 @@ export const AdminWelcome: React.FC = () => {
                           {reprintingSessionId === session.id && reprintingType === 'thermal'
                             ? (language === 'en' ? 'Printing...' : 'Mencetak...')
                             : session.thermalPrintCount
-                            ? `Thermal (${session.thermalPrintCount}x)`
-                            : 'Thermal'}
+                              ? `Thermal (${session.thermalPrintCount}x)`
+                              : 'Thermal'}
                         </span>
                       </button>
 
@@ -500,8 +524,8 @@ export const AdminWelcome: React.FC = () => {
                           {reprintingSessionId === session.id && reprintingType === 'color'
                             ? (language === 'en' ? 'Printing...' : 'Mencetak...')
                             : session.colorPrintCount
-                            ? `${language === 'en' ? 'Color' : 'Warna'} (${session.colorPrintCount}x)`
-                            : (language === 'en' ? 'Color' : 'Warna')}
+                              ? `${language === 'en' ? 'Color' : 'Warna'} (${session.colorPrintCount}x)`
+                              : (language === 'en' ? 'Color' : 'Warna')}
                         </span>
                       </button>
                     </div>
@@ -509,11 +533,10 @@ export const AdminWelcome: React.FC = () => {
                     {reprintFeedback && reprintFeedback.sessionId === session.id && (
                       <p
                         role="status"
-                        className={`text-[11px] font-mono-tabular px-2.5 py-1.5 rounded-lg border leading-tight ${
-                          reprintFeedback.isError
+                        className={`text-[11px] font-mono-tabular px-2.5 py-1.5 rounded-lg border leading-tight ${reprintFeedback.isError
                             ? 'bg-amber-50 text-amber-900 border-amber-300'
                             : 'bg-emerald-50 text-emerald-900 border-emerald-300 font-semibold'
-                        }`}
+                          }`}
                       >
                         {reprintFeedback.message}
                       </p>
@@ -525,6 +548,16 @@ export const AdminWelcome: React.FC = () => {
           </div>
         )}
       </section>
+
+      {/* Modal Dialog for Resetting All Data */}
+      <ResetAllDataModal
+        isOpen={showResetAllModal}
+        onClose={() => setShowResetAllModal(false)}
+        onSuccess={() => {
+          setNotification(t.admin.resetAllDataSuccess);
+          setTimeout(() => setNotification(null), 5000);
+        }}
+      />
     </div>
   );
 };
