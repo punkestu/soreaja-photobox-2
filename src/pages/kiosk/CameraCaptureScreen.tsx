@@ -119,7 +119,7 @@ export const CameraCaptureScreen: React.FC = () => {
         streamRef.current = mediaStream;
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
-          await videoRef.current.play().catch(() => {});
+          await videoRef.current.play().catch(() => { });
         }
         setUseSimulator(false);
         setCameraReady(true);
@@ -436,11 +436,10 @@ export const CameraCaptureScreen: React.FC = () => {
             type="button"
             onClick={() => setShowTools((prev) => !prev)}
             aria-expanded={showTools}
-            className={`min-h-[40px] px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5 border active:scale-95 ${
-              showTools
-                ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
-                : 'text-zinc-300 hover:text-white bg-zinc-900/90 hover:bg-zinc-800 border-zinc-700/80'
-            }`}
+            className={`min-h-[40px] px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5 border active:scale-95 ${showTools
+              ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
+              : 'text-zinc-300 hover:text-white bg-zinc-900/90 hover:bg-zinc-800 border-zinc-700/80'
+              }`}
           >
             <span>⚙️</span>
             <span>{showTools ? t.camera.closeTools : t.camera.tools}</span>
@@ -476,9 +475,8 @@ export const CameraCaptureScreen: React.FC = () => {
             ref={videoRef}
             playsInline
             muted
-            className={`w-full h-full object-cover ${
-              useSimulator ? 'hidden' : 'block'
-            } ${settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''}`}
+            className={`w-full h-full object-cover ${useSimulator ? 'hidden' : 'block'
+              } ${settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''}`}
           />
 
           {/* Studio Camera Simulator Fallback */}
@@ -487,9 +485,8 @@ export const CameraCaptureScreen: React.FC = () => {
               src={currentPortrait.src}
               alt={currentPortrait.label}
               referrerPolicy="no-referrer"
-              className={`w-full h-full object-cover transition-all duration-300 ${
-                settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
-              }`}
+              className={`w-full h-full object-cover transition-all duration-300 ${settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
+                }`}
             />
           )}
 
@@ -553,11 +550,10 @@ export const CameraCaptureScreen: React.FC = () => {
 
               {/* Active Photo Framing Boundary */}
               <div
-                className={`absolute transition-all duration-200 ${
-                  cropInfo.isCropped
-                    ? 'border-2 border-[var(--theme-accent,#E11D48)] shadow-[0_0_24px_rgba(225,29,72,0.45)]'
-                    : 'border-2 border-white/50'
-                }`}
+                className={`absolute transition-all duration-200 ${cropInfo.isCropped
+                  ? 'border-2 border-[var(--theme-accent,#E11D48)] shadow-[0_0_24px_rgba(225,29,72,0.45)]'
+                  : 'border-2 border-white/50'
+                  }`}
                 style={{
                   left: `${cropInfo.leftPercent}%`,
                   top: `${cropInfo.topPercent}%`,
@@ -640,11 +636,10 @@ export const CameraCaptureScreen: React.FC = () => {
                 return (
                   <div
                     key={idx}
-                    className={`w-9 h-9 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl overflow-hidden relative bg-zinc-900/90 flex items-center justify-center transition-all ${
-                      isTargetRetake || isCurrent
-                        ? 'ring-2 ring-[var(--theme-accent,#E11D48)] shadow-[0_0_15px_rgba(225,29,72,0.6)] scale-105'
-                        : 'opacity-70 hover:opacity-100'
-                    }`}
+                    className={`w-9 h-9 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl overflow-hidden relative bg-zinc-900/90 flex items-center justify-center transition-all ${isTargetRetake || isCurrent
+                      ? 'ring-2 ring-[var(--theme-accent,#E11D48)] shadow-[0_0_15px_rgba(225,29,72,0.6)] scale-105'
+                      : 'opacity-70 hover:opacity-100'
+                      }`}
                   >
                     {shotSrc ? (
                       <img
@@ -675,8 +670,8 @@ export const CameraCaptureScreen: React.FC = () => {
                   {isCapturingSequence
                     ? `⏱️ ${countdown ?? '...'}`
                     : isRetakeMode
-                    ? `↺ Retake #${(retakeIndex ?? 0) + 1}`
-                    : `${t.camera.startSequence} (${settings?.countdownSeconds || 3}s)`}
+                      ? `↺ Retake #${(retakeIndex ?? 0) + 1}`
+                      : `${t.camera.startSequence} (${settings?.countdownSeconds || 3}s)`}
                 </span>
               </button>
 
@@ -730,22 +725,20 @@ export const CameraCaptureScreen: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setUseSimulator(false)}
-                        className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${
-                          !useSimulator
-                            ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
-                            : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
-                        }`}
+                        className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${!useSimulator
+                          ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
+                          : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+                          }`}
                       >
                         📷 {t.camera.webRtc}
                       </button>
                       <button
                         type="button"
                         onClick={() => setUseSimulator(true)}
-                        className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${
-                          useSimulator
-                            ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
-                            : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
-                        }`}
+                        className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${useSimulator
+                          ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
+                          : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+                          }`}
                       >
                         🖥️ {t.camera.sim}
                       </button>
@@ -760,22 +753,20 @@ export const CameraCaptureScreen: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setShowCropGuide((prev) => !prev)}
-                        className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${
-                          showCropGuide
-                            ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
-                            : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
-                        }`}
+                        className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${showCropGuide
+                          ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
+                          : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+                          }`}
                       >
                         📐 {t.camera.cropToggle}
                       </button>
                       <button
                         type="button"
                         onClick={() => setShowGridLines((prev) => !prev)}
-                        className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${
-                          showGridLines
-                            ? 'bg-zinc-700 text-white border-zinc-600'
-                            : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
-                        }`}
+                        className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${showGridLines
+                          ? 'bg-zinc-700 text-white border-zinc-600'
+                          : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+                          }`}
                       >
                         ⊞ {t.camera.gridToggle}
                       </button>
@@ -808,11 +799,10 @@ export const CameraCaptureScreen: React.FC = () => {
                           key={pose.id}
                           type="button"
                           onClick={() => setActivePoseIdx(idx)}
-                          className={`p-2 text-xs font-mono-tabular rounded-xl border flex flex-col items-center gap-1 transition-all cursor-pointer ${
-                            activePoseIdx === idx
-                              ? 'bg-white text-zinc-950 font-bold border-white shadow-md scale-102'
-                              : 'bg-zinc-950/80 text-zinc-300 border-zinc-800 hover:border-zinc-700'
-                          }`}
+                          className={`p-2 text-xs font-mono-tabular rounded-xl border flex flex-col items-center gap-1 transition-all cursor-pointer ${activePoseIdx === idx
+                            ? 'bg-white text-zinc-950 font-bold border-white shadow-md scale-102'
+                            : 'bg-zinc-950/80 text-zinc-300 border-zinc-800 hover:border-zinc-700'
+                            }`}
                         >
                           <img
                             src={pose.src}

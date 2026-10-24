@@ -28,14 +28,14 @@ export const IdleScreen: React.FC = () => {
         diffMins < 2
           ? t.idle.justNow
           : diffMins < 60
-          ? `${diffMins} ${t.idle.minutesAgo}`
-          : `${Math.floor(diffMins / 60)} ${t.idle.hoursAgo}`;
+            ? `${diffMins} ${t.idle.minutesAgo}`
+            : `${Math.floor(diffMins / 60)} ${t.idle.hoursAgo}`;
       const timeEn =
         diffMins < 2
           ? 'Just now'
           : diffMins < 60
-          ? `${diffMins}m ago`
-          : `${Math.floor(diffMins / 60)}h ago`;
+            ? `${diffMins}m ago`
+            : `${Math.floor(diffMins / 60)}h ago`;
 
       const dateStr = new Date(session.timestamp).toLocaleDateString('id-ID', {
         day: '2-digit',
@@ -168,17 +168,15 @@ export const IdleScreen: React.FC = () => {
                   animationDelay: item.floatDelay,
                 } as React.CSSProperties
               }
-              className={`absolute ${layout.className} ${layout.anim} transition-all duration-700 pointer-events-auto ${
-                isHighlighted
+              className={`absolute ${layout.className} ${layout.anim} transition-all duration-700 pointer-events-auto ${isHighlighted
                   ? 'z-30 scale-105 sm:scale-110 drop-shadow-[0_25px_50px_rgba(0,0,0,0.95)]'
                   : 'z-10 opacity-70 sm:opacity-85 hover:opacity-100 hover:scale-105 drop-shadow-[0_15px_30px_rgba(0,0,0,0.8)]'
-              }`}
+                }`}
             >
               {/* Authentic Polaroid White Paper Card Frame */}
               <div
-                className={`relative w-[130px] sm:w-[155px] md:w-[175px] lg:w-[190px] bg-white p-2 pb-5 sm:pb-6 rounded-md shadow-2xl transition-all duration-300 ${
-                  isHighlighted ? 'ring-3 ring-[var(--theme-accent,#E11D48)]' : 'ring-1 ring-black/10'
-                }`}
+                className={`relative w-[130px] sm:w-[155px] md:w-[175px] lg:w-[190px] bg-white p-2 pb-5 sm:pb-6 rounded-md shadow-2xl transition-all duration-300 ${isHighlighted ? 'ring-3 ring-[var(--theme-accent,#E11D48)]' : 'ring-1 ring-black/10'
+                  }`}
               >
                 {/* Frosted Translucent Tape Accent on Top */}
                 <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-10 sm:w-12 h-4 sm:h-5 bg-white/40 backdrop-blur-sm -rotate-2 rounded-xs shadow-sm border-t border-b border-white/50" />
@@ -221,8 +219,6 @@ export const IdleScreen: React.FC = () => {
           <span className="font-semibold text-white">{settings?.studioName || 'SoreAja Studio — Booth 02'}</span>
           <span aria-hidden="true">·</span>
           <span>{settings?.eventName || 'SoreAja Sunset Session 2026'}</span>
-          <span aria-hidden="true">·</span>
-          <span className="text-emerald-400 font-bold">{t.idle.offlineActive}</span>
         </div>
 
         <div className="space-y-3 sm:space-y-4">
@@ -295,11 +291,10 @@ export const IdleScreen: React.FC = () => {
                     e.stopPropagation();
                     setActiveSpotlightIdx(i);
                   }}
-                  className={`w-1.5 h-1.5 rounded-full transition-all cursor-pointer ${
-                    i === activeSpotlightIdx
+                  className={`w-1.5 h-1.5 rounded-full transition-all cursor-pointer ${i === activeSpotlightIdx
                       ? 'w-4 bg-[var(--theme-accent,#E11D48)]'
                       : 'bg-zinc-600 hover:bg-zinc-400'
-                  }`}
+                    }`}
                   aria-label={`Show session ${i + 1}`}
                 />
               ))}

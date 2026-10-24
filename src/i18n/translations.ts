@@ -3,7 +3,7 @@ import type { AppLanguage } from '../types/photobox';
 export const TRANSLATIONS = {
   id: {
     // Top Bar & Steps
-    appName: 'SoreAja — Photobox',
+    appName: 'SoreAja Pose',
     steps: {
       step1: '1. Mulai',
       step2: '2. Bingkai',
@@ -35,7 +35,7 @@ export const TRANSLATIONS = {
     },
     // Idle Screen
     idle: {
-      readyBadge: 'Pilih Bingkai · Pose Otomatis · Cetak Instan & Scan QR Google Drive',
+      readyBadge: 'Pilih · Pose · Cetak',
       touchPrompt: 'Sentuh Layar untuk Memulai',
       touchSubtitle: 'Abadikan momenmu sekarang juga.',
       startBtn: 'Mulai Sesi Foto ✨',
@@ -53,7 +53,7 @@ export const TRANSLATIONS = {
     // Frame Selection Screen
     frameSelect: {
       stageBadge: 'Tahap 02/06',
-      title: 'Pilih Layout Bingkai',
+      title: 'Pilih Bingkai',
       subtitle: 'Sentuh bingkai pilihanmu untuk melanjutkan ke sesi foto kamera.',
       framesAvailable: 'Desain',
       poses: 'Pose',
@@ -65,10 +65,10 @@ export const TRANSLATIONS = {
       nextFrame: 'Bingkai berikutnya',
       scrollingIndicator: 'Menggeser...',
       filterAll: 'Semua',
-      filterSingleStrip: 'Single 2x6',
-      filterDoubleStrip: 'Double 4R',
+      filterSingleStrip: 'Single',
+      filterDoubleStrip: 'Double',
       singleStripBadge: 'Single',
-      doubleStripBadge: 'Full 4R',
+      doubleStripBadge: 'Double',
     },
     // Camera Screen
     camera: {
@@ -262,9 +262,9 @@ export const TRANSLATIONS = {
       sidebarCamera: 'Kamera Studio (/app/camera)',
       offlineReady: 'Mode Offline Mandiri',
       offlineReadyDesc: 'Penyimpanan lokal IndexedDB via Dexie.js aktif.',
-      summaryStatus: '01. Ringkasan & Status',
-      summarySettings: '02. Konfigurasi Photobox',
-      summaryLaunch: '03. Luncurkan Kiosk',
+      summaryStatus: 'Ringkasan & Status',
+      summarySettings: 'Konfigurasi Photobox',
+      summaryLaunch: 'Luncurkan Kiosk',
       recentSessions: 'Galeri Sesi Terbaru',
       clearHistory: 'Hapus Riwayat',
       noSessions: 'Belum ada sesi foto yang tercatat.',
@@ -343,7 +343,7 @@ export const TRANSLATIONS = {
     },
     // Idle Screen
     idle: {
-      readyBadge: 'Select Frame · Automatic Pose · Instant Print & Scan Google Drive QR',
+      readyBadge: 'Choose · Pose · Print',
       touchPrompt: 'Tap Screen to Start',
       touchSubtitle: 'Capture your special moment right now.',
       startBtn: 'Start Photo Session ✨',
@@ -361,7 +361,7 @@ export const TRANSLATIONS = {
     // Frame Selection Screen
     frameSelect: {
       stageBadge: 'Stage 02/06',
-      title: 'Select Frame Layout',
+      title: 'Select Frame',
       subtitle: 'Touch your favorite frame design to continue to the photo shoot.',
       framesAvailable: 'Designs',
       poses: 'Poses',
@@ -373,10 +373,10 @@ export const TRANSLATIONS = {
       nextFrame: 'Next frame',
       scrollingIndicator: 'Scrolling...',
       filterAll: 'All',
-      filterSingleStrip: 'Single 2x6',
-      filterDoubleStrip: 'Double 4R',
+      filterSingleStrip: 'Single',
+      filterDoubleStrip: 'Double',
       singleStripBadge: 'Single',
-      doubleStripBadge: 'Full 4R',
+      doubleStripBadge: 'Double',
     },
     // Camera Screen
     camera: {
@@ -570,9 +570,9 @@ export const TRANSLATIONS = {
       sidebarCamera: 'Studio Camera (/app/camera)',
       offlineReady: 'Self-Contained Offline Mode',
       offlineReadyDesc: 'IndexedDB local storage via Dexie.js is active.',
-      summaryStatus: '01. Summary & Status',
-      summarySettings: '02. Photobox Configuration',
-      summaryLaunch: '03. Launch Kiosk',
+      summaryStatus: 'Summary & Status',
+      summarySettings: 'Photobox Configuration',
+      summaryLaunch: 'Launch Kiosk',
       recentSessions: 'Recent Session Gallery',
       clearHistory: 'Clear History',
       noSessions: 'No photo sessions recorded yet.',
