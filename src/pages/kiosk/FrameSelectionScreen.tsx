@@ -65,24 +65,38 @@ export const FrameSelectionScreen: React.FC = () => {
   const momentumAnimationRef = useRef<number | null>(null);
   const wheelCooldownRef = useRef(false);
 
-  // Fetch frame templates
+  // Initial mount guard
+  const hasInitializedRef = useRef(false);
+  const hasInitialScrolledRef = useRef(false);
+
+  // Fetch frame templates once on component mount
   useEffect(() => {
+    let isMounted = true;
     fetchFramesMetadata().then((data) => {
+      if (!isMounted) return;
       setFrames(data);
       setLoading(false);
 
-      // Determine initial active index if a frame was already chosen
-      if (selectedFrame) {
-        const foundIndex = data.findIndex((f) => f.id === selectedFrame.id);
-        if (foundIndex !== -1) {
-          setActiveIndex(foundIndex);
+      if (!hasInitializedRef.current) {
+        hasInitializedRef.current = true;
+        // Determine initial active index if a frame was already chosen
+        if (selectedFrame) {
+          const foundIndex = data.findIndex((f) => f.id === selectedFrame.id);
+          if (foundIndex !== -1) {
+            setActiveIndex(foundIndex);
+          }
+        } else if (data.length > 0) {
+          // Set first frame as default selected if none chosen yet
+          setSelectedFrame(data[0]);
+          setActiveIndex(0);
         }
-      } else if (data.length > 0) {
-        // Set first frame as default selected if none chosen yet
-        setSelectedFrame(data[0]);
       }
     });
-  }, [selectedFrame, setSelectedFrame]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Run ONCE on mount
 
   // Keep activeIndex strictly in sync with selectedFrame whenever filteredFrames or selectedFrame changes
   useEffect(() => {
@@ -102,29 +116,31 @@ export const FrameSelectionScreen: React.FC = () => {
     }
   }, []);
 
-  // Calculate which frame element is currently closest to the carousel center
+  // Calculate which frame element is currently closest to the carousel center within filtered list bounds
   const getClosestFrameIndex = useCallback(() => {
     const container = carouselRef.current;
-    if (!container || itemRefs.current.length === 0) return 0;
+    const count = filteredFrames.length;
+    if (!container || count === 0) return 0;
 
     const containerCenter = container.getBoundingClientRect().left + container.offsetWidth / 2;
 
     let closestIndex = 0;
     let minDiff = Infinity;
 
-    itemRefs.current.forEach((el, index) => {
-      if (!el) return;
+    for (let i = 0; i < count; i++) {
+      const el = itemRefs.current[i];
+      if (!el) continue;
       const rect = el.getBoundingClientRect();
       const itemCenter = rect.left + rect.width / 2;
       const diff = Math.abs(itemCenter - containerCenter);
       if (diff < minDiff) {
         minDiff = diff;
-        closestIndex = index;
+        closestIndex = i;
       }
-    });
+    }
 
     return closestIndex;
-  }, []);
+  }, [filteredFrames.length]);
 
   // Programmatically center a card with smooth animation
   const scrollToIndex = useCallback(
@@ -167,13 +183,17 @@ export const FrameSelectionScreen: React.FC = () => {
 
   // Initial scroll on frames load
   useEffect(() => {
-    if (!loading && frames.length > 0) {
+    if (!loading && frames.length > 0 && !hasInitialScrolledRef.current) {
+      hasInitialScrolledRef.current = true;
+      const targetIdx = selectedFrame
+        ? Math.max(0, filteredFrames.findIndex((f) => f.id === selectedFrame.id))
+        : 0;
       const timer = setTimeout(() => {
-        scrollToIndex(activeIndex, false);
+        scrollToIndex(targetIdx !== -1 ? targetIdx : 0, false);
       }, 80);
       return () => clearTimeout(timer);
     }
-  }, [loading, frames.length, scrollToIndex, activeIndex]);
+  }, [loading, frames.length, scrollToIndex, selectedFrame, filteredFrames]);
 
   // Auto-focus and auto-center the nearest frame when filter changes
   useEffect(() => {
@@ -233,26 +253,13 @@ export const FrameSelectionScreen: React.FC = () => {
         // Frame exists in this filter: retain selection
         targetIdx = foundIdx;
       } else {
-        // Frame does NOT exist in new filter: auto-select the NEAREST frame by index distance
-        const currentAllIdx = selectedFrame
-          ? frames.findIndex((f) => f.id === selectedFrame.id)
-          : activeIndex;
-
-        const effectiveCurrentIdx = currentAllIdx !== -1 ? currentAllIdx : 0;
-
-        let minDiff = Infinity;
-        let nearestIdx = 0;
-
-        nextList.forEach((frame, idx) => {
-          const frameAllIdx = frames.findIndex((f) => f.id === frame.id);
-          const diff = Math.abs(frameAllIdx - effectiveCurrentIdx);
-          if (diff < minDiff) {
-            minDiff = diff;
-            nearestIdx = idx;
-          }
-        });
-
-        targetIdx = nearestIdx;
+        // Frame does NOT exist in new filter: proportionally map position from current carousel progress
+        const currentList = filteredFrames;
+        const progress = currentList.length > 1 ? activeIndex / (currentList.length - 1) : 0;
+        targetIdx = Math.min(
+          nextList.length - 1,
+          Math.max(0, Math.round(progress * (nextList.length - 1)))
+        );
       }
 
       const targetFrame = nextList[targetIdx];
@@ -265,7 +272,7 @@ export const FrameSelectionScreen: React.FC = () => {
       // Schedule auto-scroll and auto-focus for the nearest frame on next layout frame
       pendingFilterScrollRef.current = targetIdx;
     },
-    [activeFilter, cancelMomentum, frames, isDoubleWidthFrame, selectedFrame, activeIndex, setSelectedFrame]
+    [activeFilter, cancelMomentum, frames, isDoubleWidthFrame, selectedFrame, activeIndex, filteredFrames, setSelectedFrame]
   );
 
   // Auto-snap and commit selection when scrolling has completely stopped
@@ -276,11 +283,13 @@ export const FrameSelectionScreen: React.FC = () => {
       return;
     }
     const finalTarget = getClosestFrameIndex();
-    setActiveIndex(finalTarget);
-    if (filteredFrames[finalTarget]) {
-      setSelectedFrame(filteredFrames[finalTarget]);
+    if (finalTarget >= 0 && finalTarget < filteredFrames.length) {
+      setActiveIndex(finalTarget);
+      if (filteredFrames[finalTarget]) {
+        setSelectedFrame(filteredFrames[finalTarget]);
+      }
+      scrollToIndex(finalTarget, true);
     }
-    scrollToIndex(finalTarget, true);
     setIsScrolling(false);
     isScrollingRef.current = false;
   }, [getClosestFrameIndex, filteredFrames, setSelectedFrame, scrollToIndex]);
@@ -720,8 +729,7 @@ export const FrameSelectionScreen: React.FC = () => {
             aria-label="Frame Templates Carousel"
           >
             {filteredFrames.map((frame, index) => {
-              const isSelected = selectedFrame ? selectedFrame.id === frame.id : index === activeIndex;
-              const isActive = isSelected || index === activeIndex;
+              const isActive = selectedFrame ? selectedFrame.id === frame.id : index === activeIndex;
               const isDoubleWidth = isDoubleWidthFrame(frame);
 
               return (
@@ -729,6 +737,9 @@ export const FrameSelectionScreen: React.FC = () => {
                   key={frame.id}
                   ref={(el) => {
                     itemRefs.current[index] = el;
+                    if (index === filteredFrames.length - 1) {
+                      itemRefs.current.length = filteredFrames.length;
+                    }
                   }}
                   onClick={() => handleCardClick(frame, index)}
                   role="button"

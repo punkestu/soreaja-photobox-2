@@ -165,12 +165,18 @@ export const ReviewPhotosScreen: React.FC = () => {
                     viewMode === 'full' ? 'aspect-[4/3]' : ''
                   }`}
                 >
-                  <img
-                    src={photoSrc}
-                    alt={`Hasil tangkapan pose ${index + 1}`}
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover group-hover:opacity-75 transition-opacity"
-                  />
+                  {photoSrc ? (
+                    <img
+                      src={photoSrc}
+                      alt={`Hasil tangkapan pose ${index + 1}`}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover group-hover:opacity-75 transition-opacity"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-zinc-600 text-xs font-mono">
+                      Foto kosong
+                    </div>
+                  )}
 
                   {/* If Full View Mode: Show Crop Guide Mask Overlay */}
                   {viewMode === 'full' && (isNarrower || isWider) && (

@@ -410,11 +410,15 @@ export const AdminWelcome: React.FC = () => {
               >
                 <div className="space-y-2">
                   <div className="aspect-[3/4] bg-neutral-100 rounded overflow-hidden flex items-center justify-center p-2">
-                    <img
-                      src={session.finalLayoutBase64}
-                      alt={`Hasil sesi ${session.frameName}`}
-                      className="max-h-full max-w-full object-contain shadow-sm"
-                    />
+                    {session.finalLayoutBase64 ? (
+                      <img
+                        src={session.finalLayoutBase64}
+                        alt={`Hasil sesi ${session.frameName}`}
+                        className="max-h-full max-w-full object-contain shadow-sm"
+                      />
+                    ) : (
+                      <span className="text-xs text-neutral-400 font-mono-tabular">Tidak ada gambar</span>
+                    )}
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-neutral-900">

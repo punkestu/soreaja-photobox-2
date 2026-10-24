@@ -482,7 +482,7 @@ export const CameraCaptureScreen: React.FC = () => {
           />
 
           {/* Studio Camera Simulator Fallback */}
-          {useSimulator && (
+          {useSimulator && currentPortrait?.src && (
             <img
               src={currentPortrait.src}
               alt={currentPortrait.label}

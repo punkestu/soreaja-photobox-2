@@ -554,21 +554,28 @@ export const FinalPreviewScreen: React.FC = () => {
                     maxHeight: zoomLevel === 1.0 ? '100%' : 'none',
                   }}
                 >
-                  <img
-                    data-testid="final-composite-image"
-                    src={activeDisplayImage || finalLayoutBase64 || ''}
-                    alt={`Hasil Akhir Bingkai ${activeFrame.name}`}
-                    className="w-auto max-w-none rounded-xl shadow-2xl block"
-                    style={{
-                      height: zoomLevel === 1.0 ? '100%' : `${Math.round(baseFitHeight * zoomLevel)}px`,
-                      maxHeight: zoomLevel === 1.0 ? 'calc(100vh - 14rem)' : 'none',
-                      objectFit: 'contain',
-                    }}
-                    draggable={false}
-                  />
+                  {activeDisplayImage || finalLayoutBase64 ? (
+                    <img
+                      data-testid="final-composite-image"
+                      src={(activeDisplayImage || finalLayoutBase64) ?? undefined}
+                      alt={`Hasil Akhir Bingkai ${activeFrame.name}`}
+                      className="w-auto max-w-none rounded-xl shadow-2xl block"
+                      style={{
+                        height: zoomLevel === 1.0 ? '100%' : `${Math.round(baseFitHeight * zoomLevel)}px`,
+                        maxHeight: zoomLevel === 1.0 ? 'calc(100vh - 14rem)' : 'none',
+                        objectFit: 'contain',
+                      }}
+                      draggable={false}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-center space-y-3 py-12">
+                      <div className="w-10 h-10 border-3 border-[var(--theme-accent,#E11D48)] border-t-transparent rounded-full animate-spin" />
+                      <p className="text-sm font-mono-tabular text-zinc-300">{t.preview.rendering}</p>
+                    </div>
+                  )}
 
                   {/* Interactive Sticker Studio Layer (only on single strip view for 1:1 precision) */}
-                  {previewMode === 'single' && (
+                  {previewMode === 'single' && (activeDisplayImage || finalLayoutBase64) && (
                     <InteractiveStickerCanvas
                       stickers={placedStickers}
                       onStickersChange={(newStickers) => setPlacedStickers(newStickers)}
