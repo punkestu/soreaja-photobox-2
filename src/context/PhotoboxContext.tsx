@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import type { FrameMetadata, PhotoFilter, PhotoboxState, AppLanguage, PlacedSticker } from '../types/photobox';
-import { db } from '../db';
+import { db, resetAllData as dbResetAllData, DEFAULT_APP_SETTINGS } from '../db';
 import { DEFAULT_FRAMES } from '../data/defaultFrames';
 import { TRANSLATIONS, type TranslationDictionary } from '../i18n/translations';
 import { playSessionExpiredAlertSound } from '../services/shutterAudio';
+import { applyThemeColor } from '../data/themeConfig';
 
 interface PhotoboxContextValue extends PhotoboxState {
   language: AppLanguage;
@@ -21,14 +22,17 @@ interface PhotoboxContextValue extends PhotoboxState {
   setShowFrameStamps: (show: boolean) => void;
   setPlacedStickers: React.Dispatch<React.SetStateAction<PlacedSticker[]>>;
   resetSession: () => void;
+  resetAllData: () => Promise<void>;
   seedDemoSession: () => void;
   // Session countdown timer properties
   sessionSecondsLeft: number;
   sessionDurationMinutes: number;
   isSessionTimerEnabled: boolean;
+  isSessionTimerRunning: boolean;
   isSessionExpiredAlertOpen: boolean;
   dismissSessionExpiredAlert: () => void;
   startSessionTimer: () => void;
+  stopSessionTimer: () => void;
   resetSessionTimer: () => void;
   addExtraSessionTime: (minutes?: number) => void;
 }
@@ -78,7 +82,7 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (existing) {
           db.settings.put({ ...existing, language: lang });
         }
-      }).catch(() => {});
+      }).catch(() => { });
     });
   }, []);
 
@@ -116,7 +120,9 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
 
         if (isMounted && savedSession) {
-          if (savedSession.selectedFrame) setSelectedFrame(savedSession.selectedFrame);
+          if (savedSession.selectedFrame) {
+            setSelectedFrame((prev) => (prev ? prev : savedSession.selectedFrame));
+          }
           if (
             savedSession.capturedPhotos &&
             Array.isArray(savedSession.capturedPhotos) &&
@@ -238,6 +244,11 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setIsSessionTimerRunning(true);
   }, []);
 
+  const stopSessionTimer = useCallback(() => {
+    setIsSessionTimerRunning(false);
+    setIsSessionExpiredAlertOpen(false);
+  }, []);
+
   const resetSessionTimer = useCallback(() => {
     setSessionSecondsLeft(sessionDurationMinutes * 60);
     setIsSessionExpiredAlertOpen(false);
@@ -293,11 +304,37 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       })
       .catch(() => {
         setSessionSecondsLeft(300);
-        setCustomCaption('SOREAJA — PHOTOBOX 2');
+        setCustomCaption('SOREAJA Pose');
         setShowFrameStamps(true);
       });
 
-    db.activeSession.delete('current_active_session').catch(() => {});
+    if (saveTimeoutRef.current) {
+      window.clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+
+    db.activeSession.delete('current_active_session').catch(() => { });
+  }, []);
+
+  const resetAllData = useCallback(async () => {
+    await dbResetAllData();
+    setSelectedFrame(initialState.selectedFrame);
+    setCapturedPhotos(initialState.capturedPhotos);
+    setRetakeIndex(initialState.retakeIndex);
+    setFinalLayoutBase64(initialState.finalLayoutBase64);
+    setDoubleStripBase64(initialState.doubleStripBase64);
+    setGifBlobUrl(initialState.gifBlobUrl);
+    setSelectedFilter(initialState.selectedFilter);
+    setCustomCaption(DEFAULT_APP_SETTINGS.defaultCaption || 'SOREAJA — PHOTOBOX 2');
+    setShowFrameStamps(DEFAULT_APP_SETTINGS.showFrameStamps !== undefined ? DEFAULT_APP_SETTINGS.showFrameStamps : true);
+    setPlacedStickers(initialState.placedStickers);
+    setLanguageState('id');
+    setSessionDurationMinutes(DEFAULT_APP_SETTINGS.sessionDurationMinutes || 5);
+    setIsSessionTimerEnabled(DEFAULT_APP_SETTINGS.enableSessionTimer ?? true);
+    setSessionSecondsLeft((DEFAULT_APP_SETTINGS.sessionDurationMinutes || 5) * 60);
+    setIsSessionTimerRunning(false);
+    setIsSessionExpiredAlertOpen(false);
+    applyThemeColor(DEFAULT_APP_SETTINGS.themeColor || '#E11D48');
   }, []);
 
   const seedDemoSession = useCallback(() => {
@@ -322,6 +359,7 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         showFrameStamps,
         placedStickers,
         setPlacedStickers,
+        resetAllData,
         isHydrated,
         language,
         setLanguage,
@@ -341,9 +379,11 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         sessionSecondsLeft,
         sessionDurationMinutes,
         isSessionTimerEnabled,
+        isSessionTimerRunning,
         isSessionExpiredAlertOpen,
         dismissSessionExpiredAlert,
         startSessionTimer,
+        stopSessionTimer,
         resetSessionTimer,
         addExtraSessionTime,
       }}

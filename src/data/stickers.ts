@@ -2,11 +2,13 @@ export interface StickerItem {
   id: string;
   label: string;
   content: string;
-  type: 'emoji' | 'stamp' | 'badge';
+  type: 'emoji' | 'stamp' | 'badge' | 'image';
   category: 'sparkles' | 'hearts_y2k' | 'stamps';
 }
 
 export const STICKER_COLLECTION: StickerItem[] = [
+  // ☀️ Studio Branding (Circular Logo)
+  { id: 'st_logo', label: 'SoreAja Sun Logo', content: '/assets/logo.webp', type: 'image', category: 'stamps' },
   // ✨ Sparkles & Stars
   { id: 'spk_1', label: 'Sparkles', content: '✨', type: 'emoji', category: 'sparkles' },
   { id: 'spk_2', label: 'Star Glow', content: '🌟', type: 'emoji', category: 'sparkles' },

@@ -28,7 +28,7 @@ export interface StripRatioInfo {
   type: 'vertical-long-strip' | 'standard-portrait' | 'square' | 'landscape';
 }
 
-export type PhotoFilter = 'original' | 'warm-sore' | 'noir-bw' | 'vintage-film';
+export type PhotoFilter = 'original' | 'warm-sore' | 'noir-bw' | 'vintage-film' | 'korean-clean' | 'fuji-film';
 
 export type AppLanguage = 'id' | 'en';
 
@@ -56,6 +56,7 @@ export interface AppSettings {
   themeColor?: string; // Hex color e.g. '#E11D48'
   themePreset?: string; // 'crimson' | 'amber' | etc.
   language?: AppLanguage; // 'id' | 'en'
+  idleScreenMode?: 'standard' | 'fullscreen-camera'; // Mode layar tunggu standby
   updatedAt?: string;
 }
 
@@ -77,8 +78,8 @@ export interface SessionRecord {
 export interface PlacedSticker {
   id: string;
   stickerId: string;
-  content: string; // Emoji, SVG symbol, or text stamp
-  type: 'emoji' | 'stamp' | 'badge';
+  content: string; // Emoji, SVG symbol, text stamp, or image URL
+  type: 'emoji' | 'stamp' | 'badge' | 'image';
   x: number; // 0 to 1 normalized coordinate relative to canvas width
   y: number; // 0 to 1 normalized coordinate relative to canvas height
   scale: number; // 0.5 to 2.5 relative scale

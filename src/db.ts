@@ -30,6 +30,30 @@ export async function clearActiveSession(): Promise<void> {
   }
 }
 
+export async function resetAllData(): Promise<void> {
+  try {
+    await Promise.all([
+      db.sessions.clear(),
+      db.activeSession.clear(),
+      db.settings.clear(),
+    ]);
+    await db.settings.put({
+      ...DEFAULT_APP_SETTINGS,
+      updatedAt: new Date().toISOString(),
+    });
+    try {
+      localStorage.removeItem('soreaja_last_active_route');
+      sessionStorage.removeItem('soreaja_last_active_route');
+    } catch {
+      // Ignore storage access errors
+    }
+  } catch (err) {
+    console.error('Failed to reset all data in PhotoboxDatabase:', err);
+    throw err;
+  }
+}
+
+
 
 export const DEFAULT_DRIVE_URL =
   'https://drive.google.com/drive/folders/1SoreAjaPhotobox2StudioArchive';
@@ -39,7 +63,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   driveUrl: DEFAULT_DRIVE_URL,
   studioName: 'SoreAja Studio — Booth 02',
   eventName: 'SoreAja Sunset Session 2026',
-  defaultCaption: 'SOREAJA — PHOTOBOX 2',
+  defaultCaption: 'SOREAJA — Pose',
   showFrameStamps: true,
   countdownSeconds: 3,
   autoDownload: true,
@@ -58,6 +82,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   themeColor: '#E11D48',
   themePreset: 'crimson',
   language: 'id',
+  idleScreenMode: 'standard',
   updatedAt: new Date().toISOString(),
 };
 

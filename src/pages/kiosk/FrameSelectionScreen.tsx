@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { db } from '../../db';
 import { fetchFramesMetadata } from '../../data/defaultFrames';
 import { usePhotobox } from '../../context/PhotoboxContext';
 import type { FrameMetadata } from '../../types/photobox';
@@ -12,7 +13,7 @@ export const FrameSelectionScreen: React.FC = () => {
     usePhotobox();
   const [frames, setFrames] = useState<FrameMetadata[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [focusedIndex, setFocusedIndex] = useState(0);
   const [activeFilter, setActiveFilter] = useState<FrameFilterType>('all');
   const [isScrolling, setIsScrolling] = useState(false);
   const isScrollingRef = useRef(false);
@@ -79,16 +80,14 @@ export const FrameSelectionScreen: React.FC = () => {
 
       if (!hasInitializedRef.current) {
         hasInitializedRef.current = true;
-        // Determine initial active index if a frame was already chosen
+        // Determine initial focused index if a frame was already chosen
         if (selectedFrame) {
           const foundIndex = data.findIndex((f) => f.id === selectedFrame.id);
           if (foundIndex !== -1) {
-            setActiveIndex(foundIndex);
+            setFocusedIndex(foundIndex);
           }
         } else if (data.length > 0) {
-          // Set first frame as default selected if none chosen yet
-          setSelectedFrame(data[0]);
-          setActiveIndex(0);
+          setFocusedIndex(0);
         }
       }
     });
@@ -98,15 +97,15 @@ export const FrameSelectionScreen: React.FC = () => {
     };
   }, []); // Run ONCE on mount
 
-  // Keep activeIndex strictly in sync with selectedFrame whenever filteredFrames or selectedFrame changes
+  // Sync focusedIndex with selectedFrame if selectedFrame is externally updated
   useEffect(() => {
     if (selectedFrame && filteredFrames.length > 0) {
       const idx = filteredFrames.findIndex((f) => f.id === selectedFrame.id);
-      if (idx !== -1 && idx !== activeIndex) {
-        setActiveIndex(idx);
+      if (idx !== -1 && idx !== focusedIndex) {
+        setFocusedIndex(idx);
       }
     }
-  }, [selectedFrame, filteredFrames, activeIndex]);
+  }, [selectedFrame, filteredFrames]);
 
   // Cancel any active momentum animation
   const cancelMomentum = useCallback(() => {
@@ -168,7 +167,7 @@ export const FrameSelectionScreen: React.FC = () => {
         left: targetScrollLeft,
         behavior: smooth ? 'smooth' : 'auto',
       });
-      setActiveIndex(index);
+      setFocusedIndex(index);
 
       // Generous buffer so handleScroll never interrupts smooth scroll before it finishes
       programmaticTimerRef.current = setTimeout(() => {
@@ -176,7 +175,7 @@ export const FrameSelectionScreen: React.FC = () => {
         programmaticTargetRef.current = null;
         setIsScrolling(false);
         isScrollingRef.current = false;
-      }, smooth ? 650 : 80);
+      }, smooth ? 600 : 80);
     },
     []
   );
@@ -245,37 +244,21 @@ export const FrameSelectionScreen: React.FC = () => {
         return;
       }
 
-      // Check if the currently selected frame exists in the new filter
-      const foundIdx = selectedFrame ? nextList.findIndex((f) => f.id === selectedFrame.id) : -1;
+      // Determine closest relevant candidate in new list
+      const candidateId = selectedFrame?.id || filteredFrames[focusedIndex]?.id;
+      const foundIdx = candidateId ? nextList.findIndex((f) => f.id === candidateId) : -1;
+      const targetIdx = foundIdx !== -1 ? foundIdx : 0;
 
-      let targetIdx = 0;
-      if (foundIdx !== -1) {
-        // Frame exists in this filter: retain selection
-        targetIdx = foundIdx;
-      } else {
-        // Frame does NOT exist in new filter: proportionally map position from current carousel progress
-        const currentList = filteredFrames;
-        const progress = currentList.length > 1 ? activeIndex / (currentList.length - 1) : 0;
-        targetIdx = Math.min(
-          nextList.length - 1,
-          Math.max(0, Math.round(progress * (nextList.length - 1)))
-        );
-      }
-
-      const targetFrame = nextList[targetIdx];
       programmaticTargetRef.current = targetIdx;
-      setActiveIndex(targetIdx);
-      if (targetFrame) {
-        setSelectedFrame(targetFrame);
-      }
+      setFocusedIndex(targetIdx);
 
       // Schedule auto-scroll and auto-focus for the nearest frame on next layout frame
       pendingFilterScrollRef.current = targetIdx;
     },
-    [activeFilter, cancelMomentum, frames, isDoubleWidthFrame, selectedFrame, activeIndex, filteredFrames, setSelectedFrame]
+    [activeFilter, cancelMomentum, frames, isDoubleWidthFrame, selectedFrame, focusedIndex, filteredFrames]
   );
 
-  // Auto-snap and commit selection when scrolling has completely stopped
+  // Auto-snap and update visual center card when scrolling has completely stopped
   const snapToSettledFrame = useCallback(() => {
     // If programmatic scroll, dragging, or empty, never override
     if (isPointerDownRef.current || isProgrammaticScrollRef.current || filteredFrames.length === 0) {
@@ -285,21 +268,18 @@ export const FrameSelectionScreen: React.FC = () => {
     }
     const finalTarget = getClosestFrameIndex();
     if (finalTarget >= 0 && finalTarget < filteredFrames.length) {
-      if (finalTarget !== activeIndex) {
-        setActiveIndex(finalTarget);
-        if (filteredFrames[finalTarget]) {
-          setSelectedFrame(filteredFrames[finalTarget]);
-        }
+      if (finalTarget !== focusedIndex) {
+        setFocusedIndex(finalTarget);
       }
 
-      // Gentle alignment only if not perfectly centered (do not cause ongoing scroll bounce)
+      // Gentle alignment only if noticeably miscentered (does not cause endless bounce)
       const container = carouselRef.current;
       const targetEl = itemRefs.current[finalTarget];
       if (container && targetEl) {
         const containerRect = container.getBoundingClientRect();
         const targetRect = targetEl.getBoundingClientRect();
         const delta = (targetRect.left + targetRect.width / 2) - (containerRect.left + containerRect.width / 2);
-        if (Math.abs(delta) > 5) {
+        if (Math.abs(delta) > 8) {
           isProgrammaticScrollRef.current = true;
           container.scrollTo({
             left: Math.max(0, container.scrollLeft + delta),
@@ -307,13 +287,13 @@ export const FrameSelectionScreen: React.FC = () => {
           });
           setTimeout(() => {
             isProgrammaticScrollRef.current = false;
-          }, 350);
+          }, 250);
         }
       }
     }
     setIsScrolling(false);
     isScrollingRef.current = false;
-  }, [getClosestFrameIndex, filteredFrames, setSelectedFrame, activeIndex]);
+  }, [getClosestFrameIndex, filteredFrames.length, focusedIndex]);
 
   // Pure fluid scrolling with instantaneous auto-snap when scroll stops
   const handleScroll = useCallback(() => {
@@ -332,12 +312,12 @@ export const FrameSelectionScreen: React.FC = () => {
       clearTimeout(settleTimeoutRef.current);
     }
 
-    // Automatically snap to the nearest centered frame as soon as scrolling stops
+    // Automatically align to the nearest centered frame once scrolling ceases
     settleTimeoutRef.current = setTimeout(() => {
       if (!isPointerDownRef.current && !isProgrammaticScrollRef.current) {
         snapToSettledFrame();
       }
-    }, 100);
+    }, 150);
   }, [snapToSettledFrame]);
 
   // Listen for native scrollend event where supported for instant snapping
@@ -356,35 +336,28 @@ export const FrameSelectionScreen: React.FC = () => {
     };
   }, [snapToSettledFrame]);
 
-  // Next and Prev buttons: actively select the frame, update state, and glide to center
+  // Next and Prev buttons: glide focus to adjacent card
   const handleNext = useCallback(() => {
     cancelMomentum();
-    const nextIndex = Math.min(filteredFrames.length - 1, activeIndex + 1);
-    if (nextIndex !== activeIndex) {
+    const nextIndex = Math.min(filteredFrames.length - 1, focusedIndex + 1);
+    if (nextIndex !== focusedIndex) {
       setIsScrolling(false);
       isScrollingRef.current = false;
-      setActiveIndex(nextIndex);
-      if (filteredFrames[nextIndex]) {
-        setSelectedFrame(filteredFrames[nextIndex]);
-      }
+      setFocusedIndex(nextIndex);
       scrollToIndex(nextIndex, true);
     }
-  }, [activeIndex, filteredFrames, setSelectedFrame, scrollToIndex, cancelMomentum]);
-
+  }, [focusedIndex, filteredFrames.length, scrollToIndex, cancelMomentum]);
 
   const handlePrev = useCallback(() => {
     cancelMomentum();
-    const prevIndex = Math.max(0, activeIndex - 1);
-    if (prevIndex !== activeIndex) {
+    const prevIndex = Math.max(0, focusedIndex - 1);
+    if (prevIndex !== focusedIndex) {
       setIsScrolling(false);
       isScrollingRef.current = false;
-      setActiveIndex(prevIndex);
-      if (filteredFrames[prevIndex]) {
-        setSelectedFrame(filteredFrames[prevIndex]);
-      }
+      setFocusedIndex(prevIndex);
       scrollToIndex(prevIndex, true);
     }
-  }, [activeIndex, filteredFrames, setSelectedFrame, scrollToIndex, cancelMomentum]);
+  }, [focusedIndex, scrollToIndex, cancelMomentum]);
 
   // Keyboard navigation (Left / Right / Enter / Space)
   useEffect(() => {
@@ -399,15 +372,15 @@ export const FrameSelectionScreen: React.FC = () => {
         handleNext();
       } else if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        if (filteredFrames[activeIndex]) {
-          handleSelectFrame(filteredFrames[activeIndex]);
+        if (filteredFrames[focusedIndex]) {
+          handleSelectFrame(filteredFrames[focusedIndex]);
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeIndex, filteredFrames, loading, handlePrev, handleNext]);
+  }, [focusedIndex, filteredFrames, loading, handlePrev, handleNext]);
 
   // Mouse wheel & trackpad horizontal translation
   const handleWheel = (e: React.WheelEvent) => {
@@ -523,16 +496,33 @@ export const FrameSelectionScreen: React.FC = () => {
 
   const handleTouchEnd = () => {
     isPointerDownRef.current = false;
-    if (settleTimeoutRef.current) clearTimeout(settleTimeoutRef.current);
-    settleTimeoutRef.current = setTimeout(() => {
-      snapToSettledFrame();
-    }, 65);
+    // Let natural inertia scroll smoothly; handleScroll will align center once momentum ends
   };
 
   const handleSelectFrame = (frame: FrameMetadata) => {
     setSelectedFrame(frame);
     setCapturedPhotos([]);
     setRetakeIndex(null);
+
+    // Eagerly persist to IndexedDB active session
+    try {
+      db.activeSession.put({
+        id: 'current_active_session',
+        selectedFrame: frame,
+        capturedPhotos: [],
+        retakeIndex: null,
+        finalLayoutBase64: null,
+        doubleStripBase64: null,
+        selectedFilter: 'original',
+        customCaption: 'SOREAJA — Pose',
+        showFrameStamps: true,
+        placedStickers: [],
+        updatedAt: Date.now(),
+      }).catch(() => { });
+    } catch {
+      // ignore storage errors
+    }
+
     navigate('/app/camera');
   };
 
@@ -554,15 +544,14 @@ export const FrameSelectionScreen: React.FC = () => {
     isScrollingRef.current = false;
     setIsScrolling(false);
 
-    // If card was already stationary and active before this click, proceed to camera
-    if (index === activeIndex) {
+    // If card was already focused, clicking it confirms and advances to camera
+    if (index === focusedIndex) {
       handleSelectFrame(frame);
       return;
     }
 
-    // Set active frame immediately and smoothly glide directly to center it (no bounce)
-    setActiveIndex(index);
-    setSelectedFrame(frame);
+    // Otherwise glide to focus and center it
+    setFocusedIndex(index);
     scrollToIndex(index, true);
   };
 
@@ -606,17 +595,15 @@ export const FrameSelectionScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => handleFilterChange('all')}
-              className={`h-7 sm:h-7.5 px-2 sm:px-2.5 rounded-md font-medium transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
-                activeFilter === 'all'
-                  ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm font-bold'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
-              }`}
+              className={`h-7 sm:h-7.5 px-2 sm:px-2.5 rounded-md font-medium transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${activeFilter === 'all'
+                ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm font-bold'
+                : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+                }`}
             >
               <span>{t.frameSelect.filterAll}</span>
               <span
-                className={`text-[9px] sm:text-[10px] font-mono-tabular px-1 sm:px-1.5 py-0.2 rounded-full ${
-                  activeFilter === 'all' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'
-                }`}
+                className={`text-[9px] sm:text-[10px] font-mono-tabular px-1 sm:px-1.5 py-0.2 rounded-full ${activeFilter === 'all' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'
+                  }`}
               >
                 {frames.length}
               </span>
@@ -625,18 +612,16 @@ export const FrameSelectionScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => handleFilterChange('single')}
-              className={`h-7 sm:h-7.5 px-2 sm:px-2.5 rounded-md font-medium transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
-                activeFilter === 'single'
-                  ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm font-bold'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
-              }`}
+              className={`h-7 sm:h-7.5 px-2 sm:px-2.5 rounded-md font-medium transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${activeFilter === 'single'
+                ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm font-bold'
+                : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+                }`}
             >
               <span className="text-[11px]">📱</span>
               <span>{t.frameSelect.filterSingleStrip}</span>
               <span
-                className={`text-[9px] sm:text-[10px] font-mono-tabular px-1 sm:px-1.5 py-0.2 rounded-full ${
-                  activeFilter === 'single' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'
-                }`}
+                className={`text-[9px] sm:text-[10px] font-mono-tabular px-1 sm:px-1.5 py-0.2 rounded-full ${activeFilter === 'single' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'
+                  }`}
               >
                 {singleCount}
               </span>
@@ -645,18 +630,16 @@ export const FrameSelectionScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => handleFilterChange('double')}
-              className={`h-7 sm:h-7.5 px-2 sm:px-2.5 rounded-md font-medium transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
-                activeFilter === 'double'
-                  ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm font-bold'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
-              }`}
+              className={`h-7 sm:h-7.5 px-2 sm:px-2.5 rounded-md font-medium transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${activeFilter === 'double'
+                ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm font-bold'
+                : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+                }`}
             >
               <span className="text-[11px]">👥</span>
               <span>{t.frameSelect.filterDoubleStrip}</span>
               <span
-                className={`text-[9px] sm:text-[10px] font-mono-tabular px-1 sm:px-1.5 py-0.2 rounded-full ${
-                  activeFilter === 'double' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'
-                }`}
+                className={`text-[9px] sm:text-[10px] font-mono-tabular px-1 sm:px-1.5 py-0.2 rounded-full ${activeFilter === 'double' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'
+                  }`}
               >
                 {doubleCount}
               </span>
@@ -696,17 +679,16 @@ export const FrameSelectionScreen: React.FC = () => {
         </div>
       ) : (
         <div className="relative flex-1 min-h-0 w-full flex flex-col justify-center py-1 sm:py-2 my-auto overflow-hidden">
-          {/* Side Navigation Arrow Buttons - Pressing Next / Prev actively selects the frame */}
+          {/* Side Navigation Arrow Buttons - Pressing Next / Prev glides visual focus */}
           <button
             type="button"
             onClick={handlePrev}
-            disabled={activeIndex === 0}
+            disabled={focusedIndex === 0}
             aria-label={t.frameSelect.prevFrame || 'Previous frame'}
-            className={`absolute left-1 sm:left-3 md:left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-200 border shadow-2xl backdrop-blur-md cursor-pointer ${
-              activeIndex === 0
-                ? 'opacity-20 pointer-events-none bg-zinc-900/40 border-zinc-800 text-zinc-600'
-                : 'bg-zinc-900/90 hover:bg-zinc-800 text-white border-white/15 active:scale-90 hover:scale-105 hover:border-[var(--theme-accent,#E11D48)]/50 hover:shadow-[0_0_20px_rgba(225,29,72,0.3)]'
-            }`}
+            className={`absolute left-1 sm:left-3 md:left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-200 border shadow-2xl backdrop-blur-md cursor-pointer ${focusedIndex === 0
+              ? 'opacity-20 pointer-events-none bg-zinc-900/40 border-zinc-800 text-zinc-600'
+              : 'bg-zinc-900/90 hover:bg-zinc-800 text-white border-white/15 active:scale-90 hover:scale-105 hover:border-[var(--theme-accent,#E11D48)]/50 hover:shadow-[0_0_20px_rgba(225,29,72,0.3)]'
+              }`}
           >
             <svg className="w-5 h-5 sm:w-6 sm:h-6 stroke-current" fill="none" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
@@ -716,13 +698,12 @@ export const FrameSelectionScreen: React.FC = () => {
           <button
             type="button"
             onClick={handleNext}
-            disabled={activeIndex === filteredFrames.length - 1}
+            disabled={focusedIndex === filteredFrames.length - 1}
             aria-label={t.frameSelect.nextFrame || 'Next frame'}
-            className={`absolute right-1 sm:right-3 md:right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-200 border shadow-2xl backdrop-blur-md cursor-pointer ${
-              activeIndex === filteredFrames.length - 1
-                ? 'opacity-20 pointer-events-none bg-zinc-900/40 border-zinc-800 text-zinc-600'
-                : 'bg-zinc-900/90 hover:bg-zinc-800 text-white border-white/15 active:scale-90 hover:scale-105 hover:border-[var(--theme-accent,#E11D48)]/50 hover:shadow-[0_0_20px_rgba(225,29,72,0.3)]'
-            }`}
+            className={`absolute right-1 sm:right-3 md:right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-200 border shadow-2xl backdrop-blur-md cursor-pointer ${focusedIndex === filteredFrames.length - 1
+              ? 'opacity-20 pointer-events-none bg-zinc-900/40 border-zinc-800 text-zinc-600'
+              : 'bg-zinc-900/90 hover:bg-zinc-800 text-white border-white/15 active:scale-90 hover:scale-105 hover:border-[var(--theme-accent,#E11D48)]/50 hover:shadow-[0_0_20px_rgba(225,29,72,0.3)]'
+              }`}
           >
             <svg className="w-5 h-5 sm:w-6 sm:h-6 stroke-current" fill="none" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
@@ -750,7 +731,8 @@ export const FrameSelectionScreen: React.FC = () => {
             aria-label="Frame Templates Carousel"
           >
             {filteredFrames.map((frame, index) => {
-              const isActive = selectedFrame ? selectedFrame.id === frame.id : index === activeIndex;
+              const isFocused = index === focusedIndex;
+              const isSelected = selectedFrame ? selectedFrame.id === frame.id : isFocused;
               const isDoubleWidth = isDoubleWidthFrame(frame);
 
               return (
@@ -765,7 +747,7 @@ export const FrameSelectionScreen: React.FC = () => {
                   onClick={() => handleCardClick(frame, index)}
                   role="button"
                   tabIndex={0}
-                  aria-selected={isActive}
+                  aria-selected={isFocused}
                   aria-label={`${frame.name}, ${frame.photoCount} ${t.frameSelect.poses}`}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -773,11 +755,10 @@ export const FrameSelectionScreen: React.FC = () => {
                       handleCardClick(frame, index);
                     }
                   }}
-                  className={`w-[220px] sm:w-[250px] md:w-[280px] max-h-[58vh] shrink-0 rounded-2xl flex flex-col justify-between p-3 sm:p-3.5 select-none border transform-gpu outline-none focus-visible:ring-4 focus-visible:ring-[var(--theme-accent,#E11D48)]/60 transition-[transform,opacity,border-color,box-shadow] duration-200 ease-out will-change-[transform,opacity] ${
-                    isActive
-                      ? 'scale-100 opacity-100 bg-zinc-900 border-[var(--theme-accent,#E11D48)] ring-2 ring-[var(--theme-accent,#E11D48)]/40 shadow-[0_16px_40px_rgba(0,0,0,0.8),0_0_25px_rgba(225,29,72,0.3)] z-10'
-                      : 'scale-[0.94] opacity-65 hover:opacity-85 bg-zinc-900/70 border-zinc-800/80 hover:border-zinc-700/80 cursor-pointer z-0'
-                  }`}
+                  className={`w-[220px] sm:w-[250px] md:w-[280px] max-h-[58vh] shrink-0 rounded-2xl flex flex-col justify-between p-3 sm:p-3.5 select-none border transform-gpu outline-none focus-visible:ring-4 focus-visible:ring-[var(--theme-accent,#E11D48)]/60 transition-[transform,opacity,border-color,box-shadow] duration-500 ease-out will-change-[transform,opacity] ${isFocused
+                    ? 'scale-100 opacity-100 bg-zinc-900 border-[var(--theme-accent,#E11D48)] ring-2 ring-[var(--theme-accent,#E11D48)]/40 shadow-[0_16px_40px_rgba(0,0,0,0.8),0_0_25px_rgba(225,29,72,0.3)] z-10'
+                    : 'scale-[0.94] opacity-65 hover:opacity-85 bg-zinc-900/70 border-zinc-800/80 hover:border-zinc-700/80 cursor-pointer z-0'
+                    }`}
                 >
                   {/* Top Metadata: Poses count, Strip Format Badge & Active indicator */}
                   <div className="flex items-center justify-between pb-1.5 text-[11px] font-mono-tabular text-zinc-400 shrink-0 gap-1.5">
@@ -786,17 +767,16 @@ export const FrameSelectionScreen: React.FC = () => {
                         {frame.photoCount} {t.frameSelect.poses}
                       </span>
                       <span
-                        className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border shrink-0 ${
-                          isDoubleWidth
-                            ? 'text-amber-300 bg-amber-500/15 border-amber-500/30'
-                            : 'text-sky-300 bg-sky-500/15 border-sky-500/30'
-                        }`}
+                        className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border shrink-0 ${isDoubleWidth
+                          ? 'text-amber-300 bg-amber-500/15 border-amber-500/30'
+                          : 'text-sky-300 bg-sky-500/15 border-sky-500/30'
+                          }`}
                       >
                         {isDoubleWidth ? `👥 ${t.frameSelect.doubleStripBadge}` : `📱 ${t.frameSelect.singleStripBadge}`}
                       </span>
                     </div>
 
-                    {isActive ? (
+                    {isFocused || isSelected ? (
                       <span className="text-[10px] font-bold text-[var(--theme-accent,#E11D48)] bg-[var(--theme-accent,#E11D48)]/10 px-2 py-0.5 rounded border border-[var(--theme-accent,#E11D48)]/30 shrink-0">
                         ✓ ACTIVE
                       </span>
@@ -816,7 +796,7 @@ export const FrameSelectionScreen: React.FC = () => {
                       loading="lazy"
                       decoding="async"
                       draggable={false}
-                      className="h-full w-auto max-h-[42vh] max-w-full object-contain pointer-events-none drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] transform-gpu transition-transform duration-200"
+                      className={`h-full w-auto max-h-[42vh] max-w-full object-contain pointer-events-none drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] transform-gpu transition-transform duration-500 transition-all ${isFocused ? 'rotate-[-7deg]' : ''}`}
                     />
                   </div>
 
@@ -832,7 +812,7 @@ export const FrameSelectionScreen: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Action CTA */}
+                  {/* Action CTA: Explicitly Select and Navigate Immediately */}
                   <div className="pt-1.5 shrink-0">
                     <button
                       type="button"
@@ -840,11 +820,10 @@ export const FrameSelectionScreen: React.FC = () => {
                         e.stopPropagation();
                         handleSelectFrame(frame);
                       }}
-                      className={`w-full min-h-[42px] py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition-all whitespace-nowrap shadow-lg flex items-center justify-center gap-2 cursor-pointer ${
-                        isActive
-                          ? 'bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] text-white shadow-[0_0_20px_rgba(225,29,72,0.4)] ring-2 ring-[var(--theme-accent,#E11D48)]/50 active:scale-[0.98]'
-                          : 'bg-zinc-800/90 hover:bg-[var(--theme-accent,#E11D48)] text-zinc-300 hover:text-white border border-zinc-700/80 active:scale-[0.98]'
-                      }`}
+                      className={`w-full min-h-[42px] py-2 px-3 text-xs sm:text-sm font-bold rounded-xl transition-all whitespace-nowrap shadow-lg flex items-center justify-center gap-2 cursor-pointer ${isFocused || isSelected
+                        ? 'bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] text-white shadow-[0_0_20px_rgba(225,29,72,0.4)] ring-2 ring-[var(--theme-accent,#E11D48)]/50 active:scale-[0.98]'
+                        : 'bg-zinc-800/90 hover:bg-[var(--theme-accent,#E11D48)] text-zinc-300 hover:text-white border border-zinc-700/80 active:scale-[0.98]'
+                        }`}
                     >
                       <span>{t.frameSelect.selectAction}</span>
                       <span>📸</span>
@@ -855,15 +834,15 @@ export const FrameSelectionScreen: React.FC = () => {
             })}
           </div>
 
-          {/* Dot Indicators & Carousel Counter */}
-          <div className="flex flex-col items-center justify-center gap-1 pt-1.5 shrink-0">
+          {/* Dot Indicators & Carousel Counter with Immediate Select CTA */}
+          <div className="flex flex-col items-center justify-center gap-1.5 pt-1.5 shrink-0">
             <div
               className="flex items-center justify-center gap-1.5 max-w-full overflow-x-hidden px-4"
               role="tablist"
               aria-label="Frame selector pagination"
             >
               {filteredFrames.map((frame, idx) => {
-                const isDotActive = selectedFrame ? selectedFrame.id === frame.id : idx === activeIndex;
+                const isDotActive = idx === focusedIndex;
                 return (
                   <button
                     key={frame.id}
@@ -872,15 +851,13 @@ export const FrameSelectionScreen: React.FC = () => {
                     aria-selected={isDotActive}
                     aria-label={`${frame.name} (${idx + 1} / ${filteredFrames.length})`}
                     onClick={() => {
-                      setActiveIndex(idx);
-                      setSelectedFrame(frame);
+                      setFocusedIndex(idx);
                       scrollToIndex(idx, true);
                     }}
-                    className={`transition-all duration-300 rounded-full cursor-pointer shrink-0 ${
-                      isDotActive
-                        ? 'w-7 sm:w-8 h-2 bg-[var(--theme-accent,#E11D48)] shadow-[0_0_12px_rgba(225,29,72,0.6)]'
-                        : 'w-1.5 sm:w-2 h-1.5 sm:h-2 bg-zinc-700 hover:bg-zinc-500'
-                    }`}
+                    className={`transition-all duration-300 rounded-full cursor-pointer shrink-0 ${isDotActive
+                      ? 'w-7 sm:w-8 h-2 bg-[var(--theme-accent,#E11D48)] shadow-[0_0_12px_rgba(225,29,72,0.6)]'
+                      : 'w-1.5 sm:w-2 h-1.5 sm:h-2 bg-zinc-700 hover:bg-zinc-500'
+                      }`}
                   />
                 );
               })}
@@ -888,11 +865,23 @@ export const FrameSelectionScreen: React.FC = () => {
 
             <div className="text-xs font-mono-tabular text-zinc-400 flex items-center justify-center gap-2">
               <span className="font-semibold text-zinc-300">
-                {activeIndex + 1} / {filteredFrames.length}
+                {focusedIndex + 1} / {filteredFrames.length}
               </span>
               <span aria-hidden="true">·</span>
               <span>{t.frameSelect.swipeHint}</span>
             </div>
+
+            {/* Direct Confirmation Bottom Button */}
+            {filteredFrames[focusedIndex] && (
+              <button
+                type="button"
+                onClick={() => handleSelectFrame(filteredFrames[focusedIndex])}
+                className="min-h-[40px] px-6 py-1.5 bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] text-white font-bold text-xs sm:text-sm rounded-xl shadow-[0_0_20px_rgba(225,29,72,0.4)] active:scale-95 transition-all cursor-pointer flex items-center gap-2"
+              >
+                <span>{t.frameSelect.selectAction}: {filteredFrames[focusedIndex].name}</span>
+                <span>📸</span>
+              </button>
+            )}
           </div>
         </div>
       )}

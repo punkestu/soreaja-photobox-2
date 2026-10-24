@@ -17,6 +17,7 @@ import {
   generateSideBySideStrip,
   isVerticalLongStrip,
 } from '../../services/canvasCompositor';
+import { BrandLogo } from '../../components/common/BrandLogo';
 
 export const PrintResultScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -34,6 +35,7 @@ export const PrintResultScreen: React.FC = () => {
     showFrameStamps,
     placedStickers,
     resetSession,
+    stopSessionTimer,
     isHydrated,
     language,
     t,
@@ -62,6 +64,7 @@ export const PrintResultScreen: React.FC = () => {
 
   // Sesuai TSD 4.2.6: Proses On-Mount
   useEffect(() => {
+    stopSessionTimer();
     if (!isHydrated) return;
     if (hasInitializedRef.current) return;
     hasInitializedRef.current = true;
@@ -287,24 +290,27 @@ export const PrintResultScreen: React.FC = () => {
     <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-8 space-y-6 md:space-y-8 select-none">
       {/* Header & Live Hardware Status */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-white/5">
-        <div>
-          <div className="text-xs sm:text-sm font-mono-tabular text-zinc-400 flex items-center gap-2 mb-1.5">
-            <span className="text-[var(--theme-accent,#E11D48)] font-bold">{t.printResult.stageBadge}</span>
-            <span aria-hidden="true">·</span>
-            <span>{t.printResult.autoDownloadBadge}</span>
-            <span aria-hidden="true">·</span>
-            <span>{t.printResult.printBadge}</span>
+        <div className="flex items-start gap-3.5 sm:gap-4">
+          <BrandLogo size="lg" className="shadow-lg ring-2 ring-white/20 mt-1 shrink-0" />
+          <div>
+            <div className="text-xs sm:text-sm font-mono-tabular text-zinc-400 flex items-center gap-2 mb-1.5">
+              <span className="text-[var(--theme-accent,#E11D48)] font-bold">{t.printResult.stageBadge}</span>
+              <span aria-hidden="true">·</span>
+              <span>{t.printResult.autoDownloadBadge}</span>
+              <span aria-hidden="true">·</span>
+              <span>{t.printResult.printBadge}</span>
+            </div>
+            <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#F4F4F0]">
+              {t.printResult.title}
+            </h1>
+            <p
+              role="status"
+              className="text-xs sm:text-sm font-mono-tabular text-emerald-400 font-semibold mt-1.5 flex items-center gap-1.5"
+            >
+              <span>{printStatus.startsWith('✅') ? '✅' : printStatus.startsWith('⚠️') ? '⚠️' : '⚡'}</span>
+              <span>{printStatus}</span>
+            </p>
           </div>
-          <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#F4F4F0]">
-            {t.printResult.title}
-          </h1>
-          <p
-            role="status"
-            className="text-xs sm:text-sm font-mono-tabular text-emerald-400 font-semibold mt-1.5 flex items-center gap-1.5"
-          >
-            <span>{printStatus.startsWith('✅') ? '✅' : printStatus.startsWith('⚠️') ? '⚠️' : '⚡'}</span>
-            <span>{printStatus}</span>
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
@@ -615,9 +621,12 @@ export const PrintResultScreen: React.FC = () => {
             </div>
 
             <div className="space-y-1.5 text-center sm:text-left">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[var(--theme-accent,#E11D48)]/15 border border-[var(--theme-accent,#E11D48)]/30 text-[var(--theme-accent,#E11D48)] rounded-full text-xs font-bold font-mono-tabular">
-                <span>📱</span>
-                <span>{t.printResult.scanQrBadge}</span>
+              <div className="flex items-center justify-center sm:justify-start gap-2">
+                <BrandLogo size="xs" showRing={false} />
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[var(--theme-accent,#E11D48)]/15 border border-[var(--theme-accent,#E11D48)]/30 text-[var(--theme-accent,#E11D48)] rounded-full text-xs font-bold font-mono-tabular">
+                  <span>📱</span>
+                  <span>{t.printResult.scanQrBadge}</span>
+                </div>
               </div>
               <h3 className="font-display text-lg sm:text-xl font-bold text-[#F4F4F0]">
                 {t.printResult.scanQrTitle}

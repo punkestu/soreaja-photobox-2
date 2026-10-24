@@ -1,8 +1,8 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig} from 'vite';
-import {VitePWA} from 'vite-plugin-pwa';
+import { defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(() => {
   return {
@@ -13,7 +13,7 @@ export default defineConfig(() => {
         registerType: 'autoUpdate',
         manifest: {
           id: '/',
-          name: 'SoreAja — Photobox',
+          name: 'SoreAja Pose',
           short_name: 'SoreAja',
           description:
             'Offline-first web photobox application with local IndexedDB storage, WebRTC capture, and GIF generation.',

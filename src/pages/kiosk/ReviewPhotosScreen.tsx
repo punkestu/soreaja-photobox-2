@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePhotobox } from '../../context/PhotoboxContext';
 import { DEFAULT_FRAMES, STUDIO_PORTRAITS } from '../../data/defaultFrames';
+import { db } from '../../db';
 
 export const ReviewPhotosScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -11,16 +12,19 @@ export const ReviewPhotosScreen: React.FC = () => {
     capturedPhotos,
     setCapturedPhotos,
     setRetakeIndex,
+    setFinalLayoutBase64,
+    setDoubleStripBase64,
     isHydrated,
     t,
   } = usePhotobox();
 
   const [viewMode, setViewMode] = useState<'cropped' | 'full'>('cropped');
   const activeFrame = selectedFrame || DEFAULT_FRAMES[0];
+  const isRetakingAllRef = useRef<boolean>(false);
 
   // Ensure valid fallback photos only after hydration if user navigated directly without photos
   useEffect(() => {
-    if (!isHydrated) return;
+    if (!isHydrated || isRetakingAllRef.current) return;
 
     if (!selectedFrame) {
       setSelectedFrame(DEFAULT_FRAMES[0]);
@@ -37,6 +41,22 @@ export const ReviewPhotosScreen: React.FC = () => {
   // Sesuai TSD 4.2.4: Klik foto -> Set retakeIndex ke index foto tersebut -> Kembali ke /app/camera
   const handleRetakeSinglePhoto = (index: number) => {
     setRetakeIndex(index);
+    navigate('/app/camera');
+  };
+
+  const handleRetakeAll = () => {
+    isRetakingAllRef.current = true;
+    setRetakeIndex(null);
+    setCapturedPhotos([]);
+    setFinalLayoutBase64(null);
+    setDoubleStripBase64(null);
+    db.activeSession.update('current_active_session', {
+      capturedPhotos: [],
+      retakeIndex: null,
+      finalLayoutBase64: null,
+      doubleStripBase64: null,
+      updatedAt: Date.now(),
+    }).catch(() => {});
     navigate('/app/camera');
   };
 
@@ -67,10 +87,7 @@ export const ReviewPhotosScreen: React.FC = () => {
         <div className="flex items-center gap-2.5 sm:gap-3">
           <button
             type="button"
-            onClick={() => {
-              setRetakeIndex(null);
-              navigate('/app/camera');
-            }}
+            onClick={handleRetakeAll}
             className="min-h-[46px] sm:min-h-[50px] px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-sm flex items-center gap-1.5"
           >
             <span>↺</span>

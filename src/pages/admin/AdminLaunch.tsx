@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { printThermal, printColor, type PrintJobResult } from '../../services/printServices';
 import { usePhotobox } from '../../context/PhotoboxContext';
+import { BrandLogo } from '../../components/common/BrandLogo';
 
 export const AdminLaunch: React.FC = () => {
   const navigate = useNavigate();
@@ -55,16 +56,19 @@ export const AdminLaunch: React.FC = () => {
 
       {/* Primary Launch Card */}
       <section className="bg-neutral-900 text-white rounded-xl p-8 border border-neutral-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div className="space-y-2 max-w-xl">
-          <p className="text-xs font-mono-tabular text-neutral-400">
-            KIOSK DISPLAY · 100% OFFLINE READY
-          </p>
-          <h2 className="font-display text-2xl font-bold">
-            {t.admin.launchReadyTitle}
-          </h2>
-          <p className="text-sm text-neutral-300 leading-relaxed">
-            {t.admin.launchReadyDesc}
-          </p>
+        <div className="flex items-start gap-4 max-w-xl">
+          <BrandLogo size="lg" showRing={true} className="ring-white/30 shrink-0 shadow-lg mt-0.5" />
+          <div className="space-y-2">
+            <p className="text-xs font-mono-tabular text-neutral-400">
+              KIOSK DISPLAY · 100% OFFLINE READY
+            </p>
+            <h2 className="font-display text-2xl font-bold">
+              {t.admin.launchReadyTitle}
+            </h2>
+            <p className="text-sm text-neutral-300 leading-relaxed">
+              {t.admin.launchReadyDesc}
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row md:flex-col gap-3 shrink-0 w-full md:w-auto">
@@ -86,70 +90,6 @@ export const AdminLaunch: React.FC = () => {
             <span>{t.admin.launchNewTabBtn}</span>
           </Link>
         </div>
-      </section>
-
-      {/* Hardware Diagnostic & Mock Print Verification */}
-      <section className="bg-white border border-neutral-200 rounded-xl p-6 space-y-5">
-        <div>
-          <h2 className="text-lg font-semibold text-neutral-900">
-            {t.admin.printerDiagnosticTitle}
-          </h2>
-          <p className="text-xs text-neutral-500 mt-0.5">
-            {t.admin.printerDiagnosticDesc}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="p-4 bg-[#F4F4F0] rounded-lg border border-neutral-200 flex flex-col justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold text-neutral-900">
-                {t.admin.printerThermalTitle}
-              </p>
-              <p className="text-xs text-neutral-600 mt-1">
-                {t.admin.printerThermalDesc}
-              </p>
-            </div>
-            <button
-              type="button"
-              disabled={testingThermal}
-              onClick={handleTestThermal}
-              className="px-4 py-2 text-xs font-semibold text-neutral-900 bg-white border border-neutral-300 hover:bg-neutral-100 rounded-lg transition-colors whitespace-nowrap cursor-pointer disabled:opacity-50"
-            >
-              {testingThermal ? t.admin.testingThermalBtn : t.admin.testThermalBtn}
-            </button>
-          </div>
-
-          <div className="p-4 bg-[#F4F4F0] rounded-lg border border-neutral-200 flex flex-col justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold text-neutral-900">
-                {t.admin.printerColorTitle}
-              </p>
-              <p className="text-xs text-neutral-600 mt-1">
-                {t.admin.printerColorDesc}
-              </p>
-            </div>
-            <button
-              type="button"
-              disabled={testingColor}
-              onClick={handleTestColor}
-              className="px-4 py-2 text-xs font-semibold text-neutral-900 bg-white border border-neutral-300 hover:bg-neutral-100 rounded-lg transition-colors whitespace-nowrap cursor-pointer disabled:opacity-50"
-            >
-              {testingColor ? t.admin.testingColorBtn : t.admin.testColorBtn}
-            </button>
-          </div>
-        </div>
-
-        {lastPrintResult && (
-          <div
-            role="status"
-            className="p-3.5 rounded-lg bg-neutral-900 text-neutral-100 text-xs font-mono-tabular flex items-center justify-between"
-          >
-            <span>
-              Status: {lastPrintResult.message} · ID: {lastPrintResult.jobId}
-            </span>
-            <span className="text-emerald-400">{lastPrintResult.timestamp}</span>
-          </div>
-        )}
       </section>
     </div>
   );

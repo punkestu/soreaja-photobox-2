@@ -8,6 +8,8 @@ import type { FrameMetadata, SessionRecord } from '../../types/photobox';
 import { downloadSingleFile } from '../../services/downloadService';
 import { printThermal, printColor } from '../../services/printServices';
 import { usePhotobox } from '../../context/PhotoboxContext';
+import { ResetAllDataModal } from '../../components/common/ResetAllDataModal';
+import { BrandLogo } from '../../components/common/BrandLogo';
 
 export const AdminWelcome: React.FC = () => {
   const navigate = useNavigate();
@@ -21,10 +23,13 @@ export const AdminWelcome: React.FC = () => {
     message: string;
     isError: boolean;
   } | null>(null);
+  const [showResetAllModal, setShowResetAllModal] = useState(false);
+  const [notification, setNotification] = useState<string | null>(null);
 
   const settings = useLiveQuery(() => db.settings.get('app_settings'), []);
+  const totalSessionCount = useLiveQuery(() => db.sessions.count(), []);
   const sessions = useLiveQuery(
-    () => db.sessions.orderBy('timestamp').reverse().limit(12).toArray(),
+    () => db.sessions.orderBy('timestamp').reverse().limit(3).toArray(),
     []
   );
 
@@ -110,16 +115,38 @@ export const AdminWelcome: React.FC = () => {
 
   return (
     <div className="space-y-10 max-w-5xl">
+      {notification && (
+        <div
+          role="status"
+          className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm font-semibold text-emerald-900 flex items-center justify-between shadow-xs animate-in fade-in"
+        >
+          <div className="flex items-center gap-2">
+            <span>✅</span>
+            <span>{notification}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNotification(null)}
+            className="text-xs text-emerald-700 hover:text-emerald-900 underline cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Hero Banner & Executive Summary */}
       <section className="bg-white border border-neutral-200 rounded-xl p-6 md:p-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-7 space-y-4">
-            <div className="text-xs text-neutral-500 flex items-center gap-2">
-              <span>{t.admin.portalTitle}</span>
-              <span aria-hidden="true">·</span>
-              <span>Dexie.js (PhotoboxDB)</span>
-              <span aria-hidden="true">·</span>
-              <span>{t.admin.offlineReady}</span>
+            <div className="flex items-center gap-3">
+              <BrandLogo size="md" showRing={true} className="ring-neutral-200 shadow-xs" />
+              <div className="text-xs text-neutral-500 flex items-center gap-2">
+                <span>{t.admin.portalTitle}</span>
+                <span aria-hidden="true">·</span>
+                <span>Dexie.js (PhotoboxDB)</span>
+                <span aria-hidden="true">·</span>
+                <span>{t.admin.offlineReady}</span>
+              </div>
             </div>
 
             <h1
@@ -163,6 +190,9 @@ export const AdminWelcome: React.FC = () => {
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover opacity-90"
               />
+              <div className="absolute top-3 right-3 z-10">
+                <BrandLogo size="xs" showRing={true} className="ring-white/40 shadow-sm" />
+              </div>
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent flex flex-col justify-end p-4 text-white">
                 <p className="font-serif-editorial italic text-lg leading-snug">
                   {language === 'en'
@@ -288,72 +318,85 @@ export const AdminWelcome: React.FC = () => {
         </div>
       </section>
 
-      {/* Frame Catalog Loaded from /metadata.json */}
+      {/* Frame Catalog Overview & Quick Link */}
       <section className="bg-white border border-neutral-200 rounded-xl p-6 space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-neutral-900">
-              03. {language === 'en' ? 'Registered Frame Catalog (/metadata.json)' : 'Katalog Bingkai Terdaftar (/metadata.json)'}
+              03. {t.admin.framesCatalogTitle || (language === 'en' ? 'Studio Frame Catalog' : 'Katalog Bingkai Studio')}
             </h2>
             <p className="text-xs text-neutral-500 mt-0.5">
               {language === 'en'
-                ? 'List of frame layouts and photo slot coordinates for HTML5 Canvas compositing.'
-                : 'Daftar layout bingkai dan koordinat slot foto untuk penggabungan HTML5 Canvas.'}
+                ? 'Registered frames and slot coordinate configurations for HTML5 canvas compositing.'
+                : 'Daftar layout bingkai dan konfigurasi slot foto kanvas untuk penggabungan hasil cetak.'}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/app/frame-selection')}
-            className="px-3.5 py-2 text-xs font-semibold text-neutral-900 border border-neutral-300 rounded-lg hover:bg-neutral-100 transition-colors whitespace-nowrap self-start sm:self-auto cursor-pointer"
-          >
-            {language === 'en' ? 'Preview Frame Picker' : 'Pratinjau Pemilih Bingkai'}
-          </button>
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+            <Link
+              to="/admin/frames"
+              className="px-3.5 py-2 text-xs font-semibold text-neutral-900 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 rounded-lg transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5"
+            >
+              <span>🖼️</span>
+              <span>
+                {t.admin.viewAllFrames} ({frames.length}) →
+              </span>
+            </Link>
+            <button
+              type="button"
+              onClick={() => navigate('/app/frame-selection')}
+              className="px-3.5 py-2 text-xs font-semibold text-neutral-700 border border-neutral-300 rounded-lg hover:bg-neutral-100 transition-colors whitespace-nowrap cursor-pointer"
+            >
+              {language === 'en' ? 'Preview Frame Picker' : 'Pratinjau Pemilih Bingkai'}
+            </button>
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-neutral-200 text-xs text-neutral-500">
-                <th className="py-2.5 pr-4 font-medium">{language === 'en' ? 'Frame ID' : 'ID Bingkai'}</th>
-                <th className="py-2.5 px-4 font-medium">{language === 'en' ? 'Layout Name' : 'Nama Layout'}</th>
-                <th className="py-2.5 px-4 font-medium text-right">{language === 'en' ? 'Photo Count' : 'Jumlah Foto'}</th>
-                <th className="py-2.5 px-4 font-medium text-right">{language === 'en' ? 'Canvas Dimensions' : 'Ukuran Kanvas'}</th>
-                <th className="py-2.5 pl-4 font-medium">{language === 'en' ? 'First Slot Coordinates' : 'Koordinat Slot Pertama'}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-200">
-              {frames.map((frame) => {
-                const firstPos = frame.positions[0];
-                return (
-                  <tr key={frame.id} className="hover:bg-neutral-50 transition-colors">
-                    <td className="py-3 pr-4 font-mono-tabular text-xs text-neutral-600">
-                      {frame.id}
-                    </td>
-                    <td className="py-3 px-4 font-medium text-neutral-900">
-                      {frame.name}
-                      {frame.subtitle ? (
-                        <span className="text-xs text-neutral-500 font-normal">
-                          {' '}
-                          · {frame.subtitle}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono-tabular">
-                      {frame.photoCount} {t.frameSelect.poses}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono-tabular text-xs text-neutral-600">
-                      {frame.canvasWidth || 500} × {frame.canvasHeight || 1220} px
-                    </td>
-                    <td className="py-3 pl-4 font-mono-tabular text-xs text-neutral-600">
-                      {firstPos
-                        ? `x:${firstPos.x}, y:${firstPos.y} (${firstPos.width}×${firstPos.height})`
-                        : '-'}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        {/* Quick Summary Pill Badges */}
+        <div className="flex flex-wrap items-center gap-2 text-xs font-mono-tabular">
+          <span className="px-2.5 py-1 bg-[#F4F4F0] border border-neutral-200 rounded-lg font-semibold text-neutral-800">
+            📊 {frames.length} {language === 'en' ? 'Total Frames' : 'Total Bingkai'}
+          </span>
+          <span className="px-2.5 py-1 bg-sky-50 border border-sky-200 rounded-lg font-semibold text-sky-800">
+            📱 {frames.filter((f) => (f.canvasWidth || 500) / (f.canvasHeight || 1220) <= 0.65).length} Single Strip
+          </span>
+          <span className="px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-lg font-semibold text-amber-800">
+            👥 {frames.filter((f) => (f.canvasWidth || 500) / (f.canvasHeight || 1220) > 0.65).length} Double Strip 4R
+          </span>
+        </div>
+
+        {/* Mini Preview Reel */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {frames.slice(0, 4).map((frame) => {
+            const isDouble = (frame.canvasWidth || 500) / (frame.canvasHeight || 1220) > 0.65;
+            return (
+              <Link
+                key={frame.id}
+                to="/admin/frames"
+                className="group p-2.5 bg-[#F4F4F0] hover:bg-white border border-neutral-200 hover:border-neutral-400 rounded-xl transition-all shadow-2xs hover:shadow-sm flex flex-col justify-between gap-2"
+              >
+                <div className="aspect-[3/4] bg-[#121214] rounded-lg overflow-hidden flex items-center justify-center p-1.5 relative">
+                  {frame.previewImg || frame.frameImg ? (
+                    <img
+                      src={frame.previewImg || frame.frameImg}
+                      alt={frame.name}
+                      className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-200"
+                    />
+                  ) : (
+                    <span className="text-[10px] text-neutral-500">-</span>
+                  )}
+                  <span className="absolute top-1.5 right-1.5 text-[9px] font-mono-tabular bg-black/75 text-white px-1 py-0.2 rounded">
+                    {frame.photoCount}P
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-neutral-900 truncate">{frame.name}</p>
+                  <p className="text-[10px] font-mono-tabular text-neutral-500 truncate">
+                    {frame.canvasWidth || 500}×{frame.canvasHeight || 1220} px · {isDouble ? '4R' : 'Strip'}
+                  </p>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
@@ -370,15 +413,29 @@ export const AdminWelcome: React.FC = () => {
                 : 'Arsip sesi terakhir yang tersimpan di IndexedDB perangkat ini.'}
             </p>
           </div>
-          {sessions && sessions.length > 0 && (
-            <button
-              type="button"
-              onClick={handleClearHistory}
-              className="px-3 py-1.5 text-xs font-medium text-neutral-600 hover:text-[#DC2626] border border-neutral-200 rounded-md transition-colors whitespace-nowrap cursor-pointer"
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              to="/admin/sessions"
+              className="px-3.5 py-1.5 text-xs font-semibold text-neutral-900 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 rounded-lg transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5"
             >
-              {t.admin.clearHistory}
-            </button>
-          )}
+              <span>🖼️</span>
+              <span>
+                {t.admin.viewAllSessions}
+                {typeof totalSessionCount === 'number' && totalSessionCount > 0
+                  ? ` (${totalSessionCount})`
+                  : ''} →
+              </span>
+            </Link>
+            {sessions && sessions.length > 0 && (
+              <button
+                type="button"
+                onClick={handleClearHistory}
+                className="px-3 py-1.5 text-xs font-medium text-neutral-600 hover:text-[#DC2626] border border-neutral-200 rounded-md transition-colors whitespace-nowrap cursor-pointer"
+              >
+                {t.admin.clearHistory}
+              </button>
+            )}
+          </div>
         </div>
 
         {!sessions || sessions.length === 0 ? (
@@ -402,7 +459,8 @@ export const AdminWelcome: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {sessions.map((session) => (
               <div
                 key={session.id}
@@ -483,8 +541,8 @@ export const AdminWelcome: React.FC = () => {
                           {reprintingSessionId === session.id && reprintingType === 'thermal'
                             ? (language === 'en' ? 'Printing...' : 'Mencetak...')
                             : session.thermalPrintCount
-                            ? `Thermal (${session.thermalPrintCount}x)`
-                            : 'Thermal'}
+                              ? `Thermal (${session.thermalPrintCount}x)`
+                              : 'Thermal'}
                         </span>
                       </button>
 
@@ -500,8 +558,8 @@ export const AdminWelcome: React.FC = () => {
                           {reprintingSessionId === session.id && reprintingType === 'color'
                             ? (language === 'en' ? 'Printing...' : 'Mencetak...')
                             : session.colorPrintCount
-                            ? `${language === 'en' ? 'Color' : 'Warna'} (${session.colorPrintCount}x)`
-                            : (language === 'en' ? 'Color' : 'Warna')}
+                              ? `${language === 'en' ? 'Color' : 'Warna'} (${session.colorPrintCount}x)`
+                              : (language === 'en' ? 'Color' : 'Warna')}
                         </span>
                       </button>
                     </div>
@@ -509,11 +567,10 @@ export const AdminWelcome: React.FC = () => {
                     {reprintFeedback && reprintFeedback.sessionId === session.id && (
                       <p
                         role="status"
-                        className={`text-[11px] font-mono-tabular px-2.5 py-1.5 rounded-lg border leading-tight ${
-                          reprintFeedback.isError
+                        className={`text-[11px] font-mono-tabular px-2.5 py-1.5 rounded-lg border leading-tight ${reprintFeedback.isError
                             ? 'bg-amber-50 text-amber-900 border-amber-300'
                             : 'bg-emerald-50 text-emerald-900 border-emerald-300 font-semibold'
-                        }`}
+                          }`}
                       >
                         {reprintFeedback.message}
                       </p>
@@ -523,8 +580,35 @@ export const AdminWelcome: React.FC = () => {
               </div>
             ))}
           </div>
-        )}
+
+          {totalSessionCount && totalSessionCount > 3 ? (
+            <div className="pt-2 text-center">
+              <Link
+                to="/admin/sessions"
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-neutral-900 bg-[#F4F4F0] hover:bg-neutral-200 border border-neutral-300 rounded-xl transition-all cursor-pointer shadow-2xs"
+              >
+                <span>
+                  {language === 'en'
+                    ? `View all ${totalSessionCount} sessions in Full Gallery`
+                    : `Lihat seluruh ${totalSessionCount} sesi di Galeri Lengkap`}
+                </span>
+                <span>→</span>
+              </Link>
+            </div>
+          ) : null}
+        </>
+      )}
       </section>
+
+      {/* Modal Dialog for Resetting All Data */}
+      <ResetAllDataModal
+        isOpen={showResetAllModal}
+        onClose={() => setShowResetAllModal(false)}
+        onSuccess={() => {
+          setNotification(t.admin.resetAllDataSuccess);
+          setTimeout(() => setNotification(null), 5000);
+        }}
+      />
     </div>
   );
 };

@@ -11,6 +11,8 @@ import { KIOSK_HERO_BACKDROP } from '../../data/defaultFrames';
 import { playShutterSound } from '../../services/shutterAudio';
 import { testPrintApi, precacheAllFrameAssets } from '../../services/printServices';
 import { usePhotobox } from '../../context/PhotoboxContext';
+import { ResetAllDataModal } from '../../components/common/ResetAllDataModal';
+import { BrandLogo } from '../../components/common/BrandLogo';
 
 export const AdminSettings: React.FC = () => {
   const { language, setLanguage, t } = usePhotobox();
@@ -67,10 +69,14 @@ export const AdminSettings: React.FC = () => {
   );
   const [customBackdropUrl, setCustomBackdropUrl] = useState<string>('');
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
+  const [idleScreenMode, setIdleScreenMode] = useState<'standard' | 'fullscreen-camera'>(
+    DEFAULT_APP_SETTINGS.idleScreenMode || 'standard'
+  );
 
   const [activeTab, setActiveTab] = useState<'appearance' | 'session' | 'hardware'>('appearance');
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showResetAllModal, setShowResetAllModal] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -138,6 +144,9 @@ export const AdminSettings: React.FC = () => {
         }
         if (typeof data.kioskBackgroundOverlayOpacity === 'number') {
           setKioskBackgroundOverlayOpacity(data.kioskBackgroundOverlayOpacity);
+        }
+        if (data.idleScreenMode) {
+          setIdleScreenMode(data.idleScreenMode);
         }
       }
     });
@@ -341,6 +350,7 @@ export const AdminSettings: React.FC = () => {
       themePreset,
       kioskBackground,
       kioskBackgroundOverlayOpacity,
+      idleScreenMode,
       language,
       updatedAt: new Date().toISOString(),
     });
@@ -380,6 +390,7 @@ export const AdminSettings: React.FC = () => {
     setKioskBackground('');
     setKioskBackgroundOverlayOpacity(60);
     setCustomBackdropUrl('');
+    setIdleScreenMode(DEFAULT_APP_SETTINGS.idleScreenMode || 'standard');
     setUploadNotice(null);
     setTestApiResult(null);
     applyThemeColor('#E11D48');
@@ -390,23 +401,53 @@ export const AdminSettings: React.FC = () => {
     );
   };
 
+  const handleResetAllSuccess = () => {
+    setLanguage('id');
+    setDriveUrl(DEFAULT_APP_SETTINGS.driveUrl);
+    setStudioName(DEFAULT_APP_SETTINGS.studioName || '');
+    setEventName(DEFAULT_APP_SETTINGS.eventName || '');
+    setDefaultCaption(DEFAULT_APP_SETTINGS.defaultCaption || 'SOREAJA — PHOTOBOX 2');
+    setShowFrameStamps(true);
+    setCountdownSeconds(DEFAULT_APP_SETTINGS.countdownSeconds || 3);
+    setAutoDownload(true);
+    setMirrorCamera(true);
+    setCameraSourceMode('auto');
+    setPrintApiEndpoint(DEFAULT_APP_SETTINGS.printApiEndpoint || '');
+    setPrinterName(DEFAULT_APP_SETTINGS.printerName || '');
+    setThermalPrinterName(DEFAULT_APP_SETTINGS.thermalPrinterName || '');
+    setColorPrinterName(DEFAULT_APP_SETTINGS.colorPrinterName || '');
+    setEnableShutterSound(DEFAULT_APP_SETTINGS.enableShutterSound ?? true);
+    setThemeColor(DEFAULT_APP_SETTINGS.themeColor || '#E11D48');
+    setThemePreset(DEFAULT_APP_SETTINGS.themePreset || 'crimson');
+    setKioskBackground('');
+    setKioskBackgroundOverlayOpacity(60);
+    setCustomBackdropUrl('');
+    setUploadNotice(null);
+    setTestApiResult(null);
+    applyThemeColor('#E11D48');
+    setSaveMessage(t.admin.resetAllDataSuccess);
+  };
+
   return (
     <div className="space-y-8 max-w-5xl">
-      <div>
-        <div className="text-xs text-neutral-500 flex items-center gap-2 mb-2 font-mono-tabular">
-          <span>Konfigurasi Lokal</span>
-          <span aria-hidden="true">·</span>
-          <span>Dexie.js (PhotoboxDB)</span>
-          <span aria-hidden="true">·</span>
-          <span>Tabel: settings</span>
+      <div className="flex items-start gap-4">
+        <BrandLogo size="lg" showRing={true} className="ring-neutral-200 mt-1 shadow-xs" />
+        <div>
+          <div className="text-xs text-neutral-500 flex items-center gap-2 mb-2 font-mono-tabular">
+            <span>Konfigurasi Lokal</span>
+            <span aria-hidden="true">·</span>
+            <span>Dexie.js (PhotoboxDB)</span>
+            <span aria-hidden="true">·</span>
+            <span>Tabel: settings</span>
+          </div>
+          <h1 className="font-display text-2xl md:text-3xl font-bold text-neutral-900">
+            Pengaturan Studio, Tema & Latar Kiosk
+          </h1>
+          <p className="text-sm text-neutral-600 mt-1">
+            Kustomisasi identitas visual booth: tentukan warna tema aksen aplikasi, foto latar belakang
+            halaman awal kiosk, stempel cetakan bingkai, serta integrasi Google Drive.
+          </p>
         </div>
-        <h1 className="font-display text-2xl md:text-3xl font-bold text-neutral-900">
-          Pengaturan Studio, Tema & Latar Kiosk
-        </h1>
-        <p className="text-sm text-neutral-600 mt-1">
-          Kustomisasi identitas visual booth: tentukan warna tema aksen aplikasi, foto latar belakang
-          halaman awal kiosk, stempel cetakan bingkai, serta integrasi Google Drive.
-        </p>
       </div>
 
       {/* Navigation Tabs - Tablet Touch Friendly */}
@@ -415,11 +456,10 @@ export const AdminSettings: React.FC = () => {
           type="button"
           onClick={() => setActiveTab('appearance')}
           style={activeTab === 'appearance' ? { borderColor: themeColor, color: themeColor } : {}}
-          className={`min-h-[44px] px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer border-b-2 active:scale-95 ${
-            activeTab === 'appearance'
-              ? 'border-b-2 bg-white text-neutral-900 shadow-xs'
-              : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
-          }`}
+          className={`min-h-[44px] px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer border-b-2 active:scale-95 ${activeTab === 'appearance'
+            ? 'border-b-2 bg-white text-neutral-900 shadow-xs'
+            : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+            }`}
         >
           🎨 {t.admin.settingsTabAppearance}
         </button>
@@ -427,11 +467,10 @@ export const AdminSettings: React.FC = () => {
           type="button"
           onClick={() => setActiveTab('session')}
           style={activeTab === 'session' ? { borderColor: themeColor, color: themeColor } : {}}
-          className={`min-h-[44px] px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer border-b-2 active:scale-95 ${
-            activeTab === 'session'
-              ? 'border-b-2 bg-white text-neutral-900 shadow-xs'
-              : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
-          }`}
+          className={`min-h-[44px] px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer border-b-2 active:scale-95 ${activeTab === 'session'
+            ? 'border-b-2 bg-white text-neutral-900 shadow-xs'
+            : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+            }`}
         >
           ☁️ {t.admin.settingsTabSession}
         </button>
@@ -439,11 +478,10 @@ export const AdminSettings: React.FC = () => {
           type="button"
           onClick={() => setActiveTab('hardware')}
           style={activeTab === 'hardware' ? { borderColor: themeColor, color: themeColor } : {}}
-          className={`min-h-[44px] px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer border-b-2 active:scale-95 ${
-            activeTab === 'hardware'
-              ? 'border-b-2 bg-white text-neutral-900 shadow-xs'
-              : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
-          }`}
+          className={`min-h-[44px] px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer border-b-2 active:scale-95 ${activeTab === 'hardware'
+            ? 'border-b-2 bg-white text-neutral-900 shadow-xs'
+            : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+            }`}
         >
           📷 {t.admin.settingsTabHardware}
         </button>
@@ -475,13 +513,13 @@ export const AdminSettings: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setLanguage('id')}
-                    className={`min-h-[58px] p-3.5 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer flex items-center justify-between border ${
-                      language === 'id'
-                        ? 'bg-[var(--theme-accent,#E11D48)]/10 border-[var(--theme-accent,#E11D48)] ring-2 ring-[var(--theme-accent,#E11D48)] shadow-xs'
-                        : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-100'
-                    }`}
+                    className={`min-h-[58px] p-3.5 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer flex items-center justify-between border ${language === 'id'
+                      ? 'bg-[var(--theme-accent,#E11D48)]/10 border-[var(--theme-accent,#E11D48)] ring-2 ring-[var(--theme-accent,#E11D48)] shadow-xs'
+                      : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-100'
+                      }`}
                   >
                     <div className="space-y-0.5">
+
                       <div className="flex items-center gap-2">
                         <span className="text-base">🇮🇩</span>
                         <span className="text-xs sm:text-sm font-bold text-neutral-900">
@@ -497,25 +535,16 @@ export const AdminSettings: React.FC = () => {
                         {t.admin.langIdDesc}
                       </p>
                     </div>
-                    <div
-                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ml-2 ${
-                        language === 'id'
-                          ? 'border-[var(--theme-accent,#E11D48)] bg-[var(--theme-accent,#E11D48)]'
-                          : 'border-neutral-400'
-                      }`}
-                    >
-                      {language === 'id' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                    </div>
+
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setLanguage('en')}
-                    className={`min-h-[58px] p-3.5 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer flex items-center justify-between border ${
-                      language === 'en'
-                        ? 'bg-[var(--theme-accent,#E11D48)]/10 border-[var(--theme-accent,#E11D48)] ring-2 ring-[var(--theme-accent,#E11D48)] shadow-xs'
-                        : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-100'
-                    }`}
+                    className={`min-h-[58px] p-3.5 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer flex items-center justify-between border ${language === 'en'
+                      ? 'bg-[var(--theme-accent,#E11D48)]/10 border-[var(--theme-accent,#E11D48)] ring-2 ring-[var(--theme-accent,#E11D48)] shadow-xs'
+                      : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-100'
+                      }`}
                   >
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2">
@@ -532,15 +561,6 @@ export const AdminSettings: React.FC = () => {
                       <p className="text-[11px] text-neutral-500">
                         {t.admin.langEnDesc}
                       </p>
-                    </div>
-                    <div
-                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ml-2 ${
-                        language === 'en'
-                          ? 'border-[var(--theme-accent,#E11D48)] bg-[var(--theme-accent,#E11D48)]'
-                          : 'border-neutral-400'
-                      }`}
-                    >
-                      {language === 'en' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                     </div>
                   </button>
                 </div>
@@ -574,11 +594,10 @@ export const AdminSettings: React.FC = () => {
                         key={preset.id}
                         type="button"
                         onClick={() => handleSelectColorPreset(preset.id, preset.color)}
-                        className={`p-2.5 rounded-xl border text-left flex items-start gap-2.5 transition-all cursor-pointer ${
-                          isSelected
-                            ? 'border-neutral-900 bg-neutral-50 ring-2 ring-neutral-900 shadow-xs'
-                            : 'border-neutral-200 bg-white hover:bg-neutral-50'
-                        }`}
+                        className={`p-2.5 rounded-xl border text-left flex items-start gap-2.5 transition-all cursor-pointer ${isSelected
+                          ? 'border-neutral-900 bg-neutral-50 ring-2 ring-neutral-900 shadow-xs'
+                          : 'border-neutral-200 bg-white hover:bg-neutral-50'
+                          }`}
                       >
                         <span
                           className="w-5 h-5 rounded-full shrink-0 mt-0.5 shadow-xs border border-white"
@@ -613,9 +632,6 @@ export const AdminSettings: React.FC = () => {
                     placeholder="#E11D48"
                     className="px-2.5 py-1 text-xs font-mono-tabular bg-white border border-neutral-300 rounded-lg w-28 uppercase focus:outline-none focus:border-neutral-900"
                   />
-                  <span className="text-[11px] text-neutral-500 hidden sm:inline">
-                    Pilih warna apa pun sesuai identitas acara / brand.
-                  </span>
                 </div>
               </div>
 
@@ -650,11 +666,10 @@ export const AdminSettings: React.FC = () => {
                           key={p.id}
                           type="button"
                           onClick={() => handleSelectBackdropPreset(p.id)}
-                          className={`group relative rounded-xl overflow-hidden border text-left p-1.5 transition-all cursor-pointer ${
-                            isSelected
-                              ? 'border-neutral-900 ring-2 ring-neutral-900 shadow-md bg-neutral-900 text-white'
-                              : 'border-neutral-200 bg-white hover:border-neutral-400'
-                          }`}
+                          className={`group relative rounded-xl overflow-hidden border text-left p-1.5 transition-all cursor-pointer ${isSelected
+                            ? 'border-neutral-900 ring-2 ring-neutral-900 shadow-md bg-neutral-900 text-white'
+                            : 'border-neutral-200 bg-white hover:border-neutral-400'
+                            }`}
                         >
                           <div className="aspect-video w-full rounded-lg overflow-hidden bg-neutral-100 relative">
                             <img
@@ -700,7 +715,7 @@ export const AdminSettings: React.FC = () => {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <span>Pilih File Foto dari Perangkat</span>
+                      <span>Pilih Foto</span>
                     </button>
 
                     <div className="flex-1 flex gap-2">
@@ -708,7 +723,7 @@ export const AdminSettings: React.FC = () => {
                         type="url"
                         value={customBackdropUrl}
                         onChange={(e) => setCustomBackdropUrl(e.target.value)}
-                        placeholder="Atau tempel URL gambar eksternal..."
+                        placeholder="Atau URL gambar..."
                         className="flex-1 px-3 py-2 text-xs bg-[#F4F4F0] border border-neutral-300 rounded-xl focus:outline-none focus:border-neutral-900"
                       />
                       <button
@@ -748,10 +763,55 @@ export const AdminSettings: React.FC = () => {
                     onChange={(e) => setKioskBackgroundOverlayOpacity(Number(e.target.value))}
                     className="w-full accent-neutral-900 cursor-pointer"
                   />
-                  <div className="flex justify-between text-[10px] text-neutral-500 font-mono-tabular">
-                    <span>20% (Lebih Gelap / Teks Sangat Kontras)</span>
-                    <span>60% (Standar Studio)</span>
-                    <span>100% (Terang Maksimal)</span>
+                </div>
+
+                {/* 3. Mode Tampilan Layar Tunggu Standby */}
+                <div className="pt-4 border-t border-neutral-200 space-y-3">
+                  <div>
+                    <h2 className="text-sm font-bold text-neutral-900">
+                      3. Mode Tampilan Layar Standby Kiosk (/app/idle)
+                    </h2>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      Pilih format visual yang menyambut tamu saat photobox standby menunggu pengguna baru.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setIdleScreenMode('standard')}
+                      className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        idleScreenMode === 'standard'
+                          ? 'border-neutral-900 ring-2 ring-neutral-900 bg-neutral-900 text-white shadow-md'
+                          : 'border-neutral-200 bg-white hover:border-neutral-400 text-neutral-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-base">🖼️</span>
+                        <p className="text-xs font-bold">Mode Standar (Poster & Galeri)</p>
+                      </div>
+                      <p className={`text-[11px] ${idleScreenMode === 'standard' ? 'text-neutral-300' : 'text-neutral-500'}`}>
+                        Menampilkan poster studio, kolase sesi polaroid melayang, dan tombol sentuh besar.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setIdleScreenMode('fullscreen-camera')}
+                      className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        idleScreenMode === 'fullscreen-camera'
+                          ? 'border-neutral-900 ring-2 ring-neutral-900 bg-neutral-900 text-white shadow-md'
+                          : 'border-neutral-200 bg-white hover:border-neutral-400 text-neutral-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-base">📸</span>
+                        <p className="text-xs font-bold">Kamera Fullscreen ("Foto sekarang simpan nanti")</p>
+                      </div>
+                      <p className={`text-[11px] ${idleScreenMode === 'fullscreen-camera' ? 'text-neutral-300' : 'text-neutral-500'}`}>
+                        Layar penuh kamera live tanpa tombol/elemen lain kecuali teks "Foto sekarang simpan nanti".
+                      </p>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -831,7 +891,7 @@ export const AdminSettings: React.FC = () => {
                   maxLength={32}
                   value={defaultCaption}
                   onChange={(e) => setDefaultCaption(e.target.value)}
-                  placeholder="SOREAJA — PHOTOBOX 2"
+                  placeholder="SOREAJA Pose"
                   className="w-full px-3.5 py-2.5 text-sm bg-[#F4F4F0] border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900 font-mono-tabular"
                 />
                 <p className="text-xs text-neutral-500">
@@ -1172,11 +1232,10 @@ export const AdminSettings: React.FC = () => {
                 {testApiResult && (
                   <div
                     role="status"
-                    className={`p-3 rounded-xl border text-xs font-mono-tabular ${
-                      testApiResult.success
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
-                        : 'bg-amber-50 border-amber-300 text-amber-900'
-                    }`}
+                    className={`p-3 rounded-xl border text-xs font-mono-tabular ${testApiResult.success
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                      : 'bg-amber-50 border-amber-300 text-amber-900'
+                      }`}
                   >
                     <div className="flex items-center gap-2">
                       <span>{testApiResult.success ? '✅' : '⚠️'}</span>
@@ -1196,7 +1255,7 @@ export const AdminSettings: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
-                      <span>📶 Mode Offline & Akses Tanpa Internet</span>
+                      <span>📶 Mode Offline</span>
                       <span className="px-2 py-0.5 text-[10px] font-mono-tabular font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded">
                         100% Offline Ready
                       </span>
@@ -1212,7 +1271,7 @@ export const AdminSettings: React.FC = () => {
                     className="px-3.5 py-1.5 text-xs font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs disabled:opacity-50"
                   >
                     <span>⚡</span>
-                    <span>{cachingOffline ? 'Menyimpan Aset...' : 'Pre-Cache Seluruh Aset'}</span>
+                    <span>{cachingOffline ? 'Caching...' : 'Cache'}</span>
                   </button>
                 </div>
 
@@ -1263,7 +1322,7 @@ export const AdminSettings: React.FC = () => {
               className="min-h-[48px] px-7 py-3 text-sm sm:text-base font-extrabold text-white rounded-xl transition-all shadow-md active:scale-95 hover:brightness-90 whitespace-nowrap cursor-pointer disabled:opacity-50 flex items-center gap-2"
             >
               <span>💾</span>
-              <span>{isSaving ? 'Menyimpan...' : 'Simpan Semua Pengaturan'}</span>
+              <span>{isSaving ? (language === 'en' ? 'Saving...' : 'Menyimpan...') : (language === 'en' ? 'Save' : 'Simpan')}</span>
             </button>
 
             <button
@@ -1271,7 +1330,7 @@ export const AdminSettings: React.FC = () => {
               onClick={handleResetDefaults}
               className="min-h-[48px] px-5 py-3 text-xs sm:text-sm font-semibold text-neutral-600 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer"
             >
-              Reset ke Default Pabrik
+              {t.admin.resetDefaults}
             </button>
           </div>
         </form>
@@ -1307,7 +1366,7 @@ export const AdminSettings: React.FC = () => {
                   {studioName || 'SoreAja Studio — Booth 02'} · {eventName || 'SoreAja Sunset Session 2026'}
                 </p>
                 <h4 className="font-display text-base sm:text-lg font-extrabold text-[#F4F4F0] tracking-tight">
-                  SoreAja — Photobox
+                  SoreAja Pose
                 </h4>
                 <p className="font-serif-editorial italic text-xs text-zinc-300">
                   Abadikan momen sore terbaikmu
@@ -1357,6 +1416,38 @@ export const AdminSettings: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Danger Zone: System-Wide Data Reset Card */}
+      <section className="bg-white border border-rose-200 rounded-2xl p-6 sm:p-7 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-rose-600 font-bold text-lg">⚠️</span>
+              <h3 className="text-base font-bold text-neutral-900">
+                {t.admin.dangerZoneTitle}
+              </h3>
+            </div>
+            <p className="text-xs sm:text-sm text-neutral-600 max-w-2xl leading-relaxed">
+              {t.admin.dangerZoneDesc}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowResetAllModal(true)}
+            className="min-h-[44px] px-5 py-2.5 text-xs sm:text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer flex items-center justify-center gap-2 shadow-sm self-start sm:self-auto"
+          >
+            <span>🗑️</span>
+            <span>{t.admin.resetAllData}</span>
+          </button>
+        </div>
+      </section>
+
+      {/* Modal Dialog */}
+      <ResetAllDataModal
+        isOpen={showResetAllModal}
+        onClose={() => setShowResetAllModal(false)}
+        onSuccess={handleResetAllSuccess}
+      />
     </div>
   );
 };

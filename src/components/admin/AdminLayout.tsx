@@ -1,17 +1,24 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom';
-import { ensureDefaultSettings } from '../../db';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db, ensureDefaultSettings } from '../../db';
+import { fetchFramesMetadata } from '../../data/defaultFrames';
 import { usePhotobox } from '../../context/PhotoboxContext';
 import { PWAInstallButton } from '../common/PWAInstallButton';
 import { OfflineIndicator } from '../common/OfflineIndicator';
+import { BrandLogo } from '../common/BrandLogo';
 
 export const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
-  const { language, setLanguage, t } = usePhotobox();
+  const { language, setLanguage, t, stopSessionTimer } = usePhotobox();
+  const sessionCount = useLiveQuery(() => db.sessions.count(), []);
+  const [frameCount, setFrameCount] = useState<number | null>(null);
 
   useEffect(() => {
+    stopSessionTimer();
     ensureDefaultSettings();
-  }, []);
+    fetchFramesMetadata().then((data) => setFrameCount(data.length));
+  }, [stopSessionTimer]);
 
   return (
     <div className="min-h-screen bg-[#F4F4F0] text-[#111111] flex flex-col">
@@ -20,52 +27,11 @@ export const AdminLayout: React.FC = () => {
       <header className="flex items-center justify-between px-6 py-4 bg-white border-b border-neutral-200 sticky top-0 z-30">
         <Link
           to="/admin/welcome"
-          className="font-display text-lg font-bold tracking-tight text-neutral-900 whitespace-nowrap"
+          className="font-display text-lg font-bold tracking-tight text-neutral-900 whitespace-nowrap flex items-center gap-2.5 active:scale-95 transition-transform"
         >
-          {t.appName}
+          <BrandLogo size="sm" showRing={true} className="ring-neutral-300" />
+          <span>{t.appName}</span>
         </Link>
-
-        <nav
-          aria-label="Navigasi Utama Admin"
-          className="hidden md:flex items-center gap-8 text-sm font-medium text-neutral-600"
-        >
-          <NavLink
-            to="/admin/welcome"
-            className={({ isActive }) =>
-              `py-1 transition-colors whitespace-nowrap ${
-                isActive
-                  ? 'text-neutral-900 font-semibold border-b-2 border-[var(--theme-accent,#E11D48)]'
-                  : 'hover:text-neutral-900'
-              }`
-            }
-          >
-            {t.admin.navDashboard}
-          </NavLink>
-          <NavLink
-            to="/admin/settings"
-            className={({ isActive }) =>
-              `py-1 transition-colors whitespace-nowrap ${
-                isActive
-                  ? 'text-neutral-900 font-semibold border-b-2 border-[var(--theme-accent,#E11D48)]'
-                  : 'hover:text-neutral-900'
-              }`
-            }
-          >
-            {t.admin.navSettings}
-          </NavLink>
-          <NavLink
-            to="/admin/launch"
-            className={({ isActive }) =>
-              `py-1 transition-colors whitespace-nowrap ${
-                isActive
-                  ? 'text-neutral-900 font-semibold border-b-2 border-[var(--theme-accent,#E11D48)]'
-                  : 'hover:text-neutral-900'
-              }`
-            }
-          >
-            {t.admin.navLaunch}
-          </NavLink>
-        </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Admin Language Switcher Segmented Control */}
@@ -78,11 +44,10 @@ export const AdminLayout: React.FC = () => {
               type="button"
               onClick={() => setLanguage('id')}
               aria-label="Bahasa Indonesia"
-              className={`min-h-[38px] px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer active:scale-95 ${
-                language === 'id'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:text-neutral-900'
-              }`}
+              className={`min-h-[38px] px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer active:scale-95 ${language === 'id'
+                ? 'bg-neutral-900 text-white shadow-xs'
+                : 'text-neutral-600 hover:text-neutral-900'
+                }`}
             >
               🇮🇩 ID
             </button>
@@ -90,11 +55,10 @@ export const AdminLayout: React.FC = () => {
               type="button"
               onClick={() => setLanguage('en')}
               aria-label="English"
-              className={`min-h-[38px] px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer active:scale-95 ${
-                language === 'en'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:text-neutral-900'
-              }`}
+              className={`min-h-[38px] px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer active:scale-95 ${language === 'en'
+                ? 'bg-neutral-900 text-white shadow-xs'
+                : 'text-neutral-600 hover:text-neutral-900'
+                }`}
             >
               🇬🇧 EN
             </button>
@@ -128,22 +92,58 @@ export const AdminLayout: React.FC = () => {
                 <NavLink
                   to="/admin/welcome"
                   className={({ isActive }) =>
-                    `min-h-[44px] flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap active:scale-95 ${
-                      isActive
-                        ? 'bg-neutral-900 text-white shadow-sm'
-                        : 'text-neutral-700 hover:bg-neutral-200/70'
+                    `min-h-[44px] flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap active:scale-95 ${isActive
+                      ? 'bg-neutral-900 text-white shadow-sm'
+                      : 'text-neutral-700 hover:bg-neutral-200/70'
                     }`
                   }
                 >
                   {t.admin.summaryStatus}
                 </NavLink>
                 <NavLink
+                  to="/admin/frames"
+                  className={({ isActive }) =>
+                    `min-h-[44px] flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap active:scale-95 ${isActive
+                      ? 'bg-neutral-900 text-white shadow-sm'
+                      : 'text-neutral-700 hover:bg-neutral-200/70'
+                    }`
+                  }
+                >
+                  <span>{t.admin.summaryFrames}</span>
+                  {typeof frameCount === 'number' && (
+                    <span className="ml-2 text-xs font-mono-tabular px-2 py-0.5 rounded-full bg-neutral-200 text-neutral-600">
+                      {frameCount}
+                    </span>
+                  )}
+                </NavLink>
+                <NavLink
+                  to="/admin/sessions"
+                  className={({ isActive }) =>
+                    `min-h-[44px] flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap active:scale-95 ${isActive
+                      ? 'bg-neutral-900 text-white shadow-sm'
+                      : 'text-neutral-700 hover:bg-neutral-200/70'
+                    }`
+                  }
+                >
+                  <span>{t.admin.summarySessions}</span>
+                  {typeof sessionCount === 'number' && (
+                    <span
+                      className={`ml-2 text-xs font-mono-tabular px-2 py-0.5 rounded-full ${
+                        sessionCount > 0
+                          ? 'bg-[var(--theme-accent,#E11D48)] text-white'
+                          : 'bg-neutral-200 text-neutral-600'
+                      }`}
+                    >
+                      {sessionCount}
+                    </span>
+                  )}
+                </NavLink>
+                <NavLink
                   to="/admin/settings"
                   className={({ isActive }) =>
-                    `min-h-[44px] flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap active:scale-95 ${
-                      isActive
-                        ? 'bg-neutral-900 text-white shadow-sm'
-                        : 'text-neutral-700 hover:bg-neutral-200/70'
+                    `min-h-[44px] flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap active:scale-95 ${isActive
+                      ? 'bg-neutral-900 text-white shadow-sm'
+                      : 'text-neutral-700 hover:bg-neutral-200/70'
                     }`
                   }
                 >
@@ -152,10 +152,9 @@ export const AdminLayout: React.FC = () => {
                 <NavLink
                   to="/admin/launch"
                   className={({ isActive }) =>
-                    `min-h-[44px] flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap active:scale-95 ${
-                      isActive
-                        ? 'bg-neutral-900 text-white shadow-sm'
-                        : 'text-neutral-700 hover:bg-neutral-200/70'
+                    `min-h-[44px] flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap active:scale-95 ${isActive
+                      ? 'bg-neutral-900 text-white shadow-sm'
+                      : 'text-neutral-700 hover:bg-neutral-200/70'
                     }`
                   }
                 >
@@ -191,8 +190,14 @@ export const AdminLayout: React.FC = () => {
             </div>
           </div>
 
-          <div className="pt-4 border-t border-neutral-200/80 text-xs text-neutral-500 space-y-1">
-            <p className="font-semibold text-neutral-800">{t.admin.offlineReady}</p>
+          <div className="pt-4 border-t border-neutral-200/80 text-xs text-neutral-500 space-y-2">
+            <div className="flex items-center gap-2.5">
+              <BrandLogo size="xs" showRing={true} className="ring-neutral-300" />
+              <div>
+                <p className="font-semibold text-neutral-800 leading-tight">{t.admin.offlineReady}</p>
+                <p className="text-[10px] text-neutral-500 leading-tight">Photobox Studio System</p>
+              </div>
+            </div>
             <p>{t.admin.offlineReadyDesc}</p>
           </div>
         </aside>

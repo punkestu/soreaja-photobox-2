@@ -1,11 +1,12 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../../db';
+import { db, clearActiveSession } from '../../db';
 import { usePhotobox } from '../../context/PhotoboxContext';
-import { KIOSK_HERO_BACKDROP } from '../../data/defaultFrames';
+import { KIOSK_HERO_BACKDROP, STUDIO_PORTRAITS } from '../../data/defaultFrames';
 import { BACKDROP_PRESETS } from '../../data/themeConfig';
 import { SAMPLE_IDLE_STRIPS, type IdlePolaroidItem } from '../../data/sampleSessions';
+import { BrandLogo } from '../../components/common/BrandLogo';
 
 export const IdleScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -28,14 +29,14 @@ export const IdleScreen: React.FC = () => {
         diffMins < 2
           ? t.idle.justNow
           : diffMins < 60
-          ? `${diffMins} ${t.idle.minutesAgo}`
-          : `${Math.floor(diffMins / 60)} ${t.idle.hoursAgo}`;
+            ? `${diffMins} ${t.idle.minutesAgo}`
+            : `${Math.floor(diffMins / 60)} ${t.idle.hoursAgo}`;
       const timeEn =
         diffMins < 2
           ? 'Just now'
           : diffMins < 60
-          ? `${diffMins}m ago`
-          : `${Math.floor(diffMins / 60)}h ago`;
+            ? `${diffMins}m ago`
+            : `${Math.floor(diffMins / 60)}h ago`;
 
       const dateStr = new Date(session.timestamp).toLocaleDateString('id-ID', {
         day: '2-digit',
@@ -77,6 +78,85 @@ export const IdleScreen: React.FC = () => {
 
   const activeSpotlight = polaroidStrips[activeSpotlightIdx] || polaroidStrips[0];
 
+  // Mode Layar Tunggu: Standar (Poster + Galeri) atau Fullscreen Camera ("Foto sekarang simpan nanti")
+  const [activeMode, setActiveMode] = useState<'standard' | 'fullscreen-camera' | null>(null);
+  const currentMode = activeMode ?? (settings?.idleScreenMode || 'standard');
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [cameraReady, setCameraReady] = useState<boolean>(false);
+  const [useSimulator, setUseSimulator] = useState<boolean>(false);
+
+  // Initialize camera stream when in fullscreen-camera mode
+  useEffect(() => {
+    if (currentMode !== 'fullscreen-camera') {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+      return;
+    }
+
+    let cancelled = false;
+
+    if (settings?.cameraSourceMode === 'simulator' || !navigator.mediaDevices?.getUserMedia) {
+      setUseSimulator(true);
+      setCameraReady(true);
+      return;
+    }
+
+    const startCamera = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            facingMode: 'user',
+          },
+          audio: false,
+        });
+
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play().catch(() => {});
+        }
+        setCameraReady(true);
+      } catch {
+        if (!cancelled) {
+          setUseSimulator(true);
+          setCameraReady(true);
+        }
+      }
+    };
+
+    startCamera();
+
+    return () => {
+      cancelled = true;
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+    };
+  }, [currentMode, settings?.cameraSourceMode]);
+
+  // Keyboard shortcut: Esc to return to standard mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && currentMode === 'fullscreen-camera') {
+        setActiveMode('standard');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentMode]);
+
   const handleStart = async () => {
     if (!document.fullscreenElement) {
       try {
@@ -86,6 +166,7 @@ export const IdleScreen: React.FC = () => {
       }
     }
     resetSession();
+    await clearActiveSession();
     navigate('/app/frame-selection');
   };
 
@@ -135,6 +216,78 @@ export const IdleScreen: React.FC = () => {
     },
   ];
 
+  // MODE 2: LITERALLY FULLSCREEN CAMERA WITH ONLY "Foto sekarang simpan nanti" TEXT
+  if (currentMode === 'fullscreen-camera') {
+    return (
+      <div
+        onClick={handleStart}
+        role="button"
+        tabIndex={0}
+        aria-label={`${t.idle.photoNowSaveLater}. ${t.idle.touchAnywhere}`}
+        className="fixed inset-0 w-screen h-screen z-50 bg-black cursor-pointer overflow-hidden flex items-center justify-center select-none"
+      >
+        {/* Fullscreen Edge-to-Edge WebRTC Video Camera Feed */}
+        <video
+          ref={videoRef}
+          playsInline
+          autoPlay
+          muted
+          className={`absolute inset-0 w-full h-full object-cover pointer-events-none ${
+            useSimulator ? 'hidden' : 'block'
+          } ${settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''}`}
+        />
+
+        {/* Studio Camera Simulator Fallback Portrait */}
+        {useSimulator && (
+          <img
+            src={STUDIO_PORTRAITS[0].src}
+            alt="Studio Live Preview"
+            className={`absolute inset-0 w-full h-full object-cover pointer-events-none ${
+              settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
+            }`}
+          />
+        )}
+
+        {/* Atmospheric Soft Vignette */}
+        <div
+          className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(0,0,0,0.45)_70%,rgba(0,0,0,0.85)_100%)]"
+          aria-hidden="true"
+        />
+
+        {/* The ONLY on-screen element: "Foto sekarang simpan nanti" */}
+        <div className="relative z-10 px-8 py-6 max-w-5xl text-center pointer-events-none select-none">
+          <h1
+            className="font-display text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight text-white drop-shadow-[0_4px_40px_rgba(0,0,0,0.95)] animate-pulse"
+            style={{ textWrap: 'balance' }}
+          >
+            {t.idle.photoNowSaveLater || 'Foto sekarang simpan nanti'}
+          </h1>
+        </div>
+
+        {/* Discreet Studio Circular Logo Watermark */}
+        <div className="absolute top-5 left-5 z-20 flex items-center gap-2.5 bg-black/40 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/10 pointer-events-none select-none">
+          <BrandLogo size="xs" showRing={false} />
+          <span className="text-xs font-display font-bold tracking-wide text-white/90">
+            {settings?.studioName || 'SoreAja Studio'}
+          </span>
+        </div>
+
+        {/* Discreet Operator Toggle back to Standard Mode */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setActiveMode('standard');
+          }}
+          className="absolute top-4 right-4 z-20 px-3 py-1.5 rounded-full bg-black/40 hover:bg-black/80 text-white/40 hover:text-white text-xs font-mono transition-all backdrop-blur-sm border border-white/10 opacity-0 hover:opacity-100 focus:opacity-100 cursor-pointer"
+          title="Kembali ke Mode Standar (Esc)"
+        >
+          ✕ {t.idle.standardModeSwitch}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       onClick={handleStart}
@@ -167,17 +320,15 @@ export const IdleScreen: React.FC = () => {
                   animationDelay: item.floatDelay,
                 } as React.CSSProperties
               }
-              className={`absolute ${layout.className} ${layout.anim} transition-all duration-700 pointer-events-auto ${
-                isHighlighted
+              className={`absolute ${layout.className} ${layout.anim} transition-all duration-700 pointer-events-auto ${isHighlighted
                   ? 'z-30 scale-105 sm:scale-110 drop-shadow-[0_25px_50px_rgba(0,0,0,0.95)]'
                   : 'z-10 opacity-70 sm:opacity-85 hover:opacity-100 hover:scale-105 drop-shadow-[0_15px_30px_rgba(0,0,0,0.8)]'
-              }`}
+                }`}
             >
               {/* Authentic Polaroid White Paper Card Frame */}
               <div
-                className={`relative w-[130px] sm:w-[155px] md:w-[175px] lg:w-[190px] bg-white p-2 pb-5 sm:pb-6 rounded-md shadow-2xl transition-all duration-300 ${
-                  isHighlighted ? 'ring-3 ring-[var(--theme-accent,#E11D48)]' : 'ring-1 ring-black/10'
-                }`}
+                className={`relative w-[130px] sm:w-[155px] md:w-[175px] lg:w-[190px] bg-white p-2 pb-5 sm:pb-6 rounded-md shadow-2xl transition-all duration-300 ${isHighlighted ? 'ring-3 ring-[var(--theme-accent,#E11D48)]' : 'ring-1 ring-black/10'
+                  }`}
               >
                 {/* Frosted Translucent Tape Accent on Top */}
                 <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-10 sm:w-12 h-4 sm:h-5 bg-white/40 backdrop-blur-sm -rotate-2 rounded-xs shadow-sm border-t border-b border-white/50" />
@@ -221,10 +372,27 @@ export const IdleScreen: React.FC = () => {
           <span aria-hidden="true">·</span>
           <span>{settings?.eventName || 'SoreAja Sunset Session 2026'}</span>
           <span aria-hidden="true">·</span>
-          <span className="text-emerald-400 font-bold">{t.idle.offlineActive}</span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveMode('fullscreen-camera');
+            }}
+            className="hover:text-white underline decoration-[var(--theme-accent,#E11D48)] decoration-2 underline-offset-4 cursor-pointer text-zinc-300 flex items-center gap-1 active:scale-95 transition-all"
+            title="Buka Mode Kamera Fullscreen"
+          >
+            <span>📷</span>
+            <span>{t.idle.cameraModeSwitch}</span>
+          </button>
         </div>
 
-        <div className="space-y-3 sm:space-y-4">
+        <div className="space-y-4 sm:space-y-5">
+          <div className="flex justify-center">
+            <BrandLogo
+              size="2xl"
+              className="shadow-[0_0_50px_rgba(225,29,72,0.45)] ring-4 ring-white/20 border-2 border-white/40 transition-transform duration-300 hover:scale-105 active:scale-95"
+            />
+          </div>
           <h1
             className="font-display text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold tracking-tight text-[#F4F4F0] drop-shadow-2xl"
             style={{ textWrap: 'balance' }}
@@ -294,11 +462,10 @@ export const IdleScreen: React.FC = () => {
                     e.stopPropagation();
                     setActiveSpotlightIdx(i);
                   }}
-                  className={`w-1.5 h-1.5 rounded-full transition-all cursor-pointer ${
-                    i === activeSpotlightIdx
+                  className={`w-1.5 h-1.5 rounded-full transition-all cursor-pointer ${i === activeSpotlightIdx
                       ? 'w-4 bg-[var(--theme-accent,#E11D48)]'
                       : 'bg-zinc-600 hover:bg-zinc-400'
-                  }`}
+                    }`}
                   aria-label={`Show session ${i + 1}`}
                 />
               ))}
