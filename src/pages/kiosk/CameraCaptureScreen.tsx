@@ -22,6 +22,8 @@ export const CameraCaptureScreen: React.FC = () => {
     setRetakeIndex,
     updatePhotoAtIndex,
     t,
+    sessionSecondsLeft,
+    isSessionTimerEnabled,
   } = usePhotobox();
 
   const settings = useLiveQuery(() => db.settings.get('app_settings'), []);
@@ -534,147 +536,162 @@ export const CameraCaptureScreen: React.FC = () => {
   }, [slotAspect, cameraAspect]);
 
   return (
-    <div className="flex-1 min-h-0 w-full max-w-7xl mx-auto px-2 sm:px-4 py-1.5 sm:py-2 flex flex-col justify-between select-none h-full overflow-hidden">
-      {/* Top Header & Breadcrumb */}
-      <div className="flex items-center justify-between text-xs sm:text-sm font-mono-tabular text-zinc-400 pb-1 px-1 shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="text-[var(--theme-accent,#E11D48)] font-bold">{t.camera.stageBadge}</span>
-          <span aria-hidden="true">·</span>
-          <span className="text-zinc-200 font-semibold">{activeFrame.name}</span>
-          <span aria-hidden="true">·</span>
-          <span className="hidden sm:inline">
-            {isRetakeMode
-              ? `${t.camera.retakeSlot} #${(retakeIndex ?? 0) + 1}`
-              : `${totalShotsNeeded} ${t.camera.posesNeeded}`}
-          </span>
+    <div className="relative w-full h-full min-h-screen bg-black overflow-hidden select-none">
+      {/* Hero Edge-to-Edge Spotlight Viewfinder (Borderless Fullscreen) */}
+      <div
+        data-testid="camera-viewfinder"
+        className="absolute inset-0 w-full h-full bg-black overflow-hidden flex items-center justify-center group"
+      >
+        {/* WebRTC Video Element */}
+        <video
+          ref={videoRef}
+          playsInline
+          muted
+          className={`w-full h-full object-cover ${
+            useSimulator ? 'hidden' : 'block'
+          } ${settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''}`}
+        />
+
+        {/* Studio Camera Simulator Fallback */}
+        {useSimulator && currentPortrait?.src && (
+          <img
+            src={currentPortrait.src}
+            alt={currentPortrait.label}
+            referrerPolicy="no-referrer"
+            className={`w-full h-full object-cover transition-all duration-300 ${
+              settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
+            }`}
+          />
+        )}
+
+        {/* Ambient Vignette & Top/Bottom Gradients to Guarantee Floating HUD Legibility */}
+        <div
+          className="absolute inset-0 pointer-events-none z-10 bg-gradient-to-b from-black/60 via-transparent to-black/75"
+          aria-hidden="true"
+        />
+        <div
+          className="absolute inset-0 pointer-events-none z-10 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(0,0,0,0.35)_75%,rgba(0,0,0,0.85)_100%)]"
+          aria-hidden="true"
+        />
+
+        {/* Dynamic Crop Guide Mask & Framing Overlay */}
+        <CropGuideOverlay
+          showCropGuide={showCropGuide}
+          showGridLines={showGridLines}
+          cropInfo={cropInfo}
+        />
+
+        {/* Countdown Big Center Overlay & Flash Burst Effect */}
+        <CountdownOverlay
+          countdown={countdown}
+          isFlashing={isFlashing}
+          getReadyText={t.camera.getReady}
+        />
+
+        {/* Floating Back Button (Top Left - z-20) */}
+        <div className="absolute top-3 sm:top-5 left-3 sm:left-5 z-20 pointer-events-auto">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="min-h-[44px] px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-zinc-100 hover:text-white bg-black/60 hover:bg-black/85 backdrop-blur-md border border-white/20 active:scale-95 rounded-full transition-all cursor-pointer shadow-xl flex items-center gap-2 group"
+            title={isRetakeMode ? t.camera.cancelRetake : t.camera.backToFrames}
+          >
+            <span className="text-sm transition-transform group-hover:-translate-x-0.5">←</span>
+            <span className="font-medium">
+              {isRetakeMode ? t.camera.cancelRetake : t.camera.backToFrames}
+            </span>
+          </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Tools Toggle Button */}
+        {/* Floating Top Center: Session Timer & Photo Tray Preview (z-20) */}
+        <div className="absolute top-3 sm:top-5 left-1/2 -translate-x-1/2 z-20 pointer-events-auto flex flex-col items-center gap-2 max-w-[92vw]">
+          {/* Floating Session Timer */}
+          {isSessionTimerEnabled && (
+            <div
+              title={t.sessionTimer.timeRemaining}
+              aria-label={t.sessionTimer.timeRemaining}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-mono-tabular backdrop-blur-md shadow-lg transition-all select-none ${
+                sessionSecondsLeft === 0
+                  ? 'bg-rose-950/80 border-rose-500/80 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.5)] animate-pulse'
+                  : sessionSecondsLeft <= 60
+                  ? 'bg-amber-950/80 border-amber-500/80 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.4)]'
+                  : 'bg-black/60 border-white/20 text-zinc-200'
+              }`}
+            >
+              <span className="text-[11px]">{sessionSecondsLeft === 0 ? '🔔' : '⏳'}</span>
+              <span className="font-bold tracking-wider">
+                {String(Math.floor(sessionSecondsLeft / 60)).padStart(2, '0')}:
+                {String(sessionSecondsLeft % 60).padStart(2, '0')}
+              </span>
+              <span className="text-[10px] text-zinc-400 font-sans hidden sm:inline">
+                · {activeFrame.name}
+              </span>
+            </div>
+          )}
+
+          {/* Floating Photo Preview Tray */}
+          <PhotoTray
+            totalShotsNeeded={totalShotsNeeded}
+            localShots={localShots}
+            currentShotNumber={currentShotNumber}
+            isRetakeMode={isRetakeMode}
+            retakeIndex={retakeIndex}
+            photoSlotText={t.camera.photoSlot}
+          />
+        </div>
+
+        {/* Floating Camera Tools Button (Top Right - z-20) */}
+        <div className="absolute top-3 sm:top-5 right-3 sm:right-5 z-20 pointer-events-auto">
           <button
             type="button"
             onClick={() => setShowTools((prev) => !prev)}
             aria-expanded={showTools}
-            className={`min-h-[40px] px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5 border active:scale-95 ${
+            className={`min-h-[44px] min-w-[44px] px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-full backdrop-blur-md transition-all cursor-pointer shadow-xl flex items-center justify-center gap-1.5 border active:scale-95 ${
               showTools
-                ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
-                : 'text-zinc-300 hover:text-white bg-zinc-900/90 hover:bg-zinc-800 border-zinc-700/80'
+                ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)] shadow-[0_0_20px_rgba(225,29,72,0.6)]'
+                : 'text-zinc-200 hover:text-white bg-black/60 hover:bg-black/85 border-white/20'
             }`}
+            title={showTools ? t.camera.closeTools : t.camera.tools}
           >
-            <span>⚙️</span>
-            <span>{showTools ? t.camera.closeTools : t.camera.tools}</span>
-          </button>
-
-          {/* Back Button */}
-          <button
-            type="button"
-            onClick={handleBack}
-            className="min-h-[40px] px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white bg-zinc-900/80 active:scale-95 border border-zinc-800 rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
-          >
-            <span>{isRetakeMode ? t.camera.cancelRetake : t.camera.backToFrames}</span>
+            <span className="text-base">⚙️</span>
+            <span className="hidden sm:inline">
+              {showTools ? t.camera.closeTools : t.camera.tools}
+            </span>
           </button>
         </div>
-      </div>
 
-      {/* Hero Edge-to-Edge Spotlight Viewfinder (Claims maximum available vertical space) */}
-      <div className="relative flex-1 min-h-0 w-full flex items-center justify-center overflow-hidden py-1">
-        {/* Spotlight Stage Viewport with strict 4:3 aspect ratio fitted to available container space */}
-        <div
-          data-testid="camera-viewfinder"
-          className="relative aspect-[4/3] h-full max-h-full max-w-full bg-black rounded-2xl sm:rounded-3xl overflow-hidden shadow-[0_0_120px_rgba(0,0,0,0.98),0_0_60px_rgba(225,29,72,0.22)] ring-1 ring-white/20 border border-zinc-800/80 flex items-center justify-center group"
-        >
-          {/* WebRTC Video Element */}
-          <video
-            ref={videoRef}
-            playsInline
-            muted
-            className={`w-full h-full object-cover ${
-              useSimulator ? 'hidden' : 'block'
-            } ${settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''}`}
-          />
-
-          {/* Studio Camera Simulator Fallback */}
-          {useSimulator && currentPortrait?.src && (
-            <img
-              src={currentPortrait.src}
-              alt={currentPortrait.label}
-              referrerPolicy="no-referrer"
-              className={`w-full h-full object-cover transition-all duration-300 ${
-                settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
-              }`}
-            />
-          )}
-
-          {/* Cinematic Spotlight Vignette & Radial Beam Overlay */}
-          <div
-            className="absolute inset-0 pointer-events-none z-10 bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(0,0,0,0.45)_65%,rgba(0,0,0,0.94)_100%)]"
-            aria-hidden="true"
-          />
-          {/* Atmospheric Spotlight Glow Rim */}
-          <div
-            className="absolute inset-0 pointer-events-none z-10 shadow-[inset_0_0_80px_rgba(0,0,0,0.85)]"
-            aria-hidden="true"
-          />
-
-          {/* Dynamic Crop Guide Mask & Framing Overlay */}
-          <CropGuideOverlay
-            showCropGuide={showCropGuide}
-            showGridLines={showGridLines}
-            cropInfo={cropInfo}
-          />
-
-          {/* Countdown Big Center Overlay & Flash Burst Effect */}
-          <CountdownOverlay
+        {/* Floating Bottom Center: Shutter Controls (z-20) */}
+        <div className="absolute bottom-5 sm:bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center pointer-events-auto">
+          <ShutterControls
+            isCapturingSequence={isCapturingSequence}
+            isRetakeMode={isRetakeMode}
+            retakeIndex={retakeIndex}
             countdown={countdown}
-            isFlashing={isFlashing}
-            getReadyText={t.camera.getReady}
-          />
-
-          {/* Top Bar: Captured Photo List Preview (z-20) */}
-          <div className="absolute top-2.5 sm:top-4 left-1/2 -translate-x-1/2 z-20 pointer-events-auto flex items-center justify-center max-w-[95%]">
-            <PhotoTray
-              totalShotsNeeded={totalShotsNeeded}
-              localShots={localShots}
-              currentShotNumber={currentShotNumber}
-              isRetakeMode={isRetakeMode}
-              retakeIndex={retakeIndex}
-              photoSlotText={t.camera.photoSlot}
-            />
-          </div>
-
-          {/* Bottom Bar: Shutter Controls (z-20) */}
-          <div className="absolute bottom-2.5 sm:bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center pointer-events-auto">
-            <ShutterControls
-              isCapturingSequence={isCapturingSequence}
-              isRetakeMode={isRetakeMode}
-              retakeIndex={retakeIndex}
-              countdown={countdown}
-              countdownSeconds={settings?.countdownSeconds || 3}
-              onStartSequence={startCountdownSequence}
-              onInstantCapture={handleInstantCapture}
-              t={t}
-            />
-          </div>
-
-          {/* Toggleable Clean Camera Tools Modal / Drawer */}
-          <CameraToolsModal
-            showTools={showTools}
-            onClose={() => setShowTools(false)}
-            cameraReady={cameraReady}
-            targetSlot={targetSlot}
-            activeFrameName={activeFrame.name}
-            useSimulator={useSimulator}
-            setUseSimulator={setUseSimulator}
-            showCropGuide={showCropGuide}
-            setShowCropGuide={setShowCropGuide}
-            showGridLines={showGridLines}
-            setShowGridLines={setShowGridLines}
-            cropInfo={cropInfo}
-            activePoseIdx={activePoseIdx}
-            setActivePoseIdx={setActivePoseIdx}
+            countdownSeconds={settings?.countdownSeconds || 3}
+            onStartSequence={startCountdownSequence}
+            onInstantCapture={handleInstantCapture}
             t={t}
           />
         </div>
+
+        {/* Toggleable Clean Camera Tools Modal / Drawer (z-40) */}
+        <CameraToolsModal
+          showTools={showTools}
+          onClose={() => setShowTools(false)}
+          cameraReady={cameraReady}
+          targetSlot={targetSlot}
+          activeFrameName={activeFrame.name}
+          useSimulator={useSimulator}
+          setUseSimulator={setUseSimulator}
+          showCropGuide={showCropGuide}
+          setShowCropGuide={setShowCropGuide}
+          showGridLines={showGridLines}
+          setShowGridLines={setShowGridLines}
+          cropInfo={cropInfo}
+          activePoseIdx={activePoseIdx}
+          setActivePoseIdx={setActivePoseIdx}
+          t={t}
+        />
       </div>
     </div>
   );
