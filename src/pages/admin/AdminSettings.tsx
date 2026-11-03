@@ -15,7 +15,15 @@ import { ResetAllDataModal } from '../../components/common/ResetAllDataModal';
 import { BrandLogo } from '../../components/common/BrandLogo';
 
 export const AdminSettings: React.FC = () => {
-  const { language, setLanguage, t } = usePhotobox();
+  const {
+    language,
+    setLanguage,
+    t,
+    activeFramePack,
+    setActiveFramePack,
+    availablePacks,
+    refreshPacks,
+  } = usePhotobox();
   const [driveUrl, setDriveUrl] = useState(DEFAULT_DRIVE_URL);
   const [studioName, setStudioName] = useState(DEFAULT_APP_SETTINGS.studioName || '');
   const [eventName, setEventName] = useState(DEFAULT_APP_SETTINGS.eventName || '');
@@ -73,10 +81,60 @@ export const AdminSettings: React.FC = () => {
     DEFAULT_APP_SETTINGS.idleScreenMode || 'standard'
   );
 
-  const [activeTab, setActiveTab] = useState<'appearance' | 'session' | 'hardware'>('appearance');
+  const [activeTab, setActiveTab] = useState<'appearance' | 'packs' | 'session' | 'hardware'>('appearance');
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showResetAllModal, setShowResetAllModal] = useState(false);
+
+  // Frame Packs State & Handlers
+  const [isRescanningPacks, setIsRescanningPacks] = useState(false);
+  const [packNotice, setPackNotice] = useState<string | null>(null);
+  const [precachingAllPacks, setPrecachingAllPacks] = useState(false);
+  const [precacheProgress, setPrecacheProgress] = useState<{ current: number; total: number } | null>(null);
+
+  const handleRescanPacks = async () => {
+    setIsRescanningPacks(true);
+    try {
+      const packs = await refreshPacks();
+      setPackNotice(
+        language === 'en'
+          ? `${packs.length} frame packs detected on disk`
+          : `${packs.length} paket bingkai terdeteksi di folder`
+      );
+      setTimeout(() => setPackNotice(null), 3500);
+    } catch {
+      setPackNotice(language === 'en' ? 'Failed to scan frame packs' : 'Gagal memindai paket bingkai');
+    } finally {
+      setIsRescanningPacks(false);
+    }
+  };
+
+  const handleSelectPack = async (packId: string) => {
+    try {
+      await setActiveFramePack(packId);
+      setPackNotice(t.admin.packActivatedNotice);
+      setTimeout(() => setPackNotice(null), 3500);
+    } catch (err) {
+      console.error('Failed to switch pack:', err);
+    }
+  };
+
+  const handlePrecacheAllPacks = async () => {
+    setPrecachingAllPacks(true);
+    setPrecacheProgress(null);
+    try {
+      const result = await precacheAllFrameAssets((current, total) => {
+        setPrecacheProgress({ current, total });
+      });
+      setPackNotice(`${t.admin.precachedAllSuccess} (${result.cachedCount}/${result.totalAssets})`);
+      setTimeout(() => setPackNotice(null), 4000);
+    } catch (err) {
+      console.error('Error precaching packs:', err);
+    } finally {
+      setPrecachingAllPacks(false);
+      setPrecacheProgress(null);
+    }
+  };
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -465,6 +523,17 @@ export const AdminSettings: React.FC = () => {
         </button>
         <button
           type="button"
+          onClick={() => setActiveTab('packs')}
+          style={activeTab === 'packs' ? { borderColor: themeColor, color: themeColor } : {}}
+          className={`min-h-[44px] px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer border-b-2 active:scale-95 ${activeTab === 'packs'
+            ? 'border-b-2 bg-white text-neutral-900 shadow-xs'
+            : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+            }`}
+        >
+          🎁 {t.admin.settingsTabPacks}
+        </button>
+        <button
+          type="button"
           onClick={() => setActiveTab('session')}
           style={activeTab === 'session' ? { borderColor: themeColor, color: themeColor } : {}}
           className={`min-h-[44px] px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer border-b-2 active:scale-95 ${activeTab === 'session'
@@ -813,6 +882,172 @@ export const AdminSettings: React.FC = () => {
                       </p>
                     </button>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: FRAME PACKS MANAGEMENT */}
+          {activeTab === 'packs' && (
+            <div className="space-y-6">
+              {/* Header & Description */}
+              <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200/80 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-sm font-bold text-neutral-900 flex items-center gap-1.5">
+                      <span>🎁</span>
+                      <span>{t.admin.framePacksTitle}</span>
+                    </h2>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      {t.admin.framePacksSubtitle}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleRescanPacks}
+                      disabled={isRescanningPacks}
+                      className="min-h-[38px] px-3 py-1.5 text-xs font-bold bg-white border border-neutral-300 rounded-xl text-neutral-800 hover:bg-neutral-100 active:scale-95 transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <span className={isRescanningPacks ? 'animate-spin' : ''}>🔄</span>
+                      <span>{isRescanningPacks ? t.admin.rescanningPacks : t.admin.rescanPacksAction}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handlePrecacheAllPacks}
+                      disabled={precachingAllPacks}
+                      className="min-h-[38px] px-3 py-1.5 text-xs font-bold text-white bg-neutral-900 hover:bg-neutral-800 rounded-xl active:scale-95 transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <span className={precachingAllPacks ? 'animate-bounce' : ''}>⚡</span>
+                      <span>{precachingAllPacks ? t.admin.precachingProgress : t.admin.precacheAllPacksAction}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Feedback Notices */}
+                {packNotice && (
+                  <div className="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-2">
+                    <span>✓</span>
+                    <span>{packNotice}</span>
+                  </div>
+                )}
+
+                {precacheProgress && (
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex justify-between text-[11px] font-semibold text-neutral-600">
+                      <span>{t.admin.precachingProgress}</span>
+                      <span>{precacheProgress.current} / {precacheProgress.total}</span>
+                    </div>
+                    <div className="w-full h-2 bg-neutral-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 transition-all duration-200"
+                        style={{ width: `${Math.round((precacheProgress.current / (precacheProgress.total || 1)) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Grid of Frame Packs */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {availablePacks.map((pack) => {
+                  const isActive = pack.id === activeFramePack;
+                  return (
+                    <div
+                      key={pack.id}
+                      className={`relative rounded-2xl border p-4.5 flex flex-col justify-between gap-4 transition-all ${
+                        isActive
+                          ? 'border-[var(--theme-accent,#E11D48)] bg-[var(--theme-accent,#E11D48)]/[0.03] ring-2 ring-[var(--theme-accent,#E11D48)]/40 shadow-xs'
+                          : 'border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-2xs'
+                      }`}
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-sm font-bold text-neutral-900 leading-tight">
+                                {pack.name}
+                              </h3>
+                              {pack.isDefault && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-100 text-neutral-600 font-semibold border border-neutral-200">
+                                  Default
+                                </span>
+                              )}
+                            </div>
+                            {pack.author && (
+                              <p className="text-[11px] text-neutral-500">
+                                By {pack.author} {pack.version ? `· v${pack.version}` : ''}
+                              </p>
+                            )}
+                          </div>
+
+                          {isActive ? (
+                            <span className="shrink-0 px-2.5 py-1 text-[11px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 rounded-full flex items-center gap-1 shadow-2xs">
+                              <span>✓</span>
+                              <span>{t.admin.activePackBadge}</span>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleSelectPack(pack.id)}
+                              className="shrink-0 min-h-[34px] px-3 py-1 text-xs font-bold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all cursor-pointer shadow-2xs"
+                            >
+                              {t.admin.activatePackAction}
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Pack Cover / Preview Thumbnail */}
+                        <div className="h-32 w-full rounded-xl bg-neutral-100 border border-neutral-200/80 overflow-hidden flex items-center justify-center relative">
+                          {pack.coverImg ? (
+                            <img
+                              src={pack.coverImg}
+                              alt={pack.name}
+                              className="h-full w-full object-contain p-2"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <span className="text-3xl text-neutral-300">🖼️</span>
+                          )}
+                          <span className="absolute bottom-2 right-2 px-2 py-0.5 text-[10px] font-mono font-bold bg-neutral-900/80 text-white rounded-md backdrop-blur-xs">
+                            {pack.frameCount || pack.frames?.length || 0} {t.admin.packFramesCount}
+                          </span>
+                        </div>
+
+                        {pack.description && (
+                          <p className="text-xs text-neutral-600 line-clamp-2 leading-relaxed">
+                            {pack.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="pt-2 border-t border-neutral-100 flex items-center justify-between text-[11px] text-neutral-400">
+                        <span className="font-mono">ID: {pack.id}</span>
+                        {isActive && (
+                          <span className="text-[var(--theme-accent,#E11D48)] font-semibold flex items-center gap-1">
+                            <span>●</span>
+                            <span>{t.admin.activeKioskIndicator}</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Folder Addition Guide */}
+              <div className="p-4 bg-amber-50/70 border border-amber-200/80 rounded-2xl space-y-2 text-neutral-800">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
+                  <span>💡</span>
+                  <span>{t.admin.packFolderGuideTitle}</span>
+                </div>
+                <p className="text-xs text-amber-800/90 leading-relaxed">
+                  {t.admin.packFolderGuideDesc}
+                </p>
+                <div className="text-[11px] font-mono bg-white/80 p-2.5 rounded-xl border border-amber-200 text-neutral-700 select-all overflow-x-auto">
+                  public/frame-packs/[nama-paket]/pack.json
                 </div>
               </div>
             </div>

@@ -1,0 +1,260 @@
+{
+  "id": "pasar-sejati",
+  "name": "Pasar Sejati — Weekend Edition",
+  "description": "Koleksi bingkai tematik Car Free Day, Sunday Vibes & Komunitas Pasar Sejati",
+  "author": "SoreAja Studio x Pasar Sejati",
+  "version": "1.0.0",
+  "coverImg": "/assets/frames/car-free-day-3_transparent-preview.png",
+  "frameCount": 8,
+  "isDefault": false,
+  "frames": [
+    {
+      "id": "car-free-day-3_transparent",
+      "name": "cfd 3 (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/car-free-day-3_transparent-preview.png",
+      "frameImg": "/assets/frames/car-free-day-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 40,
+          "y": 350,
+          "width": 520,
+          "height": 390
+        },
+        {
+          "x": 40,
+          "y": 740,
+          "width": 520,
+          "height": 420
+        },
+        {
+          "x": 40,
+          "y": 1160,
+          "width": 520,
+          "height": 420
+        }
+      ]
+    },
+    {
+      "id": "cfd-pink-3_transparent",
+      "name": "cfd pink (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/cfd-pink-3_transparent-preview.png",
+      "frameImg": "/assets/frames/cfd-pink-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 40,
+          "y": 120,
+          "width": 520,
+          "height": 450
+        },
+        {
+          "x": 50,
+          "y": 600,
+          "width": 510,
+          "height": 450
+        },
+        {
+          "x": 50,
+          "y": 1080,
+          "width": 520,
+          "height": 450
+        }
+      ]
+    },
+    {
+      "id": "clasic-cfd-3_transparent",
+      "name": "classic (4 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/clasic-cfd-3_transparent-preview.png",
+      "frameImg": "/assets/frames/clasic-cfd-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 60,
+          "y": 90,
+          "width": 490,
+          "height": 340
+        },
+        {
+          "x": 60,
+          "y": 460,
+          "width": 490,
+          "height": 350
+        },
+        {
+          "x": 60,
+          "y": 820,
+          "width": 490,
+          "height": 350
+        }
+      ]
+    },
+    {
+      "id": "friends-3_transparent",
+      "name": "friends (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/friends-3_transparent-preview.png",
+      "frameImg": "/assets/frames/friends-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 70,
+          "y": 50,
+          "width": 460,
+          "height": 480
+        },
+        {
+          "x": 70,
+          "y": 580,
+          "width": 470,
+          "height": 480
+        },
+        {
+          "x": 70,
+          "y": 1100,
+          "width": 470,
+          "height": 490
+        }
+      ]
+    },
+    {
+      "id": "happy-in-moment-3_transparent",
+      "name": "happy (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/happy-in-moment-3_transparent-preview.png",
+      "frameImg": "/assets/frames/happy-in-moment-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 60,
+          "y": 310,
+          "width": 490,
+          "height": 400
+        },
+        {
+          "x": 60,
+          "y": 750,
+          "width": 490,
+          "height": 410
+        },
+        {
+          "x": 60,
+          "y": 1190,
+          "width": 490,
+          "height": 410
+        }
+      ]
+    },
+    {
+      "id": "sunday-3-photo",
+      "name": "Sunday",
+      "subtitle": "Sunday - Soreaja",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1794,
+      "previewImg": "/assets/frames/sunday-3-photo-preview.png",
+      "frameImg": "/assets/frames/sunday-3-photo.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 51,
+          "y": 190,
+          "width": 500,
+          "height": 480
+        },
+        {
+          "x": 51,
+          "y": 680,
+          "width": 500,
+          "height": 480
+        },
+        {
+          "x": 51,
+          "y": 1170,
+          "width": 500,
+          "height": 480
+        }
+      ]
+    },
+    {
+      "id": "memories-3_transparent",
+      "name": "memories (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/memories-3_transparent-preview.png",
+      "frameImg": "/assets/frames/memories-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 50,
+          "y": 80,
+          "width": 510,
+          "height": 350
+        },
+        {
+          "x": 50,
+          "y": 570,
+          "width": 510,
+          "height": 360
+        },
+        {
+          "x": 50,
+          "y": 1070,
+          "width": 510,
+          "height": 360
+        }
+      ]
+    },
+    {
+      "id": "sunday-3_transparent",
+      "name": "sunday - 3 cut",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/sunday-3_transparent-preview.png",
+      "frameImg": "/assets/frames/sunday-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 40,
+          "y": 40,
+          "width": 540,
+          "height": 510
+        },
+        {
+          "x": 40,
+          "y": 570,
+          "width": 540,
+          "height": 510
+        },
+        {
+          "x": 40,
+          "y": 1090,
+          "width": 540,
+          "height": 510
+        }
+      ]
+    }
+  ]
+}

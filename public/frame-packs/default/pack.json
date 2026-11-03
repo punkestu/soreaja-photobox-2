@@ -1,0 +1,1998 @@
+{
+  "id": "default",
+  "name": "SoreAja Classic Pack",
+  "description": "Koleksi 54 template bingkai bawaan SoreAja Photobox (Single Strip & Double Sheet)",
+  "author": "SoreAja Studio",
+  "version": "1.0.0",
+  "coverImg": "/assets/frames/hbd-1-preview.png",
+  "frameCount": 54,
+  "isDefault": true,
+  "frames": [
+    {
+      "id": "hbd-1",
+      "name": "Happy Birthday 1 (3-Cut)",
+      "subtitle": "Classic Korean Photobox 3-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1794,
+      "previewImg": "/assets/frames/hbd-1-preview.png",
+      "frameImg": "/assets/frames/hbd-1-photo.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 80,
+          "y": 470,
+          "width": 450,
+          "height": 350
+        },
+        {
+          "x": 70,
+          "y": 840,
+          "width": 460,
+          "height": 350
+        },
+        {
+          "x": 80,
+          "y": 1210,
+          "width": 450,
+          "height": 370
+        }
+      ]
+    },
+    {
+      "id": "hbd-2",
+      "name": "Happy Birthday 1 (3-Cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1794,
+      "previewImg": "/assets/frames/hbd-2-preview.png",
+      "frameImg": "/assets/frames/hbd-2-photo.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 30,
+          "y": 100,
+          "width": 520,
+          "height": 370
+        },
+        {
+          "x": 20,
+          "y": 520,
+          "width": 520,
+          "height": 360
+        },
+        {
+          "x": 30,
+          "y": 940,
+          "width": 510,
+          "height": 350
+        }
+      ]
+    },
+    {
+      "id": "analog-3_transparent",
+      "name": "analog (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/analog-3_transparent-preview.png",
+      "frameImg": "/assets/frames/analog-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 50,
+          "y": 50,
+          "width": 500,
+          "height": 540
+        },
+        {
+          "x": 50,
+          "y": 620,
+          "width": 500,
+          "height": 540
+        },
+        {
+          "x": 50,
+          "y": 1200,
+          "width": 500,
+          "height": 540
+        }
+      ]
+    },
+    {
+      "id": "beginning-3_transparent",
+      "name": "beginning (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/beginning-3_transparent-preview.png",
+      "frameImg": "/assets/frames/beginning-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 50,
+          "y": 250,
+          "width": 510,
+          "height": 470
+        },
+        {
+          "x": 40,
+          "y": 750,
+          "width": 520,
+          "height": 470
+        },
+        {
+          "x": 50,
+          "y": 1230,
+          "width": 510,
+          "height": 470
+        }
+      ]
+    },
+    {
+      "id": "bubley-3_transparent",
+      "name": "bubley (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/bubley-3_transparent-preview.png",
+      "frameImg": "/assets/frames/bubley-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 110,
+          "y": 150,
+          "width": 390,
+          "height": 390
+        },
+        {
+          "x": 110,
+          "y": 680,
+          "width": 390,
+          "height": 390
+        },
+        {
+          "x": 110,
+          "y": 1210,
+          "width": 390,
+          "height": 380
+        }
+      ]
+    },
+    {
+      "id": "captured-moments-3_transparent",
+      "name": "moments (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/captured-moments-3_transparent-preview.png",
+      "frameImg": "/assets/frames/captured-moments-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 40,
+          "y": 30,
+          "width": 520,
+          "height": 610
+        },
+        {
+          "x": 40,
+          "y": 660,
+          "width": 530,
+          "height": 500
+        },
+        {
+          "x": 40,
+          "y": 1180,
+          "width": 530,
+          "height": 590
+        }
+      ]
+    },
+    {
+      "id": "car-free-day-3_transparent",
+      "name": "cfd 3 (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/car-free-day-3_transparent-preview.png",
+      "frameImg": "/assets/frames/car-free-day-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 40,
+          "y": 350,
+          "width": 520,
+          "height": 390
+        },
+        {
+          "x": 40,
+          "y": 740,
+          "width": 520,
+          "height": 420
+        },
+        {
+          "x": 40,
+          "y": 1160,
+          "width": 520,
+          "height": 420
+        }
+      ]
+    },
+    {
+      "id": "cfd-pink-3_transparent",
+      "name": "cfd pink (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/cfd-pink-3_transparent-preview.png",
+      "frameImg": "/assets/frames/cfd-pink-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 40,
+          "y": 120,
+          "width": 520,
+          "height": 450
+        },
+        {
+          "x": 50,
+          "y": 600,
+          "width": 510,
+          "height": 450
+        },
+        {
+          "x": 50,
+          "y": 1080,
+          "width": 520,
+          "height": 450
+        }
+      ]
+    },
+    {
+      "id": "childish-3_transparent",
+      "name": "childish (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/childish-3_transparent-preview.png",
+      "frameImg": "/assets/frames/childish-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 30,
+          "y": 110,
+          "width": 540,
+          "height": 500
+        },
+        {
+          "x": 30,
+          "y": 660,
+          "width": 550,
+          "height": 500
+        },
+        {
+          "x": 30,
+          "y": 1210,
+          "width": 550,
+          "height": 510
+        }
+      ]
+    },
+    {
+      "id": "clasic-bluestrip-3_transparent",
+      "name": "candy blue (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/clasic-bluestrip-3_transparent-preview.png",
+      "frameImg": "/assets/frames/clasic-bluestrip-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 60,
+          "y": 150,
+          "width": 480,
+          "height": 480
+        },
+        {
+          "x": 60,
+          "y": 660,
+          "width": 480,
+          "height": 480
+        },
+        {
+          "x": 60,
+          "y": 1160,
+          "width": 480,
+          "height": 480
+        }
+      ]
+    },
+    {
+      "id": "clasic-candy-3_transparent",
+      "name": "candy (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/clasic-candy-3_transparent-preview.png",
+      "frameImg": "/assets/frames/clasic-candy-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 60,
+          "y": 200,
+          "width": 480,
+          "height": 460
+        },
+        {
+          "x": 60,
+          "y": 690,
+          "width": 480,
+          "height": 460
+        },
+        {
+          "x": 60,
+          "y": 1180,
+          "width": 480,
+          "height": 460
+        }
+      ]
+    },
+    {
+      "id": "clasic-cfd-3_transparent",
+      "name": "classic (4 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/clasic-cfd-3_transparent-preview.png",
+      "frameImg": "/assets/frames/clasic-cfd-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 60,
+          "y": 90,
+          "width": 490,
+          "height": 340
+        },
+        {
+          "x": 60,
+          "y": 460,
+          "width": 490,
+          "height": 350
+        },
+        {
+          "x": 60,
+          "y": 820,
+          "width": 490,
+          "height": 350
+        }
+      ]
+    },
+    {
+      "id": "cute-emo-4_transparent",
+      "name": "cute emo (4 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/cute-emo-4_transparent-preview.png",
+      "frameImg": "/assets/frames/cute-emo-4_transparent.png",
+      "photoCount": 4,
+      "positions": [
+        {
+          "x": 20,
+          "y": 30,
+          "width": 560,
+          "height": 400
+        },
+        {
+          "x": 20,
+          "y": 910,
+          "width": 560,
+          "height": 400
+        },
+        {
+          "x": 20,
+          "y": 1350,
+          "width": 570,
+          "height": 400
+        },
+        {
+          "x": 20,
+          "y": 470,
+          "width": 560,
+          "height": 400
+        }
+      ]
+    },
+    {
+      "id": "cute-pink-3_transparent",
+      "name": "cute pink (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/cute-pink-3_transparent-preview.png",
+      "frameImg": "/assets/frames/cute-pink-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 70,
+          "y": 60,
+          "width": 470,
+          "height": 470
+        },
+        {
+          "x": 70,
+          "y": 640,
+          "width": 470,
+          "height": 470
+        },
+        {
+          "x": 70,
+          "y": 1220,
+          "width": 470,
+          "height": 480
+        }
+      ]
+    },
+    {
+      "id": "cute-yellow-4_transparent",
+      "name": "cute (4 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/cute-yellow-4_transparent-preview.png",
+      "frameImg": "/assets/frames/cute-yellow-4_transparent.png",
+      "photoCount": 4,
+      "positions": [
+        {
+          "x": 50,
+          "y": 30,
+          "width": 500,
+          "height": 420
+        },
+        {
+          "x": 50,
+          "y": 470,
+          "width": 500,
+          "height": 420
+        },
+        {
+          "x": 50,
+          "y": 910,
+          "width": 500,
+          "height": 420
+        },
+        {
+          "x": 50,
+          "y": 1350,
+          "width": 500,
+          "height": 420
+        }
+      ]
+    },
+    {
+      "id": "friends-3_transparent",
+      "name": "friends (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/friends-3_transparent-preview.png",
+      "frameImg": "/assets/frames/friends-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 70,
+          "y": 50,
+          "width": 460,
+          "height": 480
+        },
+        {
+          "x": 70,
+          "y": 580,
+          "width": 470,
+          "height": 480
+        },
+        {
+          "x": 70,
+          "y": 1100,
+          "width": 470,
+          "height": 490
+        }
+      ]
+    },
+    {
+      "id": "fullframe-4_transparent",
+      "name": "fullframe (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/fullframe-4_transparent-preview.png",
+      "frameImg": "/assets/frames/fullframe-4_transparent.png",
+      "photoCount": 4,
+      "positions": [
+        {
+          "x": 20,
+          "y": 20,
+          "width": 560,
+          "height": 410
+        },
+        {
+          "x": 20,
+          "y": 470,
+          "width": 560,
+          "height": 410
+        },
+        {
+          "x": 20,
+          "y": 920,
+          "width": 560,
+          "height": 400
+        },
+        {
+          "x": 20,
+          "y": 1370,
+          "width": 560,
+          "height": 400
+        }
+      ]
+    },
+    {
+      "id": "groovy-3_transparent",
+      "name": "groovy(3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/groovy-3_transparent-preview.png",
+      "frameImg": "/assets/frames/groovy-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 40,
+          "y": 220,
+          "width": 530,
+          "height": 460
+        },
+        {
+          "x": 40,
+          "y": 710,
+          "width": 530,
+          "height": 450
+        },
+        {
+          "x": 40,
+          "y": 1190,
+          "width": 530,
+          "height": 460
+        }
+      ]
+    },
+    {
+      "id": "groovy-baby-3_transparent",
+      "name": "baby (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/groovy-baby-3_transparent-preview.png",
+      "frameImg": "/assets/frames/groovy-baby-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 40,
+          "y": 220,
+          "width": 520,
+          "height": 460
+        },
+        {
+          "x": 40,
+          "y": 710,
+          "width": 520,
+          "height": 460
+        },
+        {
+          "x": 40,
+          "y": 1190,
+          "width": 520,
+          "height": 460
+        }
+      ]
+    },
+    {
+      "id": "happiness-3_transparent",
+      "name": "happy (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/happiness-3_transparent-preview.png",
+      "frameImg": "/assets/frames/happiness-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 90,
+          "y": 210,
+          "width": 430,
+          "height": 370
+        },
+        {
+          "x": 90,
+          "y": 780,
+          "width": 430,
+          "height": 380
+        },
+        {
+          "x": 90,
+          "y": 1360,
+          "width": 430,
+          "height": 380
+        }
+      ]
+    },
+    {
+      "id": "happy-in-moment-3_transparent",
+      "name": "happy (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/happy-in-moment-3_transparent-preview.png",
+      "frameImg": "/assets/frames/happy-in-moment-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 60,
+          "y": 310,
+          "width": 490,
+          "height": 400
+        },
+        {
+          "x": 60,
+          "y": 750,
+          "width": 490,
+          "height": 410
+        },
+        {
+          "x": 60,
+          "y": 1190,
+          "width": 490,
+          "height": 410
+        }
+      ]
+    },
+    {
+      "id": "jeans-3_transparent",
+      "name": "jeans polkadot (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/jeans-3_transparent-preview.png",
+      "frameImg": "/assets/frames/jeans-3_transparent.png",
+      "photoCount": 4,
+      "positions": [
+        {
+          "x": 50,
+          "y": 90,
+          "width": 510,
+          "height": 350
+        },
+        {
+          "x": 50,
+          "y": 950,
+          "width": 510,
+          "height": 360
+        },
+        {
+          "x": 50,
+          "y": 1380,
+          "width": 510,
+          "height": 330
+        },
+        {
+          "x": 50,
+          "y": 520,
+          "width": 510,
+          "height": 350
+        }
+      ]
+    },
+    {
+      "id": "maroon-polkadot-3_transparent",
+      "name": "polkadot (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/maroon-polkadot-3_transparent-preview.png",
+      "frameImg": "/assets/frames/maroon-polkadot-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 50,
+          "y": 180,
+          "width": 500,
+          "height": 420
+        },
+        {
+          "x": 50,
+          "y": 630,
+          "width": 500,
+          "height": 420
+        },
+        {
+          "x": 50,
+          "y": 1070,
+          "width": 500,
+          "height": 420
+        }
+      ]
+    },
+    {
+      "id": "sunday-3-photo",
+      "name": "Sunday",
+      "subtitle": "Sunday - Soreaja",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1794,
+      "previewImg": "/assets/frames/sunday-3-photo-preview.png",
+      "frameImg": "/assets/frames/sunday-3-photo.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 51,
+          "y": 190,
+          "width": 500,
+          "height": 480
+        },
+        {
+          "x": 51,
+          "y": 680,
+          "width": 500,
+          "height": 480
+        },
+        {
+          "x": 51,
+          "y": 1170,
+          "width": 500,
+          "height": 480
+        }
+      ]
+    },
+    {
+      "id": "polka-strip-3_transparent.png",
+      "name": "polkadot merah + strip (3 cut)",
+      "subtitle": "Classic Photobox 3-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/polka-strip-3_transparent-preview.png",
+      "frameImg": "/assets/frames/polka-strip-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 30,
+          "y": 140,
+          "width": 540,
+          "height": 440
+        },
+        {
+          "x": 30,
+          "y": 610,
+          "width": 540,
+          "height": 660
+        },
+        {
+          "x": 30,
+          "y": 1300,
+          "width": 540,
+          "height": 440
+        }
+      ]
+    },
+    {
+      "id": "me-hello-3_transparent",
+      "name": "hello putih (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/me-hello-3_transparent-preview.png",
+      "frameImg": "/assets/frames/me-hello-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 60,
+          "y": 450,
+          "width": 480,
+          "height": 330
+        },
+        {
+          "x": 60,
+          "y": 840,
+          "width": 480,
+          "height": 330
+        },
+        {
+          "x": 60,
+          "y": 1230,
+          "width": 480,
+          "height": 330
+        }
+      ]
+    },
+    {
+      "id": "me-hello-dark-3_transparent",
+      "name": "hello (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/me-hello-dark-3_transparent-preview.png",
+      "frameImg": "/assets/frames/me-hello-dark-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 70,
+          "y": 340,
+          "width": 460,
+          "height": 330
+        },
+        {
+          "x": 70,
+          "y": 730,
+          "width": 460,
+          "height": 320
+        },
+        {
+          "x": 70,
+          "y": 1100,
+          "width": 460,
+          "height": 330
+        }
+      ]
+    },
+    {
+      "id": "memories-3_transparent",
+      "name": "memories (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/memories-3_transparent-preview.png",
+      "frameImg": "/assets/frames/memories-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 50,
+          "y": 80,
+          "width": 510,
+          "height": 350
+        },
+        {
+          "x": 50,
+          "y": 570,
+          "width": 510,
+          "height": 360
+        },
+        {
+          "x": 50,
+          "y": 1070,
+          "width": 510,
+          "height": 360
+        }
+      ]
+    },
+    {
+      "id": "og-3_transparent.png",
+      "name": "maroon polos (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/og-3_transparent-preview.png",
+      "frameImg": "/assets/frames/og-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 20,
+          "y": 210,
+          "width": 560,
+          "height": 420
+        },
+        {
+          "x": 20,
+          "y": 650,
+          "width": 560,
+          "height": 410
+        },
+        {
+          "x": 20,
+          "y": 1070,
+          "width": 560,
+          "height": 420
+        }
+      ]
+    },
+    {
+      "id": "og-blue-3_transparent.png",
+      "name": "blue transparant (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/og-blue-3_transparent.png-preview.png",
+      "frameImg": "/assets/frames/og-blue-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 50,
+          "y": 220,
+          "width": 500,
+          "height": 410
+        },
+        {
+          "x": 50,
+          "y": 720,
+          "width": 500,
+          "height": 410
+        },
+        {
+          "x": 50,
+          "y": 1200,
+          "width": 500,
+          "height": 430
+        }
+      ]
+    },
+    {
+      "id": "pink-polkadot-3_transparent.png",
+      "name": "polkadot merah besar (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/pink-polkadot-3_transparent.png-preview.png",
+      "frameImg": "/assets/frames/pink-polkadot-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 50,
+          "y": 170,
+          "width": 500,
+          "height": 500
+        },
+        {
+          "x": 50,
+          "y": 690,
+          "width": 500,
+          "height": 500
+        },
+        {
+          "x": 50,
+          "y": 1210,
+          "width": 500,
+          "height": 500
+        }
+      ]
+    },
+    {
+      "id": "red-polkadot-3_transparent.png",
+      "name": "polkadot merah besar (4 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/red-polkadot-3_transparent.png-preview.png",
+      "frameImg": "/assets/frames/red-polkadot-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 60,
+          "y": 80,
+          "width": 490,
+          "height": 500
+        },
+        {
+          "x": 60,
+          "y": 610,
+          "width": 490,
+          "height": 500
+        },
+        {
+          "x": 60,
+          "y": 1130,
+          "width": 490,
+          "height": 510
+        }
+      ]
+    },
+    {
+      "id": "simple-4_transparent.png",
+      "name": "kotak simple (4 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/simple-4_transparent.png-preview.png",
+      "frameImg": "/assets/frames/simple-4_transparent.png",
+      "photoCount": 4,
+      "positions": [
+        {
+          "x": 70,
+          "y": 60,
+          "width": 470,
+          "height": 410
+        },
+        {
+          "x": 70,
+          "y": 480,
+          "width": 470,
+          "height": 410
+        },
+        {
+          "x": 70,
+          "y": 1330,
+          "width": 470,
+          "height": 410
+        },
+        {
+          "x": 70,
+          "y": 910,
+          "width": 470,
+          "height": 400
+        }
+      ]
+    },
+    {
+      "id": "simple-dotted-4_transparent.png",
+      "name": "polkadot merah kecil (4 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/simple-dotted-4_transparent.png-preview.png",
+      "frameImg": "/assets/frames/simple-dotted-4_transparent.png",
+      "photoCount": 4,
+      "positions": [
+        {
+          "x": 70,
+          "y": 90,
+          "width": 460,
+          "height": 390
+        },
+        {
+          "x": 70,
+          "y": 510,
+          "width": 460,
+          "height": 390
+        },
+        {
+          "x": 70,
+          "y": 1340,
+          "width": 460,
+          "height": 400
+        },
+        {
+          "x": 70,
+          "y": 920,
+          "width": 460,
+          "height": 390
+        }
+      ]
+    },
+    {
+      "id": "simple-dotted-blue-4_transparent.png",
+      "name": "polkadot biru (4 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/simple-dotted-blue-4_transparent.png-preview.png",
+      "frameImg": "/assets/frames/simple-dotted-blue-4_transparent.png",
+      "photoCount": 4,
+      "positions": [
+        {
+          "x": 20,
+          "y": 40,
+          "width": 560,
+          "height": 420
+        },
+        {
+          "x": 20,
+          "y": 470,
+          "width": 560,
+          "height": 420
+        },
+        {
+          "x": 20,
+          "y": 1330,
+          "width": 560,
+          "height": 430
+        },
+        {
+          "x": 20,
+          "y": 910,
+          "width": 560,
+          "height": 410
+        }
+      ]
+    },
+    {
+      "id": "soreaja-pb-3_transparent.png",
+      "name": "soreaja photobooth (3 cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/soreaja-pb-3_transparent.png-preview.png",
+      "frameImg": "/assets/frames/soreaja-pb-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 50,
+          "y": 460,
+          "width": 500,
+          "height": 350
+        },
+        {
+          "x": 50,
+          "y": 890,
+          "width": 500,
+          "height": 350
+        },
+        {
+          "x": 50,
+          "y": 1330,
+          "width": 500,
+          "height": 360
+        }
+      ]
+    },
+    {
+      "id": "sunday-3_transparent",
+      "name": "sunday - 3 cut",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 602,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/sunday-3_transparent-preview.png",
+      "frameImg": "/assets/frames/sunday-3_transparent.png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 40,
+          "y": 40,
+          "width": 540,
+          "height": 510
+        },
+        {
+          "x": 40,
+          "y": 570,
+          "width": 540,
+          "height": 510
+        },
+        {
+          "x": 40,
+          "y": 1090,
+          "width": 540,
+          "height": 510
+        }
+      ]
+    },
+    {
+      "id": "red-white-love-8",
+      "name": "Red White Love (8-Cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 1204,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/red-white-love-8-preview.png",
+      "frameImg": "/assets/frames/red-white-love-8.png",
+      "photoCount": 8,
+      "positions": [
+        {
+          "x": 50,
+          "y": 30,
+          "width": 530,
+          "height": 390
+        },
+        {
+          "x": 50,
+          "y": 420,
+          "width": 530,
+          "height": 390
+        },
+        {
+          "x": 50,
+          "y": 810,
+          "width": 530,
+          "height": 400
+        },
+        {
+          "x": 50,
+          "y": 1210,
+          "width": 530,
+          "height": 390
+        },
+        {
+          "x": 630,
+          "y": 20,
+          "width": 530,
+          "height": 400
+        },
+        {
+          "x": 620,
+          "y": 420,
+          "width": 540,
+          "height": 390
+        },
+        {
+          "x": 620,
+          "y": 810,
+          "width": 540,
+          "height": 400
+        },
+        {
+          "x": 620,
+          "y": 1200,
+          "width": 530,
+          "height": 400
+        }
+      ]
+    },
+    {
+      "id": "ticket-archive-2",
+      "name": "Ticket Archive (6-Cut)",
+      "subtitle": "Classic Korean Photobox 6-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 1204,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/2. soreaja-strip-4cut-midnight-preview (1).png",
+      "frameImg": "/assets/frames/2_transparent.png",
+      "photoCount": 6,
+      "positions": [
+        {
+          "x": 60,
+          "y": 280,
+          "width": 480,
+          "height": 350
+        },
+        {
+          "x": 60,
+          "y": 700,
+          "width": 480,
+          "height": 350
+        },
+        {
+          "x": 60,
+          "y": 1120,
+          "width": 480,
+          "height": 350
+        },
+        {
+          "x": 670,
+          "y": 280,
+          "width": 470,
+          "height": 350
+        },
+        {
+          "x": 670,
+          "y": 700,
+          "width": 470,
+          "height": 350
+        },
+        {
+          "x": 670,
+          "y": 1120,
+          "width": 470,
+          "height": 360
+        }
+      ]
+    },
+    {
+      "id": "the-news-3",
+      "name": "The News (6-Cut)",
+      "subtitle": "Classic Korean Photobox 6-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 1204,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/3. soreaja-strip-4cut-midnight-preview (2).png",
+      "frameImg": "/assets/frames/3_transparent.png",
+      "photoCount": 6,
+      "positions": [
+        {
+          "x": 40,
+          "y": 300,
+          "width": 530,
+          "height": 390
+        },
+        {
+          "x": 40,
+          "y": 700,
+          "width": 530,
+          "height": 380
+        },
+        {
+          "x": 40,
+          "y": 1090,
+          "width": 530,
+          "height": 390
+        },
+        {
+          "x": 640,
+          "y": 480,
+          "width": 540,
+          "height": 390
+        },
+        {
+          "x": 640,
+          "y": 880,
+          "width": 540,
+          "height": 390
+        },
+        {
+          "x": 630,
+          "y": 1280,
+          "width": 550,
+          "height": 400
+        }
+      ]
+    },
+    {
+      "id": "receipt-soreaja-4",
+      "name": "Receipt Soreaja (5-Cut)",
+      "subtitle": "Classic Korean Photobox 5-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 1204,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/4. soreaja-strip-4cut-midnight-preview (3).png",
+      "frameImg": "/assets/frames/4_transparent.png",
+      "photoCount": 5,
+      "positions": [
+        {
+          "x": 30,
+          "y": 480,
+          "width": 530,
+          "height": 340
+        },
+        {
+          "x": 30,
+          "y": 820,
+          "width": 530,
+          "height": 340
+        },
+        {
+          "x": 30,
+          "y": 1160,
+          "width": 530,
+          "height": 340
+        },
+        {
+          "x": 640,
+          "y": 30,
+          "width": 530,
+          "height": 630
+        },
+        {
+          "x": 640,
+          "y": 670,
+          "width": 530,
+          "height": 640
+        }
+      ]
+    },
+    {
+      "id": "boothy-call-5",
+      "name": "Boothy Call (6-Cut)",
+      "subtitle": "Classic Korean Photobox 6-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 1204,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/5. soreaja-strip-4cut-midnight-preview (4).png",
+      "frameImg": "/assets/frames/5_transparent.png",
+      "photoCount": 6,
+      "positions": [
+        {
+          "x": 50,
+          "y": 230,
+          "width": 500,
+          "height": 490
+        },
+        {
+          "x": 50,
+          "y": 720,
+          "width": 500,
+          "height": 490
+        },
+        {
+          "x": 50,
+          "y": 1220,
+          "width": 500,
+          "height": 490
+        },
+        {
+          "x": 660,
+          "y": 220,
+          "width": 490,
+          "height": 500
+        },
+        {
+          "x": 660,
+          "y": 740,
+          "width": 490,
+          "height": 490
+        },
+        {
+          "x": 650,
+          "y": 1250,
+          "width": 510,
+          "height": 500
+        }
+      ]
+    },
+    {
+      "id": "come-closer-6",
+      "name": "Come Closer (6-Cut)",
+      "subtitle": "Classic Korean Photobox 6-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 1204,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/6. soreaja-strip-4cut-midnight-preview (5).png",
+      "frameImg": "/assets/frames/6_transparent.png",
+      "photoCount": 6,
+      "positions": [
+        {
+          "x": 40,
+          "y": 170,
+          "width": 530,
+          "height": 300
+        },
+        {
+          "x": 40,
+          "y": 530,
+          "width": 530,
+          "height": 300
+        },
+        {
+          "x": 40,
+          "y": 890,
+          "width": 530,
+          "height": 300
+        },
+        {
+          "x": 640,
+          "y": 570,
+          "width": 540,
+          "height": 310
+        },
+        {
+          "x": 640,
+          "y": 930,
+          "width": 530,
+          "height": 310
+        },
+        {
+          "x": 640,
+          "y": 1280,
+          "width": 530,
+          "height": 310
+        }
+      ]
+    },
+    {
+      "id": "soreaja-pix-7",
+      "name": "Soreaja Pix DM (6-Cut)",
+      "subtitle": "Classic Korean Photobox 6-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 1204,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/7. soreaja-strip-4cut-midnight-preview (6).png",
+      "frameImg": "/assets/frames/7_transparent.png",
+      "photoCount": 6,
+      "positions": [
+        {
+          "x": 20,
+          "y": 150,
+          "width": 550,
+          "height": 420
+        },
+        {
+          "x": 20,
+          "y": 580,
+          "width": 550,
+          "height": 420
+        },
+        {
+          "x": 20,
+          "y": 1010,
+          "width": 550,
+          "height": 420
+        },
+        {
+          "x": 630,
+          "y": 150,
+          "width": 550,
+          "height": 420
+        },
+        {
+          "x": 630,
+          "y": 580,
+          "width": 550,
+          "height": 420
+        },
+        {
+          "x": 630,
+          "y": 1010,
+          "width": 550,
+          "height": 420
+        }
+      ]
+    },
+    {
+      "id": "bahela-lawas-8",
+      "name": "Bahela Lawas (6-Cut)",
+      "subtitle": "Classic Korean Photobox 6-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 1204,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/8. soreaja-strip-4cut-midnight-preview (7).png",
+      "frameImg": "/assets/frames/8_transparent.png",
+      "photoCount": 6,
+      "positions": [
+        {
+          "x": 50,
+          "y": 180,
+          "width": 520,
+          "height": 420
+        },
+        {
+          "x": 50,
+          "y": 690,
+          "width": 520,
+          "height": 410
+        },
+        {
+          "x": 50,
+          "y": 1200,
+          "width": 520,
+          "height": 410
+        },
+        {
+          "x": 640,
+          "y": 80,
+          "width": 510,
+          "height": 490
+        },
+        {
+          "x": 640,
+          "y": 670,
+          "width": 510,
+          "height": 460
+        },
+        {
+          "x": 640,
+          "y": 1220,
+          "width": 510,
+          "height": 500
+        }
+      ]
+    },
+    {
+      "id": "photodump-stillness-9",
+      "name": "Photodump Stillness (4-Cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Grid",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 1204,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/9. soreaja-strip-4cut-midnight-preview (8).png",
+      "frameImg": "/assets/frames/9_transparent.png",
+      "photoCount": 4,
+      "positions": [
+        {
+          "x": 80,
+          "y": 560,
+          "width": 520,
+          "height": 480
+        },
+        {
+          "x": 80,
+          "y": 1050,
+          "width": 520,
+          "height": 490
+        },
+        {
+          "x": 600,
+          "y": 1050,
+          "width": 530,
+          "height": 490
+        },
+        {
+          "x": 600,
+          "y": 560,
+          "width": 530,
+          "height": 490
+        }
+      ]
+    },
+    {
+      "id": "poserbox-playlist-10",
+      "name": "Poserbox Playlist (6-Cut)",
+      "subtitle": "Classic Korean Photobox 6-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 1204,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/10. soreaja-strip-4cut-midnight-preview (9).png",
+      "frameImg": "/assets/frames/10_transparent.png",
+      "photoCount": 6,
+      "positions": [
+        {
+          "x": 90,
+          "y": 170,
+          "width": 430,
+          "height": 430
+        },
+        {
+          "x": 90,
+          "y": 610,
+          "width": 430,
+          "height": 430
+        },
+        {
+          "x": 90,
+          "y": 1060,
+          "width": 430,
+          "height": 430
+        },
+        {
+          "x": 690,
+          "y": 170,
+          "width": 440,
+          "height": 430
+        },
+        {
+          "x": 690,
+          "y": 610,
+          "width": 430,
+          "height": 430
+        },
+        {
+          "x": 690,
+          "y": 1050,
+          "width": 440,
+          "height": 440
+        }
+      ]
+    },
+    {
+      "id": "ferz-moment-12",
+      "name": "Ferz Moment (6-Cut)",
+      "subtitle": "Classic Korean Photobox 6-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 1204,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/12. soreaja-strip-4cut-midnight-preview (10).png",
+      "frameImg": "/assets/frames/12_transparent.png",
+      "photoCount": 6,
+      "positions": [
+        {
+          "x": 60,
+          "y": 60,
+          "width": 480,
+          "height": 380
+        },
+        {
+          "x": 60,
+          "y": 520,
+          "width": 480,
+          "height": 380
+        },
+        {
+          "x": 60,
+          "y": 960,
+          "width": 490,
+          "height": 390
+        },
+        {
+          "x": 660,
+          "y": 60,
+          "width": 490,
+          "height": 380
+        },
+        {
+          "x": 660,
+          "y": 520,
+          "width": 490,
+          "height": 380
+        },
+        {
+          "x": 660,
+          "y": 960,
+          "width": 490,
+          "height": 390
+        }
+      ]
+    },
+    {
+      "id": "snap-station-boemi-13",
+      "name": "Snap Station Boemi (8-Cut)",
+      "subtitle": "Classic Korean Photobox 8-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 1204,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/13. soreaja-strip-4cut-midnight-preview (11).png",
+      "frameImg": "/assets/frames/13_transparent.png",
+      "photoCount": 8,
+      "positions": [
+        {
+          "x": 40,
+          "y": 50,
+          "width": 530,
+          "height": 340
+        },
+        {
+          "x": 40,
+          "y": 400,
+          "width": 530,
+          "height": 340
+        },
+        {
+          "x": 40,
+          "y": 750,
+          "width": 530,
+          "height": 350
+        },
+        {
+          "x": 40,
+          "y": 1110,
+          "width": 530,
+          "height": 340
+        },
+        {
+          "x": 620,
+          "y": 50,
+          "width": 540,
+          "height": 340
+        },
+        {
+          "x": 620,
+          "y": 400,
+          "width": 540,
+          "height": 340
+        },
+        {
+          "x": 620,
+          "y": 750,
+          "width": 540,
+          "height": 350
+        },
+        {
+          "x": 630,
+          "y": 1110,
+          "width": 530,
+          "height": 340
+        }
+      ]
+    },
+    {
+      "id": "do-snap-14",
+      "name": "Do Snap (6-Cut)",
+      "subtitle": "Classic Korean Photobox 6-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 1204,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/14. soreaja-strip-4cut-midnight-preview.png",
+      "frameImg": "/assets/frames/14_transparent.png",
+      "photoCount": 6,
+      "positions": [
+        {
+          "x": 70,
+          "y": 230,
+          "width": 480,
+          "height": 410
+        },
+        {
+          "x": 60,
+          "y": 680,
+          "width": 490,
+          "height": 400
+        },
+        {
+          "x": 70,
+          "y": 1120,
+          "width": 490,
+          "height": 400
+        },
+        {
+          "x": 650,
+          "y": 230,
+          "width": 490,
+          "height": 410
+        },
+        {
+          "x": 650,
+          "y": 680,
+          "width": 490,
+          "height": 400
+        },
+        {
+          "x": 650,
+          "y": 1120,
+          "width": 490,
+          "height": 400
+        }
+      ]
+    },
+    {
+      "id": "detik-air-15",
+      "name": "Detik Air Boarding Pass (4-Cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 1204,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/15. soreaja-strip-4cut-midnight-preview (1).png",
+      "frameImg": "/assets/frames/15_transparent.png",
+      "photoCount": 4,
+      "positions": [
+        {
+          "x": 600,
+          "y": 640,
+          "width": 560,
+          "height": 530
+        },
+        {
+          "x": 50,
+          "y": 640,
+          "width": 540,
+          "height": 520
+        },
+        {
+          "x": 50,
+          "y": 1160,
+          "width": 540,
+          "height": 520
+        },
+        {
+          "x": 600,
+          "y": 1180,
+          "width": 560,
+          "height": 500
+        }
+      ]
+    },
+    {
+      "id": "suafoto-golden-ticket-16",
+      "name": "Suafoto Golden Ticket (4-Cut)",
+      "subtitle": "Classic Korean Photobox 4-Cut Grid",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 1204,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/16. soreaja-strip-4cut-midnight-preview (2).png",
+      "frameImg": "/assets/frames/16_transparent (2).png",
+      "photoCount": 4,
+      "positions": [
+        {
+          "x": 40,
+          "y": 370,
+          "width": 550,
+          "height": 500
+        },
+        {
+          "x": 630,
+          "y": 370,
+          "width": 540,
+          "height": 500
+        },
+        {
+          "x": 40,
+          "y": 930,
+          "width": 550,
+          "height": 470
+        },
+        {
+          "x": 630,
+          "y": 930,
+          "width": 540,
+          "height": 470
+        }
+      ]
+    },
+    {
+      "id": "pose-n-pop-sakau-17",
+      "name": "Pose n Pop x Sakau (6-Cut)",
+      "subtitle": "Classic Korean Photobox 6-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 1204,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/17. soreaja-strip-4cut-midnight-preview (3).png",
+      "frameImg": "/assets/frames/17_transparent.png",
+      "photoCount": 6,
+      "positions": [
+        {
+          "x": 80,
+          "y": 140,
+          "width": 440,
+          "height": 370
+        },
+        {
+          "x": 90,
+          "y": 520,
+          "width": 440,
+          "height": 370
+        },
+        {
+          "x": 80,
+          "y": 900,
+          "width": 440,
+          "height": 370
+        },
+        {
+          "x": 680,
+          "y": 140,
+          "width": 440,
+          "height": 370
+        },
+        {
+          "x": 680,
+          "y": 510,
+          "width": 440,
+          "height": 380
+        },
+        {
+          "x": 680,
+          "y": 890,
+          "width": 450,
+          "height": 380
+        }
+      ]
+    },
+    {
+      "id": "photomatics-calendar-18",
+      "name": "Photomatics Calendar 2026 (3-Cut)",
+      "subtitle": "Classic Korean Photobox 3-Cut Vertical",
+      "theme": "Dark Minimalist",
+      "canvasWidth": 1205,
+      "canvasHeight": 1795,
+      "previewImg": "/assets/frames/18. soreaja-strip-4cut-midnight-preview (4).png",
+      "frameImg": "/assets/frames/18_transparent (2).png",
+      "photoCount": 3,
+      "positions": [
+        {
+          "x": 340,
+          "y": 420,
+          "width": 530,
+          "height": 440
+        },
+        {
+          "x": 340,
+          "y": 860,
+          "width": 530,
+          "height": 450
+        },
+        {
+          "x": 340,
+          "y": 1320,
+          "width": 530,
+          "height": 440
+        }
+      ]
+    }
+  ]
+}

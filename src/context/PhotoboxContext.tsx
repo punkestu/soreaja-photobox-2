@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import type { FrameMetadata, PhotoFilter, PhotoboxState, AppLanguage, PlacedSticker } from '../types/photobox';
+import type { FrameMetadata, PhotoFilter, PhotoboxState, AppLanguage, PlacedSticker, FramePackInfo } from '../types/photobox';
 import { db, resetAllData as dbResetAllData, DEFAULT_APP_SETTINGS } from '../db';
-import { DEFAULT_FRAMES } from '../data/defaultFrames';
+import { DEFAULT_FRAMES, fetchAvailablePacks, fetchFramesMetadata } from '../data/defaultFrames';
 import { TRANSLATIONS, type TranslationDictionary } from '../i18n/translations';
 import { playSessionExpiredAlertSound } from '../services/shutterAudio';
 import { applyThemeColor } from '../data/themeConfig';
@@ -10,6 +10,10 @@ interface PhotoboxContextValue extends PhotoboxState {
   language: AppLanguage;
   setLanguage: (lang: AppLanguage) => void;
   t: TranslationDictionary;
+  activeFramePack: string;
+  setActiveFramePack: (packId: string) => Promise<void>;
+  availablePacks: FramePackInfo[];
+  refreshPacks: () => Promise<FramePackInfo[]>;
   setSelectedFrame: (frame: FrameMetadata | null) => void;
   setCapturedPhotos: React.Dispatch<React.SetStateAction<string[]>>;
   updatePhotoAtIndex: (index: number, photoBase64: string) => void;
@@ -65,7 +69,45 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [showFrameStamps, setShowFrameStamps] = useState<boolean>(initialState.showFrameStamps);
   const [placedStickers, setPlacedStickers] = useState<PlacedSticker[]>(initialState.placedStickers);
   const [language, setLanguageState] = useState<AppLanguage>('id');
+  const [activeFramePack, setActiveFramePackState] = useState<string>('default');
+  const [availablePacks, setAvailablePacks] = useState<FramePackInfo[]>([]);
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
+
+  // Refresh available frame packs from disk/API
+  const refreshPacks = useCallback(async (): Promise<FramePackInfo[]> => {
+    try {
+      const packs = await fetchAvailablePacks();
+      setAvailablePacks(packs);
+      return packs;
+    } catch (err) {
+      console.warn('Error refreshing frame packs:', err);
+      return [];
+    }
+  }, []);
+
+  // Set active frame pack with instant DB sync and safe frame switching
+  const setActiveFramePack = useCallback(async (packId: string) => {
+    setActiveFramePackState(packId);
+    try {
+      await db.settings.update('app_settings', { activeFramePack: packId });
+    } catch {
+      const existing = await db.settings.get('app_settings');
+      if (existing) {
+        await db.settings.put({ ...existing, activeFramePack: packId });
+      }
+    }
+
+    try {
+      const newFrames = await fetchFramesMetadata(packId);
+      setSelectedFrame((curr) => {
+        if (!curr) return newFrames[0] || null;
+        const exists = newFrames.find((f) => f.id === curr.id);
+        return exists ? exists : newFrames[0] || null;
+      });
+    } catch (err) {
+      console.warn('Error applying active frame pack frames:', err);
+    }
+  }, []);
 
   // Session timer states
   const [sessionDurationMinutes, setSessionDurationMinutes] = useState<number>(5);
@@ -89,6 +131,10 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Load saved session and settings from Dexie IndexedDB on initial mount
   useEffect(() => {
     let isMounted = true;
+    fetchAvailablePacks().then((packs) => {
+      if (isMounted) setAvailablePacks(packs);
+    });
+
     Promise.all([
       db.activeSession.get('current_active_session'),
       db.settings.get('app_settings'),
@@ -116,6 +162,9 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
           if (savedSettings?.language === 'en' || savedSettings?.language === 'id') {
             setLanguageState(savedSettings.language);
+          }
+          if (savedSettings?.activeFramePack) {
+            setActiveFramePackState(savedSettings.activeFramePack);
           }
         }
 
@@ -364,6 +413,10 @@ export const PhotoboxProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         language,
         setLanguage,
         t,
+        activeFramePack,
+        setActiveFramePack,
+        availablePacks,
+        refreshPacks,
         setSelectedFrame,
         setCapturedPhotos,
         updatePhotoAtIndex,

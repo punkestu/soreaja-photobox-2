@@ -8,8 +8,9 @@ import { BrandLogo } from '../../components/common/BrandLogo';
 
 export const AdminFrames: React.FC = () => {
   const navigate = useNavigate();
-  const { language, t } = usePhotobox();
+  const { language, t, activeFramePack, setActiveFramePack, availablePacks } = usePhotobox();
 
+  const [selectedPackId, setSelectedPackId] = useState<string>(activeFramePack);
   const [frames, setFrames] = useState<FrameMetadata[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFrame, setSelectedFrame] = useState<FrameMetadata | null>(null);
@@ -22,11 +23,16 @@ export const AdminFrames: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   useEffect(() => {
-    fetchFramesMetadata().then((data) => {
+    setSelectedPackId(activeFramePack);
+  }, [activeFramePack]);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchFramesMetadata(selectedPackId).then((data) => {
       setFrames(data);
       setLoading(false);
     });
-  }, []);
+  }, [selectedPackId]);
 
   const isDoubleWidth = (frame: FrameMetadata) => {
     const w = frame.canvasWidth || 500;
@@ -123,6 +129,47 @@ export const AdminFrames: React.FC = () => {
           <span>{t.admin.testInKiosk}</span>
         </button>
       </div>
+
+      {/* Pack Selector Banner */}
+      <section className="bg-white p-4 rounded-xl border border-neutral-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">🎁</span>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-neutral-500">{t.admin.selectPackToView}</span>
+              {selectedPackId === activeFramePack && (
+                <span className="px-2 py-0.5 text-[10px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 rounded-full flex items-center gap-1">
+                  <span>✓</span>
+                  <span>{t.admin.activeKioskIndicator}</span>
+                </span>
+              )}
+            </div>
+            <select
+              value={selectedPackId}
+              onChange={(e) => setSelectedPackId(e.target.value)}
+              className="mt-1 px-3 py-1.5 text-xs sm:text-sm font-bold bg-[#F4F4F0] border border-neutral-300 rounded-xl text-neutral-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent,#E11D48)]/40"
+            >
+              {availablePacks.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.frameCount || p.frames?.length || 0} {t.admin.packFramesCount})
+                  {p.id === activeFramePack ? ' ★' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {selectedPackId !== activeFramePack && (
+          <button
+            type="button"
+            onClick={() => setActiveFramePack(selectedPackId)}
+            className="min-h-[38px] px-4 py-2 text-xs font-bold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] rounded-xl active:scale-95 transition-all cursor-pointer shadow-xs flex items-center gap-1.5 self-start sm:self-auto"
+          >
+            <span>✨</span>
+            <span>{t.admin.setActiveForKiosk}</span>
+          </button>
+        )}
+      </section>
 
       {/* Metric Cards Bar */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -10,15 +10,15 @@ import { BrandLogo } from '../common/BrandLogo';
 
 export const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
-  const { language, setLanguage, t, stopSessionTimer } = usePhotobox();
+  const { language, setLanguage, t, stopSessionTimer, activeFramePack } = usePhotobox();
   const sessionCount = useLiveQuery(() => db.sessions.count(), []);
   const [frameCount, setFrameCount] = useState<number | null>(null);
 
   useEffect(() => {
     stopSessionTimer();
     ensureDefaultSettings();
-    fetchFramesMetadata().then((data) => setFrameCount(data.length));
-  }, [stopSessionTimer]);
+    fetchFramesMetadata(activeFramePack).then((data) => setFrameCount(data.length));
+  }, [stopSessionTimer, activeFramePack]);
 
   return (
     <div className="min-h-screen bg-[#F4F4F0] text-[#111111] flex flex-col">
