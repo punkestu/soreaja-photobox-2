@@ -1,0 +1,24 @@
+[
+  {
+    "id": "default",
+    "name": "SoreAja Classic Pack",
+    "description": "Koleksi 54 template bingkai bawaan SoreAja Photobox (Single Strip & Double Sheet)",
+    "author": "SoreAja Studio",
+    "version": "1.0.0",
+    "coverImg": "/assets/frames/hbd-1-preview.png",
+    "frameCount": 54,
+    "isDefault": true,
+    "path": "/frame-packs/default"
+  },
+  {
+    "id": "pasar-sejati",
+    "name": "Pasar Sejati — Weekend Edition",
+    "description": "Koleksi bingkai tematik Car Free Day, Sunday Vibes & Komunitas Pasar Sejati",
+    "author": "SoreAja Studio x Pasar Sejati",
+    "version": "1.0.0",
+    "coverImg": "/assets/frames/car-free-day-3_transparent-preview.png",
+    "frameCount": 8,
+    "isDefault": false,
+    "path": "/frame-packs/pasar-sejati"
+  }
+]

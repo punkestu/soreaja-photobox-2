@@ -19,6 +19,20 @@ export interface FrameMetadata {
   hideGenericStamps?: boolean;
 }
 
+export interface FramePackInfo {
+  id: string;
+  name: string;
+  description?: string;
+  author?: string;
+  version?: string;
+  coverImg?: string;
+  frameCount?: number;
+  isDefault?: boolean;
+  path?: string;
+  frames?: FrameMetadata[];
+  updatedAt?: string;
+}
+
 export interface StripRatioInfo {
   width: number;
   height: number;
@@ -57,6 +71,7 @@ export interface AppSettings {
   themePreset?: string; // 'crimson' | 'amber' | etc.
   language?: AppLanguage; // 'id' | 'en'
   idleScreenMode?: 'standard' | 'fullscreen-camera'; // Mode layar tunggu standby
+  activeFramePack?: string; // ID paket bingkai yang aktif (misal 'default', 'pasar-sejati')
   updatedAt?: string;
 }
 

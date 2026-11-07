@@ -1,10 +1,11 @@
 import Dexie, { type Table } from 'dexie';
-import type { AppSettings, SessionRecord, ActiveSessionRecord } from './types/photobox';
+import type { AppSettings, SessionRecord, ActiveSessionRecord, FramePackInfo } from './types/photobox';
 
 export class PhotoboxDatabase extends Dexie {
   settings!: Table<AppSettings, string>;
   sessions!: Table<SessionRecord, number>;
   activeSession!: Table<ActiveSessionRecord, string>;
+  framePacks!: Table<FramePackInfo, string>;
 
   constructor() {
     super('PhotoboxDB');
@@ -16,6 +17,12 @@ export class PhotoboxDatabase extends Dexie {
       settings: 'id, driveUrl',
       sessions: '++id, timestamp, frameId, frameName, driveUrl',
       activeSession: 'id, updatedAt',
+    });
+    this.version(3).stores({
+      settings: 'id, driveUrl',
+      sessions: '++id, timestamp, frameId, frameName, driveUrl',
+      activeSession: 'id, updatedAt',
+      framePacks: 'id, name, isDefault, updatedAt',
     });
   }
 }
@@ -36,6 +43,7 @@ export async function resetAllData(): Promise<void> {
       db.sessions.clear(),
       db.activeSession.clear(),
       db.settings.clear(),
+      db.framePacks.clear(),
     ]);
     await db.settings.put({
       ...DEFAULT_APP_SETTINGS,
@@ -83,6 +91,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   themePreset: 'crimson',
   language: 'id',
   idleScreenMode: 'standard',
+  activeFramePack: 'default',
   updatedAt: new Date().toISOString(),
 };
 
@@ -93,6 +102,7 @@ export async function ensureDefaultSettings(): Promise<AppSettings> {
       return {
         ...DEFAULT_APP_SETTINGS,
         ...existing,
+        activeFramePack: existing.activeFramePack || 'default',
       };
     }
     await db.settings.put(DEFAULT_APP_SETTINGS);

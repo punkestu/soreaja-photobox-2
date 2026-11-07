@@ -226,7 +226,9 @@ export const printColor = async (
 /**
  * Pre-cache all frame assets, icons, and metadata in CacheStorage for 100% offline availability.
  */
-export async function precacheAllFrameAssets(): Promise<{
+export async function precacheAllFrameAssets(
+  onProgress?: (cached: number, total: number) => void
+): Promise<{
   totalAssets: number;
   cachedCount: number;
   isFullyCached: boolean;
@@ -238,6 +240,7 @@ export async function precacheAllFrameAssets(): Promise<{
   const cache = await caches.open('photobox-offline-frames-v1');
   const urlsToCache = new Set<string>([
     '/frames-metadata.json',
+    '/frame-packs/packs.json',
     '/assets/gif.worker.js',
     '/favicon.ico',
     '/pwa-192x192.png',
@@ -245,6 +248,7 @@ export async function precacheAllFrameAssets(): Promise<{
     '/pwa-maskable-512x512.png',
   ]);
 
+  // 1. Precache Legacy / Root frames
   try {
     const metaRes = await fetch('/frames-metadata.json');
     if (metaRes.ok) {
@@ -260,10 +264,48 @@ export async function precacheAllFrameAssets(): Promise<{
     console.warn('Could not read frames-metadata for precaching:', err);
   }
 
-  const allUrls = Array.from(urlsToCache);
+  // 2. Precache Modular Frame Packs & All Pack Images
+  try {
+    const packsRes = await fetch('/frame-packs/packs.json').catch(() => fetch('/api/frame-packs'));
+    if (packsRes && packsRes.ok) {
+      const packs = await packsRes.json();
+      if (Array.isArray(packs)) {
+        for (const p of packs) {
+          if (p.coverImg) urlsToCache.add(p.coverImg);
+          const packJsonUrl = `/frame-packs/${p.id}/pack.json`;
+          urlsToCache.add(packJsonUrl);
+
+          try {
+            const packRes = await fetch(packJsonUrl);
+            if (packRes.ok) {
+              const packData = await packRes.json();
+              if (Array.isArray(packData.frames)) {
+                for (const f of packData.frames) {
+                  const resolveUrl = (url: string) => {
+                    if (!url) return '';
+                    if (url.startsWith('/') || url.startsWith('http')) return url;
+                    return `/frame-packs/${p.id}/${url}`;
+                  };
+                  if (f.frameImg) urlsToCache.add(resolveUrl(f.frameImg));
+                  if (f.previewImg) urlsToCache.add(resolveUrl(f.previewImg));
+                }
+              }
+            }
+          } catch {
+            // Ignore single pack fetch error
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Could not read frame packs for precaching:', err);
+  }
+
+  const allUrls = Array.from(urlsToCache).filter(Boolean);
   let successCount = 0;
 
-  for (const url of allUrls) {
+  for (let i = 0; i < allUrls.length; i++) {
+    const url = allUrls[i];
     try {
       const match = await cache.match(url);
       if (match) {
@@ -277,6 +319,9 @@ export async function precacheAllFrameAssets(): Promise<{
       }
     } catch {
       // Continue next
+    }
+    if (onProgress) {
+      onProgress(successCount, allUrls.length);
     }
   }
 

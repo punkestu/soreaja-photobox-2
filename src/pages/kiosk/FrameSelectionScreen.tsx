@@ -9,7 +9,7 @@ export type FrameFilterType = 'all' | 'single' | 'double';
 
 export const FrameSelectionScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { selectedFrame, setSelectedFrame, setCapturedPhotos, setRetakeIndex, t } =
+  const { selectedFrame, setSelectedFrame, setCapturedPhotos, setRetakeIndex, t, activeFramePack } =
     usePhotobox();
   const [frames, setFrames] = useState<FrameMetadata[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,32 +70,34 @@ export const FrameSelectionScreen: React.FC = () => {
   const hasInitializedRef = useRef(false);
   const hasInitialScrolledRef = useRef(false);
 
-  // Fetch frame templates once on component mount
+  // Fetch frame templates for the active pack
   useEffect(() => {
     let isMounted = true;
-    fetchFramesMetadata().then((data) => {
+    setLoading(true);
+    fetchFramesMetadata(activeFramePack).then((data) => {
       if (!isMounted) return;
       setFrames(data);
       setLoading(false);
 
-      if (!hasInitializedRef.current) {
-        hasInitializedRef.current = true;
-        // Determine initial focused index if a frame was already chosen
-        if (selectedFrame) {
-          const foundIndex = data.findIndex((f) => f.id === selectedFrame.id);
-          if (foundIndex !== -1) {
-            setFocusedIndex(foundIndex);
-          }
+      // Determine initial focused index
+      if (selectedFrame) {
+        const foundIndex = data.findIndex((f) => f.id === selectedFrame.id);
+        if (foundIndex !== -1) {
+          setFocusedIndex(foundIndex);
         } else if (data.length > 0) {
           setFocusedIndex(0);
+          setSelectedFrame(data[0]);
         }
+      } else if (data.length > 0) {
+        setFocusedIndex(0);
+        setSelectedFrame(data[0]);
       }
     });
 
     return () => {
       isMounted = false;
     };
-  }, []); // Run ONCE on mount
+  }, [activeFramePack]);
 
   // Sync focusedIndex with selectedFrame if selectedFrame is externally updated
   useEffect(() => {
