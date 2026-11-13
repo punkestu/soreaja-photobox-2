@@ -56,7 +56,7 @@ export interface AppSettings {
   countdownSeconds?: number;
   autoDownload?: boolean;
   mirrorCamera?: boolean;
-  cameraSourceMode?: 'auto' | 'simulator';
+  cameraSourceMode?: 'auto' | 'gphoto' | 'simulator';
   showCropGuide?: boolean; // Tampilkan batas panduan area crop kamera
   printApiEndpoint?: string; // Endpoint URL for multipart/form-data printing API
   printerName?: string; // Legacy fallback printer name parameter

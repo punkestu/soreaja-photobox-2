@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+// import basicSsl from '@vitejs/plugin-basic-ssl';
 
 function scanFramePacks(rootDir: string, syncToFile = false) {
   const packsDir = path.resolve(rootDir, 'public/frame-packs');
@@ -112,9 +113,34 @@ function framePackDiscoveryPlugin() {
   };
 }
 
+function crossOriginIsolationPlugin() {
+  return {
+    name: 'vite-plugin-cross-origin-isolation',
+    configureServer(server: any) {
+      server.middlewares.use((_req: any, res: any, next: any) => {
+        res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+        res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+        next();
+      });
+    },
+    configurePreviewServer(server: any) {
+      server.middlewares.use((_req: any, res: any, next: any) => {
+        res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+        res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+        next();
+      });
+    },
+  };
+}
+
 export default defineConfig(() => {
   return {
+    optimizeDeps: {
+      exclude: ['web-gphoto2'],
+    },
     plugins: [
+      // basicSsl(),
+      crossOriginIsolationPlugin(),
       react(),
       tailwindcss(),
       framePackDiscoveryPlugin(),
