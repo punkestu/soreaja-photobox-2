@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import { STUDIO_PORTRAITS } from '../../../data/defaultFrames';
 import type { TranslationDictionary } from '../../../i18n/translations';
 import type { CropInfo } from './CropGuideOverlay';
+import type { GPhotoStatus } from '../../../services/gphotoService';
 
 interface CameraToolsModalProps {
   showTools: boolean;
@@ -9,8 +10,11 @@ interface CameraToolsModalProps {
   cameraReady: boolean;
   targetSlot: { width: number; height: number };
   activeFrameName: string;
-  useSimulator: boolean;
-  setUseSimulator: (val: boolean) => void;
+  cameraSource: 'webrtc' | 'gphoto' | 'simulator';
+  setCameraSource: (val: 'webrtc' | 'gphoto' | 'simulator') => void;
+  gphotoStatus: GPhotoStatus;
+  onConnectGPhoto: () => Promise<void>;
+  onDisconnectGPhoto: () => Promise<void>;
   showCropGuide: boolean;
   setShowCropGuide: React.Dispatch<React.SetStateAction<boolean>>;
   showGridLines: boolean;
@@ -27,8 +31,11 @@ export const CameraToolsModal: React.FC<CameraToolsModalProps> = memo(({
   cameraReady,
   targetSlot,
   activeFrameName,
-  useSimulator,
-  setUseSimulator,
+  cameraSource,
+  setCameraSource,
+  gphotoStatus,
+  onConnectGPhoto,
+  onDisconnectGPhoto,
   showCropGuide,
   setShowCropGuide,
   showGridLines,
@@ -73,12 +80,12 @@ export const CameraToolsModal: React.FC<CameraToolsModalProps> = memo(({
             <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider block">
               Sumber Kamera:
             </span>
-            <div className="flex items-center gap-2">
+            <div className="grid grid-cols-3 gap-1.5">
               <button
                 type="button"
-                onClick={() => setUseSimulator(false)}
-                className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${
-                  !useSimulator
+                onClick={() => setCameraSource('webrtc')}
+                className={`py-2 px-1 text-center text-xs font-bold rounded-lg transition-all border ${
+                  cameraSource === 'webrtc'
                     ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
                     : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
                 }`}
@@ -87,9 +94,20 @@ export const CameraToolsModal: React.FC<CameraToolsModalProps> = memo(({
               </button>
               <button
                 type="button"
-                onClick={() => setUseSimulator(true)}
-                className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${
-                  useSimulator
+                onClick={() => setCameraSource('gphoto')}
+                className={`py-2 px-1 text-center text-xs font-bold rounded-lg transition-all border ${
+                  cameraSource === 'gphoto'
+                    ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
+                    : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+                }`}
+              >
+                📸 {t.camera.dslr}
+              </button>
+              <button
+                type="button"
+                onClick={() => setCameraSource('simulator')}
+                className={`py-2 px-1 text-center text-xs font-bold rounded-lg transition-all border ${
+                  cameraSource === 'simulator'
                     ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
                     : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
                 }`}
@@ -97,6 +115,68 @@ export const CameraToolsModal: React.FC<CameraToolsModalProps> = memo(({
                 🖥️ {t.camera.sim}
               </button>
             </div>
+
+            {/* DSLR WebUSB connection & status management */}
+            {cameraSource === 'gphoto' && (
+              <div className="mt-2.5 pt-2.5 border-t border-zinc-800/80 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-zinc-400">Status USB:</span>
+                  <span className="flex items-center gap-1.5 font-medium truncate max-w-[180px]">
+                    <span
+                      className={`w-2 h-2 rounded-full shrink-0 ${
+                        gphotoStatus.isConnected
+                          ? 'bg-emerald-400 animate-pulse'
+                          : gphotoStatus.isConnecting
+                          ? 'bg-amber-400 animate-pulse'
+                          : 'bg-zinc-500'
+                      }`}
+                    />
+                    <span
+                      className={`truncate ${
+                        gphotoStatus.isConnected ? 'text-emerald-400' : 'text-zinc-400'
+                      }`}
+                      title={gphotoStatus.modelName || ''}
+                    >
+                      {gphotoStatus.isConnected
+                        ? gphotoStatus.modelName || t.camera.dslrConnected
+                        : gphotoStatus.isConnecting
+                        ? t.camera.dslrConnecting
+                        : t.camera.dslrDisconnected}
+                    </span>
+                  </span>
+                </div>
+
+                {!gphotoStatus.isSupported ? (
+                  <p className="text-[11px] text-amber-300 bg-amber-950/40 p-2 rounded-lg border border-amber-500/30">
+                    ⚠️ {t.camera.dslrNotSupported}
+                  </p>
+                ) : !gphotoStatus.isConnected ? (
+                  <button
+                    type="button"
+                    onClick={onConnectGPhoto}
+                    disabled={gphotoStatus.isConnecting}
+                    className="w-full py-2 px-3 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-all active:scale-95 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span>🔌</span>
+                    <span>{t.camera.dslrConnectPrompt}</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={onDisconnectGPhoto}
+                    className="w-full py-1.5 px-3 text-xs font-semibold bg-zinc-800 hover:bg-rose-900/60 text-zinc-300 hover:text-rose-200 rounded-lg transition-all border border-zinc-700 cursor-pointer"
+                  >
+                    ✕ Putuskan Kamera DSLR
+                  </button>
+                )}
+
+                {gphotoStatus.error && (
+                  <p className="text-[11px] text-rose-300 bg-rose-950/40 p-1.5 rounded border border-rose-500/30">
+                    {gphotoStatus.error}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="bg-zinc-900/90 rounded-xl p-3 border border-zinc-800 space-y-2">
@@ -144,7 +224,7 @@ export const CameraToolsModal: React.FC<CameraToolsModalProps> = memo(({
         )}
 
         {/* Studio Simulator Pose Picker (only when simulator active) */}
-        {useSimulator && (
+        {cameraSource === 'simulator' && (
           <div className="bg-zinc-900/90 rounded-xl p-3 border border-zinc-800 space-y-2">
             <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider block">
               {t.camera.presetSimulator}

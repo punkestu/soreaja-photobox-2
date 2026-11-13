@@ -13,6 +13,7 @@ import { testPrintApi, precacheAllFrameAssets } from '../../services/printServic
 import { usePhotobox } from '../../context/PhotoboxContext';
 import { ResetAllDataModal } from '../../components/common/ResetAllDataModal';
 import { BrandLogo } from '../../components/common/BrandLogo';
+import { gphotoService, type GPhotoStatus } from '../../services/gphotoService';
 
 export const AdminSettings: React.FC = () => {
   const {
@@ -35,7 +36,7 @@ export const AdminSettings: React.FC = () => {
   const [autoDownload, setAutoDownload] = useState<boolean>(true);
   const [mirrorCamera, setMirrorCamera] = useState<boolean>(true);
   const [showCropGuide, setShowCropGuide] = useState<boolean>(true);
-  const [cameraSourceMode, setCameraSourceMode] = useState<'auto' | 'simulator'>('auto');
+  const [cameraSourceMode, setCameraSourceMode] = useState<'auto' | 'gphoto' | 'simulator'>('auto');
 
   // Hardware: Print Server API & Shutter Sound
   const [printApiEndpoint, setPrintApiEndpoint] = useState<string>(
@@ -67,6 +68,23 @@ export const AdminSettings: React.FC = () => {
   } | null>(null);
   const [cachingOffline, setCachingOffline] = useState<boolean>(false);
   const [offlineCacheStatus, setOfflineCacheStatus] = useState<string | null>(null);
+
+  // External DSLR / web-gphoto2 state
+  const [dslrStatus, setDslrStatus] = useState<GPhotoStatus>(gphotoService.getStatus());
+
+  useEffect(() => {
+    return gphotoService.subscribeState((status) => {
+      setDslrStatus(status);
+    });
+  }, []);
+
+  const handleConnectDslr = async () => {
+    await gphotoService.requestAndConnect();
+  };
+
+  const handleDisconnectDslr = async () => {
+    await gphotoService.disconnect();
+  };
 
   // Tema & Background Kiosk
   const [themeColor, setThemeColor] = useState<string>(DEFAULT_APP_SETTINGS.themeColor || '#E11D48');
@@ -1241,13 +1259,67 @@ export const AdminSettings: React.FC = () => {
                     id="cameraSourceSelect"
                     value={cameraSourceMode}
                     onChange={(e) =>
-                      setCameraSourceMode(e.target.value as 'auto' | 'simulator')
+                      setCameraSourceMode(e.target.value as 'auto' | 'gphoto' | 'simulator')
                     }
                     className="w-full px-3 py-2 text-sm bg-[#F4F4F0] border border-neutral-300 rounded-lg focus:outline-none focus:border-neutral-900"
                   >
                     <option value="auto">Otomatis (WebRTC + Fallback Simulator)</option>
+                    <option value="gphoto">Kamera Eksternal DSLR/Mirrorless (web-gphoto2 WebUSB)</option>
                     <option value="simulator">Paksa Mode Simulator Studio</option>
                   </select>
+
+                  {/* DSLR diagnostics & test pairing in Admin */}
+                  <div className="mt-2 p-3 bg-neutral-100 rounded-lg border border-neutral-200 text-xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-neutral-700">Kamera DSLR (WebUSB):</span>
+                      <span className="flex items-center gap-1.5 font-medium">
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            dslrStatus.isConnected
+                              ? 'bg-emerald-500 animate-pulse'
+                              : dslrStatus.isConnecting
+                              ? 'bg-amber-500 animate-pulse'
+                              : 'bg-neutral-400'
+                          }`}
+                        />
+                        <span className={dslrStatus.isConnected ? 'text-emerald-700' : 'text-neutral-600'}>
+                          {dslrStatus.isConnected
+                            ? dslrStatus.modelName || 'DSLR Terhubung'
+                            : dslrStatus.isConnecting
+                            ? 'Menghubungkan...'
+                            : 'Tidak Terhubung'}
+                        </span>
+                      </span>
+                    </div>
+
+                    {!dslrStatus.isSupported ? (
+                      <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded border border-amber-200">
+                        ⚠️ Browser tidak mendukung WebUSB atau koneksi bukan HTTPS/localhost. Gunakan Google Chrome/Edge.
+                      </p>
+                    ) : (
+                      <div className="flex items-center gap-2 pt-1">
+                        {!dslrStatus.isConnected ? (
+                          <button
+                            type="button"
+                            onClick={handleConnectDslr}
+                            disabled={dslrStatus.isConnecting}
+                            className="px-3 py-1.5 text-xs font-semibold bg-emerald-700 hover:bg-emerald-600 text-white rounded-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer flex items-center gap-1"
+                          >
+                            <span>🔌</span>
+                            <span>Hubungkan / Uji Kamera DSLR</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleDisconnectDslr}
+                            className="px-3 py-1.5 text-xs font-semibold bg-neutral-200 hover:bg-rose-100 text-neutral-800 hover:text-rose-700 rounded-md transition-all border border-neutral-300 cursor-pointer"
+                          >
+                            ✕ Putuskan DSLR
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

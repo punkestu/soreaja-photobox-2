@@ -5,6 +5,7 @@ import { db } from '../../db';
 import { usePhotobox } from '../../context/PhotoboxContext';
 import { DEFAULT_FRAMES, STUDIO_PORTRAITS } from '../../data/defaultFrames';
 import { playShutterSound } from '../../services/shutterAudio';
+import { gphotoService, type GPhotoStatus } from '../../services/gphotoService';
 import { CropGuideOverlay, type CropInfo } from '../../components/kiosk/camera/CropGuideOverlay';
 import { CountdownOverlay } from '../../components/kiosk/camera/CountdownOverlay';
 import { PhotoTray } from '../../components/kiosk/camera/PhotoTray';
@@ -41,7 +42,11 @@ export const CameraCaptureScreen: React.FC = () => {
   const timeoutIdsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
   const intervalIdsRef = useRef<Set<ReturnType<typeof setInterval>>>(new Set());
 
-  const [useSimulator, setUseSimulator] = useState<boolean>(false);
+  // Camera Source Mode: 'webrtc' | 'gphoto' | 'simulator'
+  const [cameraSource, setCameraSource] = useState<'webrtc' | 'gphoto' | 'simulator'>('webrtc');
+  const [gphotoStatus, setGphotoStatus] = useState<GPhotoStatus>(gphotoService.getStatus());
+  const [gphotoLiveFrame, setGphotoLiveFrame] = useState<string | null>(null);
+
   const [cameraReady, setCameraReady] = useState<boolean>(false);
   const [showCropGuide, setShowCropGuide] = useState<boolean>(true);
   const [showGridLines, setShowGridLines] = useState<boolean>(true);
@@ -94,6 +99,32 @@ export const CameraCaptureScreen: React.FC = () => {
     };
   }, [clearAllTimers]);
 
+  // Subscribe to gPhoto WebUSB status and live preview frames
+  useEffect(() => {
+    const unsubState = gphotoService.subscribeState((status) => {
+      setGphotoStatus(status);
+    });
+    const unsubFrames = gphotoService.subscribeFrames((frameUrl) => {
+      setGphotoLiveFrame(frameUrl);
+      setCameraReady(true);
+    });
+    return () => {
+      unsubState();
+      unsubFrames();
+    };
+  }, []);
+
+  // Initialize cameraSource from AppSettings
+  useEffect(() => {
+    if (settings?.cameraSourceMode === 'gphoto') {
+      setCameraSource('gphoto');
+    } else if (settings?.cameraSourceMode === 'simulator') {
+      setCameraSource('simulator');
+    } else {
+      setCameraSource('webrtc');
+    }
+  }, [settings?.cameraSourceMode]);
+
   // Sync crop guide setting from IndexedDB app settings
   useEffect(() => {
     if (typeof settings?.showCropGuide === 'boolean') {
@@ -131,19 +162,40 @@ export const CameraCaptureScreen: React.FC = () => {
       img.src = p.src;
       img.onload = () => {
         loaded[idx] = img;
-        if (idx === 0) setCameraReady(true);
+        if (idx === 0 && cameraSource === 'simulator') setCameraReady(true);
       };
       loaded[idx] = img;
     });
     simulatorImagesRef.current = loaded;
-  }, []);
+  }, [cameraSource]);
 
-  // Initialize WebRTC or release stream on simulator mode / unmount
+  // Camera stream lifecycle coordinator
   useEffect(() => {
     let cancelled = false;
 
-    // If simulator mode is active, release hardware camera tracks immediately
-    if (useSimulator || settings?.cameraSourceMode === 'simulator') {
+    // 1. DSLR / gPhoto mode
+    if (cameraSource === 'gphoto') {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+      if (gphotoStatus.isConnected) {
+        gphotoService.startLiveView();
+      } else {
+        setCameraReady(true);
+      }
+      return () => {
+        cancelled = true;
+        gphotoService.stopLiveView();
+      };
+    }
+
+    // 2. Simulator mode
+    if (cameraSource === 'simulator') {
+      gphotoService.stopLiveView();
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
@@ -152,11 +204,15 @@ export const CameraCaptureScreen: React.FC = () => {
         videoRef.current.srcObject = null;
       }
       setCameraReady(true);
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
 
+    // 3. WebRTC Live Camera mode
+    gphotoService.stopLiveView();
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setUseSimulator(true);
+      setCameraSource('simulator');
       setCameraReady(true);
       return;
     }
@@ -185,7 +241,7 @@ export const CameraCaptureScreen: React.FC = () => {
         setCameraReady(true);
       } catch {
         if (!cancelled) {
-          setUseSimulator(true);
+          setCameraSource('simulator');
           setCameraReady(true);
         }
       }
@@ -200,7 +256,7 @@ export const CameraCaptureScreen: React.FC = () => {
         streamRef.current = null;
       }
     };
-  }, [useSimulator, settings?.cameraSourceMode]);
+  }, [cameraSource, gphotoStatus.isConnected]);
 
   // Recycled canvas generator to eliminate DOM allocation overhead
   const getRecycledCanvas = useCallback((width: number, height: number): HTMLCanvasElement => {
@@ -213,9 +269,19 @@ export const CameraCaptureScreen: React.FC = () => {
     return canvas;
   }, []);
 
-  // Capture single photo snapshot with recycled canvas and ultra-fast JPEG encoding
+  // Capture single photo snapshot: prioritizes DSLR full-res PTP capture with canvas fallback
   const captureSinglePhoto = useCallback(
-    (shotIndexZeroBased: number): string => {
+    async (shotIndexZeroBased: number): Promise<string> => {
+      // 1. High-resolution hardware shutter if DSLR is active and connected
+      if (cameraSource === 'gphoto' && gphotoStatus.isConnected) {
+        try {
+          return await gphotoService.captureHighResPhoto();
+        } catch (err) {
+          console.warn('[CameraCaptureScreen] DSLR shutter failed, using fallback:', err);
+        }
+      }
+
+      // 2. High-speed recycled canvas capture (WebRTC video, DSLR live frame, or Simulator)
       const width = 800;
       const height = 600;
       const canvas = getRecycledCanvas(width, height);
@@ -223,12 +289,11 @@ export const CameraCaptureScreen: React.FC = () => {
       if (!ctx) return '';
 
       ctx.clearRect(0, 0, width, height);
-
       const shouldMirror = settings?.mirrorCamera !== false;
       const videoEl = videoRef.current;
 
       if (
-        !useSimulator &&
+        cameraSource === 'webrtc' &&
         videoEl &&
         videoEl.readyState >= 2 &&
         videoEl.videoWidth > 0
@@ -273,7 +338,6 @@ export const CameraCaptureScreen: React.FC = () => {
           }
           ctx.drawImage(simImg, sx, sy, sw, sh, 0, 0, width, height);
         } else {
-          // Procedural fallback canvas in case image is still decoding
           ctx.fillStyle = '#27272A';
           ctx.fillRect(0, 0, width, height);
           ctx.fillStyle = '#F4F4F0';
@@ -285,11 +349,11 @@ export const CameraCaptureScreen: React.FC = () => {
       // JPEG at 0.92 gives ~5x faster encoding and ~8x smaller base64 payloads
       return canvas.toDataURL('image/jpeg', 0.92);
     },
-    [getRecycledCanvas, settings?.mirrorCamera, useSimulator]
+    [cameraSource, getRecycledCanvas, gphotoStatus.isConnected, settings?.mirrorCamera]
   );
 
   // Instant capture handler (captures remaining or retake shot immediately)
-  const handleInstantCapture = useCallback(() => {
+  const handleInstantCapture = useCallback(async () => {
     clearAllTimers();
     setIsCapturingSequence(false);
     setCountdown(null);
@@ -300,8 +364,7 @@ export const CameraCaptureScreen: React.FC = () => {
     safeSetTimeout(() => setIsFlashing(false), 300);
 
     if (isRetakeMode && retakeIndex !== null) {
-      // Sesuai TSD 4.2.3: Ambil 1 foto, timpa array capturedPhotos pada index tersebut, set retakeIndex kembali null
-      const newPhoto = captureSinglePhoto(activePoseIdx);
+      const newPhoto = await captureSinglePhoto(activePoseIdx);
       updatePhotoAtIndex(retakeIndex, newPhoto);
       setRetakeIndex(null);
       navigate('/app/review-photos');
@@ -311,7 +374,7 @@ export const CameraCaptureScreen: React.FC = () => {
     // Loop ambil foto sebanyak photoCount
     const generated: string[] = [];
     for (let i = 0; i < totalShotsNeeded; i++) {
-      generated.push(captureSinglePhoto(i));
+      generated.push(await captureSinglePhoto(i));
     }
     setLocalShots(generated);
     setCapturedPhotos(generated);
@@ -331,7 +394,7 @@ export const CameraCaptureScreen: React.FC = () => {
     updatePhotoAtIndex,
   ]);
 
-  // Timed Countdown Capture Sequence (TSD 4.2.3)
+  // Timed Countdown Capture Sequence
   const startCountdownSequence = useCallback(() => {
     if (isCapturingSequence) return;
     clearAllTimers();
@@ -355,11 +418,12 @@ export const CameraCaptureScreen: React.FC = () => {
             playShutterSound();
           }
           safeSetTimeout(() => setIsFlashing(false), 300);
-          const newPhoto = captureSinglePhoto(activePoseIdx);
-          updatePhotoAtIndex(retakeIndex, newPhoto);
-          setRetakeIndex(null);
-          setIsCapturingSequence(false);
-          navigate('/app/review-photos');
+          captureSinglePhoto(activePoseIdx).then((newPhoto) => {
+            updatePhotoAtIndex(retakeIndex, newPhoto);
+            setRetakeIndex(null);
+            setIsCapturingSequence(false);
+            navigate('/app/review-photos');
+          });
         }
       }, 900);
       return;
@@ -389,21 +453,22 @@ export const CameraCaptureScreen: React.FC = () => {
           }
           safeSetTimeout(() => setIsFlashing(false), 300);
 
-          const snap = captureSinglePhoto(currentIdx);
-          accumulated.push(snap);
-          const currentShots = [...accumulated];
-          setLocalShots(currentShots);
-          setCapturedPhotos(currentShots);
+          captureSinglePhoto(currentIdx).then((snap) => {
+            accumulated.push(snap);
+            const currentShots = [...accumulated];
+            setLocalShots(currentShots);
+            setCapturedPhotos(currentShots);
 
-          currentIdx += 1;
-          if (currentIdx < totalShotsNeeded) {
-            safeSetTimeout(runNextShot, 600);
-          } else {
-            setIsCapturingSequence(false);
-            safeSetTimeout(() => {
-              navigate('/app/review-photos');
-            }, 450);
-          }
+            currentIdx += 1;
+            if (currentIdx < totalShotsNeeded) {
+              safeSetTimeout(runNextShot, 600);
+            } else {
+              setIsCapturingSequence(false);
+              safeSetTimeout(() => {
+                navigate('/app/review-photos');
+              }, 450);
+            }
+          });
         }
       }, 900);
     };
@@ -462,6 +527,19 @@ export const CameraCaptureScreen: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isCapturingSequence, showTools, startCountdownSequence]);
 
+  const handleConnectGPhoto = useCallback(async () => {
+    const res = await gphotoService.requestAndConnect();
+    if (res.success) {
+      setCameraSource('gphoto');
+    }
+  }, []);
+
+  const handleDisconnectGPhoto = useCallback(async () => {
+    await gphotoService.disconnect();
+    setGphotoLiveFrame(null);
+    setCameraSource('webrtc');
+  }, []);
+
   const currentPortrait =
     STUDIO_PORTRAITS[activePoseIdx % STUDIO_PORTRAITS.length] || STUDIO_PORTRAITS[0];
 
@@ -488,7 +566,6 @@ export const CameraCaptureScreen: React.FC = () => {
   const cropInfo: CropInfo = useMemo(() => {
     const diff = slotAspect - cameraAspect;
     if (diff < -0.015) {
-      // Slot is narrower / more square than 4:3 (e.g. 500x480 = 1.04:1 vs 1.33:1)
       const widthPercent = (slotAspect / cameraAspect) * 100;
       const sidePercent = Math.max(0, (100 - widthPercent) / 2);
       return {
@@ -501,10 +578,9 @@ export const CameraCaptureScreen: React.FC = () => {
         croppedSidePercent: sidePercent,
         slotAspect,
         cameraAspect,
-        label: `Sisi kiri & kanan (${Math.round(sidePercent * 2)}% total) akan terpotong pada bingkai`,
+        label: t.camera.cropSideWarning,
       };
     } else if (diff > 0.015) {
-      // Slot is wider than 4:3 (e.g. 380x265 = 1.43:1 vs 1.33:1)
       const heightPercent = (cameraAspect / slotAspect) * 100;
       const topPercent = Math.max(0, (100 - heightPercent) / 2);
       return {
@@ -517,7 +593,7 @@ export const CameraCaptureScreen: React.FC = () => {
         croppedSidePercent: topPercent,
         slotAspect,
         cameraAspect,
-        label: `Sisi atas & bawah (${Math.round(topPercent * 2)}% total) akan terpotong pada bingkai`,
+        label: t.camera.cropTopWarning,
       };
     } else {
       return {
@@ -530,30 +606,71 @@ export const CameraCaptureScreen: React.FC = () => {
         croppedSidePercent: 0,
         slotAspect,
         cameraAspect,
-        label: 'Pas sempurna dengan rasio kamera (4:3)',
+        label: t.camera.cropPerfect,
       };
     }
-  }, [slotAspect, cameraAspect]);
+  }, [slotAspect, cameraAspect, t.camera]);
 
   return (
-    <div className="relative w-full h-full min-h-screen bg-black overflow-hidden select-none">
+    <div className="relative w-screen h-screen overflow-hidden bg-black select-none">
       {/* Hero Edge-to-Edge Spotlight Viewfinder (Borderless Fullscreen) */}
       <div
         data-testid="camera-viewfinder"
         className="absolute inset-0 w-full h-full bg-black overflow-hidden flex items-center justify-center group"
       >
+        {/* DSLR Live View Preview Frame */}
+        {cameraSource === 'gphoto' && gphotoStatus.isConnected && gphotoLiveFrame && (
+          <img
+            src={gphotoLiveFrame}
+            alt="DSLR Live View"
+            className={`w-full h-full object-cover select-none pointer-events-none ${
+              settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
+            }`}
+          />
+        )}
+
+        {/* DSLR Waiting / Disconnected Prompt */}
+        {cameraSource === 'gphoto' && (!gphotoStatus.isConnected || !gphotoLiveFrame) && (
+          <div className="flex flex-col items-center justify-center p-6 text-center text-zinc-300 space-y-3 z-10">
+            <span className="text-4xl sm:text-5xl">📸</span>
+            <div className="space-y-1">
+              <h3 className="text-base sm:text-lg font-bold text-white">
+                {gphotoStatus.isConnected ? 'Menunggu Live View DSLR...' : t.camera.dslrDisconnected}
+              </h3>
+              <p className="text-xs sm:text-sm text-zinc-400 max-w-sm">
+                {gphotoStatus.isConnected
+                  ? 'Kamera terdeteksi. Mengaktifkan preview sensor PTP...'
+                  : 'Pastikan kamera menyala, terhubung via kabel USB, dan beri izin WebUSB.'}
+              </p>
+            </div>
+            {!gphotoStatus.isConnected && (
+              <button
+                type="button"
+                onClick={handleConnectGPhoto}
+                disabled={gphotoStatus.isConnecting}
+                className="px-4 py-2 text-xs sm:text-sm font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-lg transition-all active:scale-95 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <span>🔌</span>
+                <span>{t.camera.dslrConnectPrompt}</span>
+              </button>
+            )}
+          </div>
+        )}
+
         {/* WebRTC Video Element */}
-        <video
-          ref={videoRef}
-          playsInline
-          muted
-          className={`w-full h-full object-cover ${
-            useSimulator ? 'hidden' : 'block'
-          } ${settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''}`}
-        />
+        {cameraSource === 'webrtc' && (
+          <video
+            ref={videoRef}
+            playsInline
+            muted
+            className={`w-full h-full object-cover ${
+              settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
+            }`}
+          />
+        )}
 
         {/* Studio Camera Simulator Fallback */}
-        {useSimulator && currentPortrait?.src && (
+        {cameraSource === 'simulator' && currentPortrait?.src && (
           <img
             src={currentPortrait.src}
             alt={currentPortrait.label}
@@ -681,8 +798,11 @@ export const CameraCaptureScreen: React.FC = () => {
           cameraReady={cameraReady}
           targetSlot={targetSlot}
           activeFrameName={activeFrame.name}
-          useSimulator={useSimulator}
-          setUseSimulator={setUseSimulator}
+          cameraSource={cameraSource}
+          setCameraSource={setCameraSource}
+          gphotoStatus={gphotoStatus}
+          onConnectGPhoto={handleConnectGPhoto}
+          onDisconnectGPhoto={handleDisconnectGPhoto}
           showCropGuide={showCropGuide}
           setShowCropGuide={setShowCropGuide}
           showGridLines={showGridLines}
