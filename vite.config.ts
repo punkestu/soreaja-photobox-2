@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
-// import basicSsl from '@vitejs/plugin-basic-ssl';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 
 function scanFramePacks(rootDir: string, syncToFile = false) {
   const packsDir = path.resolve(rootDir, 'public/frame-packs');
@@ -119,14 +119,14 @@ function crossOriginIsolationPlugin() {
     configureServer(server: any) {
       server.middlewares.use((_req: any, res: any, next: any) => {
         res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-        res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+        res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
         next();
       });
     },
     configurePreviewServer(server: any) {
       server.middlewares.use((_req: any, res: any, next: any) => {
         res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-        res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+        res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
         next();
       });
     },
@@ -139,7 +139,7 @@ export default defineConfig(() => {
       exclude: ['web-gphoto2'],
     },
     plugins: [
-      // basicSsl(),
+      basicSsl(),
       crossOriginIsolationPlugin(),
       react(),
       tailwindcss(),
@@ -278,12 +278,22 @@ export default defineConfig(() => {
       },
     },
     server: {
+      headers: {
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Embedder-Policy': 'require-corp',
+      },
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify—file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {
         ignored: ['**/public/frame-packs/**', '**/dist/**', '**/.git/**'],
+      },
+    },
+    preview: {
+      headers: {
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Embedder-Policy': 'require-corp',
       },
     },
   };

@@ -113,6 +113,29 @@ class GPhotoService {
     if (!this.isSupported()) {
       const err = 'Browser tidak mendukung WebUSB atau koneksi tidak aman (HTTPS/localhost dibutuhkan)';
       this.notifyState(err);
+      if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+        window.alert(`Error menghubungkan kamera: ${err}`);
+      }
+      return { success: false, error: err };
+    }
+
+    if (typeof SharedArrayBuffer === 'undefined') {
+      const err =
+        'SharedArrayBuffer belum aktif (Cross-Origin Isolation dibutuhkan). Harap refresh halaman atau restart dev server.';
+      this.notifyState(err);
+      if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+        window.alert(`Error menghubungkan kamera: ${err}`);
+      }
+      return { success: false, error: err };
+    }
+
+    if (typeof SharedArrayBuffer === 'undefined') {
+      const err =
+        'SharedArrayBuffer belum aktif (Cross-Origin Isolation dibutuhkan). Harap refresh halaman atau restart dev server.';
+      this.notifyState(err);
+      if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+        window.alert(`Error menghubungkan kamera: ${err}`);
+      }
       return { success: false, error: err };
     }
 
@@ -158,8 +181,11 @@ class GPhotoService {
       this.isConnecting = false;
       this.camera = null;
       this.modelName = null;
-      const errMsg = err?.message || 'Gagal menghubungkan ke kamera USB';
+      const errMsg = err?.message || String(err) || 'Gagal menghubungkan ke kamera USB';
       this.notifyState(errMsg);
+      if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+        window.alert(`Error menghubungkan kamera: ${errMsg}`);
+      }
       return { success: false, error: errMsg };
     }
   }
@@ -254,10 +280,10 @@ class GPhotoService {
   /**
    * Mutex-guarded high-resolution photo capture.
    * Pauses the liveview loop to prevent PTP device concurrency collisions,
-   * triggers camera shutter, converts resulting file to base64 data URL,
-   * and resumes liveview.
+   * triggers camera shutter, optionally mirrors horizontally to match viewfinder,
+   * converts resulting file to base64 data URL, and resumes liveview.
    */
-  public async captureHighResPhoto(): Promise<string> {
+  public async captureHighResPhoto(shouldMirror: boolean = false): Promise<string> {
     if (!this.camera) {
       throw new Error('Kamera USB belum terhubung');
     }
@@ -282,7 +308,27 @@ class GPhotoService {
       // 2. Trigger hardware shutter and download full-res file
       const file = await this.camera.captureImageAsFile();
 
-      // 3. Convert File/Blob to Base64 Data URL for compositing
+      // 3. Mirror image if requested to match kiosk viewfinder mirror mode
+      if (shouldMirror && typeof document !== 'undefined') {
+        try {
+          const bitmap = await createImageBitmap(file);
+          const canvas = document.createElement('canvas');
+          canvas.width = bitmap.width;
+          canvas.height = bitmap.height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(bitmap, 0, 0);
+            bitmap.close();
+            return canvas.toDataURL('image/jpeg', 0.95);
+          }
+        } catch (bitmapErr) {
+          console.warn('[GPhotoService] Failed to mirror via ImageBitmap, using raw image:', bitmapErr);
+        }
+      }
+
+      // 4. Convert File/Blob to Base64 Data URL for compositing
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
@@ -295,7 +341,7 @@ class GPhotoService {
       this.isCapturing = false;
       this.notifyState();
 
-      // 4. Resume live view if it was running previously
+      // 5. Resume live view if it was running previously
       if (wasLiveViewing && this.camera && !this.liveViewLoopActive) {
         this.startLiveView();
       }

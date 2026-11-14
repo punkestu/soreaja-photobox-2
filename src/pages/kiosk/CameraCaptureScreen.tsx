@@ -272,10 +272,12 @@ export const CameraCaptureScreen: React.FC = () => {
   // Capture single photo snapshot: prioritizes DSLR full-res PTP capture with canvas fallback
   const captureSinglePhoto = useCallback(
     async (shotIndexZeroBased: number): Promise<string> => {
+      const shouldMirror = settings?.mirrorCamera !== false;
+
       // 1. High-resolution hardware shutter if DSLR is active and connected
       if (cameraSource === 'gphoto' && gphotoStatus.isConnected) {
         try {
-          return await gphotoService.captureHighResPhoto();
+          return await gphotoService.captureHighResPhoto(shouldMirror);
         } catch (err) {
           console.warn('[CameraCaptureScreen] DSLR shutter failed, using fallback:', err);
         }
@@ -289,7 +291,6 @@ export const CameraCaptureScreen: React.FC = () => {
       if (!ctx) return '';
 
       ctx.clearRect(0, 0, width, height);
-      const shouldMirror = settings?.mirrorCamera !== false;
       const videoEl = videoRef.current;
 
       if (
@@ -319,6 +320,11 @@ export const CameraCaptureScreen: React.FC = () => {
         ctx.drawImage(videoEl, sx, sy, sw, sh, 0, 0, width, height);
         ctx.restore();
       } else {
+        ctx.save();
+        if (shouldMirror) {
+          ctx.translate(width, 0);
+          ctx.scale(-1, 1);
+        }
         // Draw from Studio Simulator Portrait
         const poseIndex = shotIndexZeroBased % STUDIO_PORTRAITS.length;
         const simImg = simulatorImagesRef.current[poseIndex];
@@ -344,6 +350,7 @@ export const CameraCaptureScreen: React.FC = () => {
           ctx.font = '700 36px "Syne", sans-serif';
           ctx.fillText(`SOREAJA STUDIO · POSE 0${shotIndexZeroBased + 1}`, 60, 300);
         }
+        ctx.restore();
       }
 
       // JPEG at 0.92 gives ~5x faster encoding and ~8x smaller base64 payloads
