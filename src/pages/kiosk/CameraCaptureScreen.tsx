@@ -57,6 +57,10 @@ export const CameraCaptureScreen: React.FC = () => {
     isRetakeMode && retakeIndex !== null ? retakeIndex + 1 : 1
   );
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [isPreparing, setIsPreparing] = useState<boolean>(false);
+  const [prepKey, setPrepKey] = useState<number>(0);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isImageLoading, setIsImageLoading] = useState<boolean>(false);
   const [isFlashing, setIsFlashing] = useState<boolean>(false);
   const [isCapturingSequence, setIsCapturingSequence] = useState<boolean>(false);
   const [localShots, setLocalShots] = useState<string[]>(capturedPhotos);
@@ -90,6 +94,9 @@ export const CameraCaptureScreen: React.FC = () => {
     timeoutIdsRef.current.clear();
     intervalIdsRef.current.forEach((id) => clearInterval(id));
     intervalIdsRef.current.clear();
+    setIsPreparing(false);
+    setCountdown(null);
+    setIsImageLoading(false);
   }, []);
 
   // Cleanup all timers on unmount
@@ -272,10 +279,12 @@ export const CameraCaptureScreen: React.FC = () => {
   // Capture single photo snapshot: prioritizes DSLR full-res PTP capture with canvas fallback
   const captureSinglePhoto = useCallback(
     async (shotIndexZeroBased: number): Promise<string> => {
+      const shouldMirror = settings?.mirrorCamera !== false;
+
       // 1. High-resolution hardware shutter if DSLR is active and connected
       if (cameraSource === 'gphoto' && gphotoStatus.isConnected) {
         try {
-          return await gphotoService.captureHighResPhoto();
+          return await gphotoService.captureHighResPhoto(shouldMirror);
         } catch (err) {
           console.warn('[CameraCaptureScreen] DSLR shutter failed, using fallback:', err);
         }
@@ -289,7 +298,6 @@ export const CameraCaptureScreen: React.FC = () => {
       if (!ctx) return '';
 
       ctx.clearRect(0, 0, width, height);
-      const shouldMirror = settings?.mirrorCamera !== false;
       const videoEl = videoRef.current;
 
       if (
@@ -319,6 +327,11 @@ export const CameraCaptureScreen: React.FC = () => {
         ctx.drawImage(videoEl, sx, sy, sw, sh, 0, 0, width, height);
         ctx.restore();
       } else {
+        ctx.save();
+        if (shouldMirror) {
+          ctx.translate(width, 0);
+          ctx.scale(-1, 1);
+        }
         // Draw from Studio Simulator Portrait
         const poseIndex = shotIndexZeroBased % STUDIO_PORTRAITS.length;
         const simImg = simulatorImagesRef.current[poseIndex];
@@ -344,6 +357,7 @@ export const CameraCaptureScreen: React.FC = () => {
           ctx.font = '700 36px "Syne", sans-serif';
           ctx.fillText(`SOREAJA STUDIO · POSE 0${shotIndexZeroBased + 1}`, 60, 300);
         }
+        ctx.restore();
       }
 
       // JPEG at 0.92 gives ~5x faster encoding and ~8x smaller base64 payloads
@@ -356,6 +370,7 @@ export const CameraCaptureScreen: React.FC = () => {
   const handleInstantCapture = useCallback(async () => {
     clearAllTimers();
     setIsCapturingSequence(false);
+    setIsPreparing(false);
     setCountdown(null);
     setIsFlashing(true);
     if (settings?.enableShutterSound !== false) {
@@ -363,22 +378,37 @@ export const CameraCaptureScreen: React.FC = () => {
     }
     safeSetTimeout(() => setIsFlashing(false), 300);
 
-    if (isRetakeMode && retakeIndex !== null) {
-      const newPhoto = await captureSinglePhoto(activePoseIdx);
-      updatePhotoAtIndex(retakeIndex, newPhoto);
-      setRetakeIndex(null);
-      navigate('/app/review-photos');
-      return;
-    }
+    // Show image loading screen immediately while transferring/capturing
+    setIsImageLoading(true);
 
-    // Loop ambil foto sebanyak photoCount
-    const generated: string[] = [];
-    for (let i = 0; i < totalShotsNeeded; i++) {
-      generated.push(await captureSinglePhoto(i));
+    try {
+      if (isRetakeMode && retakeIndex !== null) {
+        const newPhoto = await captureSinglePhoto(activePoseIdx);
+        setIsImageLoading(false);
+        setIsSaving(true);
+        updatePhotoAtIndex(retakeIndex, newPhoto);
+        setRetakeIndex(null);
+        setIsSaving(false);
+        navigate('/app/review-photos');
+        return;
+      }
+
+      // Loop ambil foto sebanyak photoCount
+      const generated: string[] = [];
+      for (let i = 0; i < totalShotsNeeded; i++) {
+        generated.push(await captureSinglePhoto(i));
+      }
+      setIsImageLoading(false);
+      setIsSaving(true);
+      setLocalShots(generated);
+      setCapturedPhotos(generated);
+      setIsSaving(false);
+      navigate('/app/review-photos');
+    } catch (err) {
+      console.error('[CameraCaptureScreen] Instant capture failed:', err);
+      setIsImageLoading(false);
+      setIsSaving(false);
     }
-    setLocalShots(generated);
-    setCapturedPhotos(generated);
-    navigate('/app/review-photos');
   }, [
     activePoseIdx,
     captureSinglePhoto,
@@ -394,93 +424,148 @@ export const CameraCaptureScreen: React.FC = () => {
     updatePhotoAtIndex,
   ]);
 
-  // Timed Countdown Capture Sequence
+  // Timed Countdown Capture Sequence with Preparation Stage before EVERY capture
   const startCountdownSequence = useCallback(() => {
-    if (isCapturingSequence) return;
+    if (isCapturingSequence || isSaving || isImageLoading) return;
     clearAllTimers();
     setIsCapturingSequence(true);
 
     const secondsPerShot = settings?.countdownSeconds || 3;
+    const PREP_DURATION_MS = 2500; // Continuous auto circular progress duration
 
     if (isRetakeMode && retakeIndex !== null) {
-      let timer = secondsPerShot;
-      setCountdown(timer);
-      let intervalId: ReturnType<typeof setInterval> | null = null;
-      intervalId = safeSetInterval(() => {
-        timer -= 1;
-        if (timer > 0) {
-          setCountdown(timer);
-        } else {
-          clearRegisteredInterval(intervalId);
-          setCountdown(null);
-          setIsFlashing(true);
-          if (settings?.enableShutterSound !== false) {
-            playShutterSound();
+      // Retake Mode: Preparation stage (auto progress) -> Shot countdown -> Image loading -> Save
+      setIsPreparing(true);
+      setPrepKey((k) => k + 1);
+      setCountdown(null);
+
+      safeSetTimeout(() => {
+        setIsPreparing(false);
+
+        // Shot countdown (3, 2, 1)
+        let timer = secondsPerShot;
+        setCountdown(timer);
+        let shotInterval: ReturnType<typeof setInterval> | null = null;
+        shotInterval = safeSetInterval(() => {
+          timer -= 1;
+          if (timer > 0) {
+            setCountdown(timer);
+          } else {
+            clearRegisteredInterval(shotInterval);
+            setCountdown(null);
+            setIsFlashing(true);
+            if (settings?.enableShutterSound !== false) {
+              playShutterSound();
+            }
+            safeSetTimeout(() => setIsFlashing(false), 300);
+
+            // Show image loading screen while processing capture from camera
+            setIsImageLoading(true);
+            captureSinglePhoto(activePoseIdx)
+              .then((newPhoto) => {
+                setIsImageLoading(false);
+                setIsSaving(true);
+                updatePhotoAtIndex(retakeIndex, newPhoto);
+                setRetakeIndex(null);
+                safeSetTimeout(() => {
+                  setIsCapturingSequence(false);
+                  setIsSaving(false);
+                  navigate('/app/review-photos');
+                }, 600);
+              })
+              .catch((err) => {
+                console.error('[CameraCaptureScreen] Retake capture error:', err);
+                setIsImageLoading(false);
+                setIsSaving(false);
+                setIsCapturingSequence(false);
+              });
           }
-          safeSetTimeout(() => setIsFlashing(false), 300);
-          captureSinglePhoto(activePoseIdx).then((newPhoto) => {
-            updatePhotoAtIndex(retakeIndex, newPhoto);
-            setRetakeIndex(null);
-            setIsCapturingSequence(false);
-            navigate('/app/review-photos');
-          });
-        }
-      }, 900);
+        }, 900);
+      }, PREP_DURATION_MS);
       return;
     }
 
-    // Full multi-shot loop
+    // Full multi-shot loop: every shot executes Auto Preparation progress -> Shot countdown -> Image loading
     const accumulated: string[] = [];
-    let currentIdx = 0;
 
-    const runNextShot = () => {
-      setCurrentShotNumber(currentIdx + 1);
-      setActivePoseIdx(currentIdx % STUDIO_PORTRAITS.length);
-      let timer = secondsPerShot;
-      setCountdown(timer);
+    const runNextShot = (shotIdx: number) => {
+      setCurrentShotNumber(shotIdx + 1);
+      setActivePoseIdx(shotIdx % STUDIO_PORTRAITS.length);
 
-      let intervalId: ReturnType<typeof setInterval> | null = null;
-      intervalId = safeSetInterval(() => {
-        timer -= 1;
-        if (timer > 0) {
-          setCountdown(timer);
-        } else {
-          clearRegisteredInterval(intervalId);
-          setCountdown(null);
-          setIsFlashing(true);
-          if (settings?.enableShutterSound !== false) {
-            playShutterSound();
-          }
-          safeSetTimeout(() => setIsFlashing(false), 300);
+      // 1. Preparation stage: starts auto progress immediately, advances strictly when finished
+      setIsPreparing(true);
+      setPrepKey(shotIdx);
+      setCountdown(null);
 
-          captureSinglePhoto(currentIdx).then((snap) => {
-            accumulated.push(snap);
-            const currentShots = [...accumulated];
-            setLocalShots(currentShots);
-            setCapturedPhotos(currentShots);
+      safeSetTimeout(() => {
+        setIsPreparing(false);
 
-            currentIdx += 1;
-            if (currentIdx < totalShotsNeeded) {
-              safeSetTimeout(runNextShot, 600);
-            } else {
-              setIsCapturingSequence(false);
-              safeSetTimeout(() => {
-                navigate('/app/review-photos');
-              }, 450);
+        // 2. Main Shot countdown (3, 2, 1)
+        let timer = secondsPerShot;
+        setCountdown(timer);
+
+        let shotInterval: ReturnType<typeof setInterval> | null = null;
+        shotInterval = safeSetInterval(() => {
+          timer -= 1;
+          if (timer > 0) {
+            setCountdown(timer);
+          } else {
+            clearRegisteredInterval(shotInterval);
+            setCountdown(null);
+
+            // 3. Shutter trigger & flash
+            setIsFlashing(true);
+            if (settings?.enableShutterSound !== false) {
+              playShutterSound();
             }
-          });
-        }
-      }, 900);
+            safeSetTimeout(() => setIsFlashing(false), 300);
+
+            // 4. Show image loading screen while fetching/processing from camera
+            setIsImageLoading(true);
+            captureSinglePhoto(shotIdx)
+              .then((snap) => {
+                setIsImageLoading(false);
+                accumulated.push(snap);
+                const currentShots = [...accumulated];
+                setLocalShots(currentShots);
+                setCapturedPhotos(currentShots);
+
+                const nextIdx = shotIdx + 1;
+                if (nextIdx < totalShotsNeeded) {
+                  // Next shot also starts with auto preparation progress!
+                  runNextShot(nextIdx);
+                } else {
+                  // All photos captured: show saving loading screen!
+                  setIsSaving(true);
+                  safeSetTimeout(() => {
+                    setIsCapturingSequence(false);
+                    setIsSaving(false);
+                    navigate('/app/review-photos');
+                  }, 800);
+                }
+              })
+              .catch((err) => {
+                console.error('[CameraCaptureScreen] Shot capture error:', err);
+                setIsImageLoading(false);
+                setIsSaving(false);
+                setIsCapturingSequence(false);
+              });
+          }
+        }, 900);
+      }, PREP_DURATION_MS);
     };
 
-    runNextShot();
+    // Begin sequence starting with shot 0
+    runNextShot(0);
   }, [
     activePoseIdx,
     captureSinglePhoto,
     clearAllTimers,
     clearRegisteredInterval,
     isCapturingSequence,
+    isImageLoading,
     isRetakeMode,
+    isSaving,
     navigate,
     retakeIndex,
     safeSetInterval,
@@ -497,7 +582,10 @@ export const CameraCaptureScreen: React.FC = () => {
   const handleBack = useCallback(() => {
     clearAllTimers();
     setIsCapturingSequence(false);
+    setIsPreparing(false);
     setCountdown(null);
+    setIsImageLoading(false);
+    setIsSaving(false);
     if (isRetakeMode) {
       setRetakeIndex(null);
       navigate('/app/review-photos');
@@ -514,7 +602,7 @@ export const CameraCaptureScreen: React.FC = () => {
       }
       if (e.code === 'Space' || e.code === 'Enter') {
         e.preventDefault();
-        if (!isCapturingSequence && !showTools) {
+        if (!isCapturingSequence && !showTools && !isSaving) {
           startCountdownSequence();
         }
       } else if (e.code === 'Escape' && showTools) {
@@ -525,7 +613,7 @@ export const CameraCaptureScreen: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCapturingSequence, showTools, startCountdownSequence]);
+  }, [isCapturingSequence, isSaving, showTools, startCountdownSequence]);
 
   const handleConnectGPhoto = useCallback(async () => {
     const res = await gphotoService.requestAndConnect();
@@ -538,6 +626,24 @@ export const CameraCaptureScreen: React.FC = () => {
     await gphotoService.disconnect();
     setGphotoLiveFrame(null);
     setCameraSource('webrtc');
+  }, []);
+
+  const handleSetConfigValue = useCallback(async (name: string, value: string | number) => {
+    try {
+      await gphotoService.setConfigValue(name, value);
+    } catch (err: any) {
+      if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+        window.alert(`Gagal mengubah ${name}: ${err?.message || err}`);
+      }
+    }
+  }, []);
+
+  const handleRefreshConfig = useCallback(async () => {
+    try {
+      await gphotoService.refreshConfig();
+    } catch (err: any) {
+      console.warn('[CameraCaptureScreen] Failed to refresh camera config:', err);
+    }
   }, []);
 
   const currentPortrait =
@@ -698,11 +804,20 @@ export const CameraCaptureScreen: React.FC = () => {
           cropInfo={cropInfo}
         />
 
-        {/* Countdown Big Center Overlay & Flash Burst Effect */}
+        {/* Countdown Big Center Overlay & Flash Burst Effect & Saving/Loading Screens */}
         <CountdownOverlay
           countdown={countdown}
+          isPreparing={isPreparing}
+          prepKey={prepKey}
+          prepDurationMs={2500}
           isFlashing={isFlashing}
+          isSaving={isSaving}
+          isImageLoading={isImageLoading}
           getReadyText={t.camera.getReady}
+          savingTitle={t.camera.savingTitle}
+          savingSubtitle={t.camera.savingSubtitle}
+          imageLoadingTitle={t.camera.imageLoadingTitle}
+          imageLoadingSubtitle={t.camera.imageLoadingSubtitle}
         />
 
         {/* Floating Back Button (Top Left - z-20) */}
@@ -784,6 +899,9 @@ export const CameraCaptureScreen: React.FC = () => {
             isRetakeMode={isRetakeMode}
             retakeIndex={retakeIndex}
             countdown={countdown}
+            isPreparing={isPreparing}
+            isSaving={isSaving}
+            isImageLoading={isImageLoading}
             countdownSeconds={settings?.countdownSeconds || 3}
             onStartSequence={startCountdownSequence}
             onInstantCapture={handleInstantCapture}
@@ -803,6 +921,8 @@ export const CameraCaptureScreen: React.FC = () => {
           gphotoStatus={gphotoStatus}
           onConnectGPhoto={handleConnectGPhoto}
           onDisconnectGPhoto={handleDisconnectGPhoto}
+          onSetConfigValue={handleSetConfigValue}
+          onRefreshConfig={handleRefreshConfig}
           showCropGuide={showCropGuide}
           setShowCropGuide={setShowCropGuide}
           showGridLines={showGridLines}

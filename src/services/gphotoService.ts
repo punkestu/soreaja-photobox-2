@@ -1,5 +1,14 @@
 import { Camera } from 'web-gphoto2';
 
+export interface CameraConfigField {
+  name: string;
+  label: string;
+  type: string;
+  value: string | number | boolean;
+  choices?: string[];
+  readonly: boolean;
+}
+
 export interface GPhotoStatus {
   isSupported: boolean;
   isConnected: boolean;
@@ -7,11 +16,35 @@ export interface GPhotoStatus {
   isCapturing: boolean;
   isLiveViewing: boolean;
   modelName: string | null;
+  batteryLevel?: string | null;
+  config?: Record<string, CameraConfigField>;
   error: string | null;
 }
 
 type StateListener = (status: GPhotoStatus) => void;
 type FrameListener = (frameUrl: string) => void;
+
+function extractConfigItems(
+  node: any,
+  result: Record<string, CameraConfigField> = {}
+): Record<string, CameraConfigField> {
+  if (!node) return result;
+  if (node.children) {
+    for (const key of Object.keys(node.children)) {
+      extractConfigItems(node.children[key], result);
+    }
+  } else if (node.name) {
+    result[node.name.toLowerCase()] = {
+      name: node.name,
+      label: node.label || node.name,
+      type: node.type,
+      value: node.value,
+      choices: Array.isArray(node.choices) ? node.choices : undefined,
+      readonly: Boolean(node.readonly),
+    };
+  }
+  return result;
+}
 
 class GPhotoService {
   private camera: Camera | null = null;
@@ -19,6 +52,8 @@ class GPhotoService {
   private isCapturing: boolean = false;
   private isLiveViewing: boolean = false;
   private modelName: string | null = null;
+  private batteryLevel: string | null = null;
+  private cameraConfig: Record<string, CameraConfigField> = {};
   private lastError: string | null = null;
 
   private stateListeners: Set<StateListener> = new Set();
@@ -64,6 +99,8 @@ class GPhotoService {
       isCapturing: this.isCapturing,
       isLiveViewing: this.isLiveViewing,
       modelName: this.modelName,
+      batteryLevel: this.batteryLevel,
+      config: this.cameraConfig,
       error: this.lastError,
     };
   }
@@ -107,12 +144,26 @@ class GPhotoService {
   }
 
   /**
-   * Prompt user with browser's native WebUSB picker and connect to camera
+   * Prompt user with browser's native WebUSB picker, connect to camera,
+   * and immediately read the camera's full hardware configuration.
    */
   public async requestAndConnect(): Promise<{ success: boolean; model?: string; error?: string }> {
     if (!this.isSupported()) {
       const err = 'Browser tidak mendukung WebUSB atau koneksi tidak aman (HTTPS/localhost dibutuhkan)';
       this.notifyState(err);
+      if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+        window.alert(`Error menghubungkan kamera: ${err}`);
+      }
+      return { success: false, error: err };
+    }
+
+    if (typeof SharedArrayBuffer === 'undefined') {
+      const err =
+        'SharedArrayBuffer belum aktif (Cross-Origin Isolation dibutuhkan). Harap refresh halaman atau restart dev server.';
+      this.notifyState(err);
+      if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+        window.alert(`Error menghubungkan kamera: ${err}`);
+      }
       return { success: false, error: err };
     }
 
@@ -135,32 +186,109 @@ class GPhotoService {
       this.camera = camera;
       this.isConnecting = false;
 
-      // 3. Try to query camera model name from config
-      let detectedModel = 'DSLR / Mirrorless USB Camera';
-      try {
-        const config = await camera.getConfig();
-        if (config && config.children) {
-          const main = config.children.main || config.children.status;
-          if (main && 'children' in main && main.children && main.children.cameramodel) {
-            const val = (main.children.cameramodel as any).value;
-            if (val) detectedModel = String(val);
-          }
-        }
-      } catch (cfgErr) {
-        console.info('[GPhotoService] Could not read model name from config:', cfgErr);
-      }
+      // 3. Read camera configuration tree so DSLR config follows camera hardware settings
+      await this.refreshConfigInternal();
 
-      this.modelName = detectedModel;
-      this.notifyState();
-      return { success: true, model: detectedModel };
+      return {
+        success: true,
+        model: this.modelName || 'DSLR / Mirrorless USB Camera',
+      };
     } catch (err: any) {
       console.error('[GPhotoService] Failed to connect to camera:', err);
       this.isConnecting = false;
       this.camera = null;
       this.modelName = null;
-      const errMsg = err?.message || 'Gagal menghubungkan ke kamera USB';
+      this.batteryLevel = null;
+      this.cameraConfig = {};
+      const errMsg = err?.message || String(err) || 'Gagal menghubungkan ke kamera USB';
       this.notifyState(errMsg);
+      if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+        window.alert(`Error menghubungkan kamera: ${errMsg}`);
+      }
       return { success: false, error: errMsg };
+    }
+  }
+
+  /**
+   * Refresh and sync configuration tree directly from connected camera
+   */
+  public async refreshConfig(): Promise<Record<string, CameraConfigField>> {
+    if (!this.camera) return {};
+
+    const wasLive = this.isLiveViewing;
+    if (wasLive) {
+      this.stopLiveView();
+      await new Promise((r) => setTimeout(r, 60));
+    }
+
+    try {
+      await this.refreshConfigInternal();
+      return this.cameraConfig;
+    } finally {
+      if (wasLive && this.camera) {
+        this.startLiveView();
+      }
+    }
+  }
+
+  private async refreshConfigInternal(): Promise<void> {
+    if (!this.camera) return;
+    try {
+      const rawConfig = await this.camera.getConfig();
+      this.cameraConfig = extractConfigItems(rawConfig);
+
+      // Extract model name
+      const modelField =
+        this.cameraConfig['cameramodel'] ||
+        this.cameraConfig['model'] ||
+        this.cameraConfig['cameraname'];
+      if (modelField && typeof modelField.value === 'string' && modelField.value.trim()) {
+        this.modelName = modelField.value.trim();
+      } else if (!this.modelName) {
+        this.modelName = 'DSLR / Mirrorless USB Camera';
+      }
+
+      // Extract battery level if reported
+      const batteryField =
+        this.cameraConfig['batterylevel'] ||
+        this.cameraConfig['battery'] ||
+        this.cameraConfig['batterystatus'];
+      if (batteryField && batteryField.value !== undefined) {
+        this.batteryLevel = String(batteryField.value);
+      }
+
+      this.notifyState();
+    } catch (err) {
+      console.warn('[GPhotoService] Could not read camera config:', err);
+    }
+  }
+
+  /**
+   * Set a specific camera configuration setting (e.g. 'iso', 'shutterspeed', 'aperture', 'whitebalance')
+   */
+  public async setConfigValue(name: string, value: string | number | boolean): Promise<void> {
+    if (!this.camera) {
+      throw new Error('Kamera USB belum terhubung');
+    }
+
+    const wasLive = this.isLiveViewing;
+    if (wasLive) {
+      this.stopLiveView();
+      await new Promise((r) => setTimeout(r, 60));
+    }
+
+    try {
+      await this.camera.setConfigValue(name, value);
+      // Wait briefly for camera hardware to register update
+      await new Promise((r) => setTimeout(r, 150));
+      await this.refreshConfigInternal();
+    } catch (err: any) {
+      console.error(`[GPhotoService] Failed to set config ${name}=${value}:`, err);
+      throw err;
+    } finally {
+      if (wasLive && this.camera) {
+        this.startLiveView();
+      }
     }
   }
 
@@ -180,6 +308,8 @@ class GPhotoService {
     }
 
     this.modelName = null;
+    this.batteryLevel = null;
+    this.cameraConfig = {};
     this.isCapturing = false;
     this.notifyState();
   }
@@ -254,10 +384,10 @@ class GPhotoService {
   /**
    * Mutex-guarded high-resolution photo capture.
    * Pauses the liveview loop to prevent PTP device concurrency collisions,
-   * triggers camera shutter, converts resulting file to base64 data URL,
-   * and resumes liveview.
+   * triggers camera shutter, optionally mirrors horizontally to match viewfinder,
+   * converts resulting file to base64 data URL, and resumes liveview.
    */
-  public async captureHighResPhoto(): Promise<string> {
+  public async captureHighResPhoto(shouldMirror: boolean = false): Promise<string> {
     if (!this.camera) {
       throw new Error('Kamera USB belum terhubung');
     }
@@ -282,7 +412,27 @@ class GPhotoService {
       // 2. Trigger hardware shutter and download full-res file
       const file = await this.camera.captureImageAsFile();
 
-      // 3. Convert File/Blob to Base64 Data URL for compositing
+      // 3. Mirror image if requested to match kiosk viewfinder mirror mode
+      if (shouldMirror && typeof document !== 'undefined') {
+        try {
+          const bitmap = await createImageBitmap(file);
+          const canvas = document.createElement('canvas');
+          canvas.width = bitmap.width;
+          canvas.height = bitmap.height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(bitmap, 0, 0);
+            bitmap.close();
+            return canvas.toDataURL('image/jpeg', 0.95);
+          }
+        } catch (bitmapErr) {
+          console.warn('[GPhotoService] Failed to mirror via ImageBitmap, using raw image:', bitmapErr);
+        }
+      }
+
+      // 4. Convert File/Blob to Base64 Data URL for compositing
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
@@ -295,7 +445,7 @@ class GPhotoService {
       this.isCapturing = false;
       this.notifyState();
 
-      // 4. Resume live view if it was running previously
+      // 5. Resume live view if it was running previously
       if (wasLiveViewing && this.camera && !this.liveViewLoopActive) {
         this.startLiveView();
       }

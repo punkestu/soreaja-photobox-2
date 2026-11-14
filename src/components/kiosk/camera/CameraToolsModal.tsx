@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import { STUDIO_PORTRAITS } from '../../../data/defaultFrames';
 import type { TranslationDictionary } from '../../../i18n/translations';
 import type { CropInfo } from './CropGuideOverlay';
@@ -15,6 +15,8 @@ interface CameraToolsModalProps {
   gphotoStatus: GPhotoStatus;
   onConnectGPhoto: () => Promise<void>;
   onDisconnectGPhoto: () => Promise<void>;
+  onSetConfigValue?: (name: string, value: string | number) => Promise<void>;
+  onRefreshConfig?: () => Promise<void>;
   showCropGuide: boolean;
   setShowCropGuide: React.Dispatch<React.SetStateAction<boolean>>;
   showGridLines: boolean;
@@ -36,6 +38,8 @@ export const CameraToolsModal: React.FC<CameraToolsModalProps> = memo(({
   gphotoStatus,
   onConnectGPhoto,
   onDisconnectGPhoto,
+  onSetConfigValue,
+  onRefreshConfig,
   showCropGuide,
   setShowCropGuide,
   showGridLines,
@@ -45,7 +49,26 @@ export const CameraToolsModal: React.FC<CameraToolsModalProps> = memo(({
   setActivePoseIdx,
   t,
 }) => {
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
   if (!showTools) return null;
+
+  const cfg = gphotoStatus.config || {};
+  const isoField = cfg['iso'] || cfg['iso-speed'] || cfg['isospeed'];
+  const shutterField = cfg['shutterspeed'] || cfg['shutter-speed'] || cfg['shutterspeed2'];
+  const apertureField = cfg['aperture'] || cfg['f-number'] || cfg['fnumber'];
+  const wbField = cfg['whitebalance'] || cfg['white-balance'];
+  const captureTargetField = cfg['capturetarget'];
+
+  const handleSyncFromCamera = async () => {
+    if (!onRefreshConfig) return;
+    setIsSyncing(true);
+    try {
+      await onRefreshConfig();
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   return (
     <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-md p-4 sm:p-6 flex flex-col justify-between animate-in fade-in duration-200 pointer-events-auto">
@@ -209,6 +232,174 @@ export const CameraToolsModal: React.FC<CameraToolsModalProps> = memo(({
             </div>
           </div>
         </div>
+
+        {/* DSLR Hardware Settings: Directly follows camera configuration */}
+        {cameraSource === 'gphoto' && gphotoStatus.isConnected && (
+          <div className="bg-zinc-900/95 rounded-xl p-3.5 border border-zinc-800 space-y-3 animate-in fade-in duration-150">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-zinc-200 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>📸</span>
+                  <span>Konfigurasi Hardware DSLR (Ikuti Kamera)</span>
+                </span>
+                {gphotoStatus.batteryLevel && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-emerald-400 font-mono">
+                    🔋 {gphotoStatus.batteryLevel}
+                  </span>
+                )}
+              </div>
+
+              {onRefreshConfig && (
+                <button
+                  type="button"
+                  onClick={handleSyncFromCamera}
+                  disabled={isSyncing}
+                  className="px-2.5 py-1 text-[11px] font-semibold bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-200 rounded-lg border border-zinc-700 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  title="Ambil ulang pengaturan dari tombol fisik / dial kamera"
+                >
+                  <span className={isSyncing ? 'animate-spin' : ''}>🔄</span>
+                  <span>{isSyncing ? 'Menyinkronkan...' : 'Sinkron dari Kamera'}</span>
+                </button>
+              )}
+            </div>
+
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              Pengaturan di bawah ini otomatis membaca dan mengikuti konfigurasi fisik pada body kamera Anda.
+            </p>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {/* ISO */}
+              {isoField && (
+                <div className="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800 space-y-1">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                    ISO
+                  </span>
+                  {isoField.choices && isoField.choices.length > 0 && onSetConfigValue ? (
+                    <select
+                      value={String(isoField.value)}
+                      onChange={(e) => onSetConfigValue(isoField.name, e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-[var(--theme-accent,#E11D48)] cursor-pointer"
+                    >
+                      {isoField.choices.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="text-xs font-mono font-bold text-white py-1">
+                      {String(isoField.value)}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Shutter Speed */}
+              {shutterField && (
+                <div className="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800 space-y-1">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                    Shutter Speed
+                  </span>
+                  {shutterField.choices && shutterField.choices.length > 0 && onSetConfigValue ? (
+                    <select
+                      value={String(shutterField.value)}
+                      onChange={(e) => onSetConfigValue(shutterField.name, e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-[var(--theme-accent,#E11D48)] cursor-pointer"
+                    >
+                      {shutterField.choices.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="text-xs font-mono font-bold text-white py-1">
+                      {String(shutterField.value)}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Aperture */}
+              {apertureField && (
+                <div className="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800 space-y-1">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                    Aperture (f)
+                  </span>
+                  {apertureField.choices && apertureField.choices.length > 0 && onSetConfigValue ? (
+                    <select
+                      value={String(apertureField.value)}
+                      onChange={(e) => onSetConfigValue(apertureField.name, e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-[var(--theme-accent,#E11D48)] cursor-pointer"
+                    >
+                      {apertureField.choices.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="text-xs font-mono font-bold text-white py-1">
+                      {String(apertureField.value)}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* White Balance */}
+              {wbField && (
+                <div className="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800 space-y-1">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                    White Balance
+                  </span>
+                  {wbField.choices && wbField.choices.length > 0 && onSetConfigValue ? (
+                    <select
+                      value={String(wbField.value)}
+                      onChange={(e) => onSetConfigValue(wbField.name, e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-[var(--theme-accent,#E11D48)] cursor-pointer"
+                    >
+                      {wbField.choices.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="text-xs font-mono font-bold text-white py-1">
+                      {String(wbField.value)}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Capture Target (RAM vs Card) */}
+              {captureTargetField && (
+                <div className="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800 space-y-1">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                    Simpan Ke
+                  </span>
+                  {captureTargetField.choices && captureTargetField.choices.length > 0 && onSetConfigValue ? (
+                    <select
+                      value={String(captureTargetField.value)}
+                      onChange={(e) => onSetConfigValue(captureTargetField.name, e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-[var(--theme-accent,#E11D48)] cursor-pointer"
+                    >
+                      {captureTargetField.choices.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="text-xs font-mono font-bold text-white py-1">
+                      {String(captureTargetField.value)}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Composition Guide Info */}
         {cropInfo.isCropped && (

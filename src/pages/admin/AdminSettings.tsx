@@ -86,6 +86,27 @@ export const AdminSettings: React.FC = () => {
     await gphotoService.disconnect();
   };
 
+  const [syncingDslrConfig, setSyncingDslrConfig] = useState<boolean>(false);
+
+  const handleRefreshDslrConfig = async () => {
+    setSyncingDslrConfig(true);
+    try {
+      await gphotoService.refreshConfig();
+    } finally {
+      setSyncingDslrConfig(false);
+    }
+  };
+
+  const handleSetDslrConfig = async (name: string, value: string | number) => {
+    try {
+      await gphotoService.setConfigValue(name, value);
+    } catch (err: any) {
+      if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+        window.alert(`Gagal mengubah konfigurasi ${name}: ${err?.message || err}`);
+      }
+    }
+  };
+
   // Tema & Background Kiosk
   const [themeColor, setThemeColor] = useState<string>(DEFAULT_APP_SETTINGS.themeColor || '#E11D48');
   const [themePreset, setThemePreset] = useState<string>(DEFAULT_APP_SETTINGS.themePreset || 'crimson');
@@ -1317,6 +1338,116 @@ export const AdminSettings: React.FC = () => {
                             ✕ Putuskan DSLR
                           </button>
                         )}
+                      </div>
+                    )}
+
+                    {dslrStatus.isConnected && dslrStatus.config && (
+                      <div className="mt-2.5 pt-2 border-t border-neutral-200 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-neutral-800 text-[11px] uppercase tracking-wide">
+                            Konfigurasi Hardware Kamera:
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleRefreshDslrConfig}
+                            disabled={syncingDslrConfig}
+                            className="text-[11px] px-2 py-0.5 rounded bg-neutral-200 hover:bg-neutral-300 text-neutral-700 font-medium transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                          >
+                            <span className={syncingDslrConfig ? 'animate-spin' : ''}>🔄</span>
+                            <span>{syncingDslrConfig ? 'Menyinkronkan...' : 'Sinkron dari Kamera'}</span>
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                          {/* ISO */}
+                          {dslrStatus.config['iso'] && (
+                            <div className="bg-white p-2 rounded border border-neutral-200">
+                              <span className="text-[10px] text-neutral-500 font-bold block uppercase">ISO</span>
+                              {dslrStatus.config['iso'].choices && dslrStatus.config['iso'].choices.length > 0 ? (
+                                <select
+                                  value={String(dslrStatus.config['iso'].value)}
+                                  onChange={(e) => handleSetDslrConfig('iso', e.target.value)}
+                                  className="w-full text-xs font-semibold bg-neutral-50 border border-neutral-300 rounded p-1 mt-0.5"
+                                >
+                                  {dslrStatus.config['iso'].choices.map((c) => (
+                                    <option key={c} value={c}>{c}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span className="font-mono text-xs font-bold text-neutral-800">{String(dslrStatus.config['iso'].value)}</span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Shutter */}
+                          {(dslrStatus.config['shutterspeed'] || dslrStatus.config['shutter-speed']) && (() => {
+                            const f = dslrStatus.config['shutterspeed'] || dslrStatus.config['shutter-speed'];
+                            return (
+                              <div className="bg-white p-2 rounded border border-neutral-200">
+                                <span className="text-[10px] text-neutral-500 font-bold block uppercase">Shutter</span>
+                                {f.choices && f.choices.length > 0 ? (
+                                  <select
+                                    value={String(f.value)}
+                                    onChange={(e) => handleSetDslrConfig(f.name, e.target.value)}
+                                    className="w-full text-xs font-semibold bg-neutral-50 border border-neutral-300 rounded p-1 mt-0.5"
+                                  >
+                                    {f.choices.map((c) => (
+                                      <option key={c} value={c}>{c}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <span className="font-mono text-xs font-bold text-neutral-800">{String(f.value)}</span>
+                                )}
+                              </div>
+                            );
+                          })()}
+
+                          {/* Aperture */}
+                          {(dslrStatus.config['aperture'] || dslrStatus.config['f-number']) && (() => {
+                            const f = dslrStatus.config['aperture'] || dslrStatus.config['f-number'];
+                            return (
+                              <div className="bg-white p-2 rounded border border-neutral-200">
+                                <span className="text-[10px] text-neutral-500 font-bold block uppercase">Aperture</span>
+                                {f.choices && f.choices.length > 0 ? (
+                                  <select
+                                    value={String(f.value)}
+                                    onChange={(e) => handleSetDslrConfig(f.name, e.target.value)}
+                                    className="w-full text-xs font-semibold bg-neutral-50 border border-neutral-300 rounded p-1 mt-0.5"
+                                  >
+                                    {f.choices.map((c) => (
+                                      <option key={c} value={c}>{c}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <span className="font-mono text-xs font-bold text-neutral-800">{String(f.value)}</span>
+                                )}
+                              </div>
+                            );
+                          })()}
+
+                          {/* White Balance */}
+                          {(dslrStatus.config['whitebalance'] || dslrStatus.config['white-balance']) && (() => {
+                            const f = dslrStatus.config['whitebalance'] || dslrStatus.config['white-balance'];
+                            return (
+                              <div className="bg-white p-2 rounded border border-neutral-200">
+                                <span className="text-[10px] text-neutral-500 font-bold block uppercase">WB</span>
+                                {f.choices && f.choices.length > 0 ? (
+                                  <select
+                                    value={String(f.value)}
+                                    onChange={(e) => handleSetDslrConfig(f.name, e.target.value)}
+                                    className="w-full text-xs font-semibold bg-neutral-50 border border-neutral-300 rounded p-1 mt-0.5"
+                                  >
+                                    {f.choices.map((c) => (
+                                      <option key={c} value={c}>{c}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <span className="font-mono text-xs font-bold text-neutral-800">{String(f.value)}</span>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
                       </div>
                     )}
                   </div>
