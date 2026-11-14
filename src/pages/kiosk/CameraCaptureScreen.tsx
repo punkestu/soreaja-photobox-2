@@ -547,6 +547,24 @@ export const CameraCaptureScreen: React.FC = () => {
     setCameraSource('webrtc');
   }, []);
 
+  const handleSetConfigValue = useCallback(async (name: string, value: string | number) => {
+    try {
+      await gphotoService.setConfigValue(name, value);
+    } catch (err: any) {
+      if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+        window.alert(`Gagal mengubah ${name}: ${err?.message || err}`);
+      }
+    }
+  }, []);
+
+  const handleRefreshConfig = useCallback(async () => {
+    try {
+      await gphotoService.refreshConfig();
+    } catch (err: any) {
+      console.warn('[CameraCaptureScreen] Failed to refresh camera config:', err);
+    }
+  }, []);
+
   const currentPortrait =
     STUDIO_PORTRAITS[activePoseIdx % STUDIO_PORTRAITS.length] || STUDIO_PORTRAITS[0];
 
@@ -810,6 +828,8 @@ export const CameraCaptureScreen: React.FC = () => {
           gphotoStatus={gphotoStatus}
           onConnectGPhoto={handleConnectGPhoto}
           onDisconnectGPhoto={handleDisconnectGPhoto}
+          onSetConfigValue={handleSetConfigValue}
+          onRefreshConfig={handleRefreshConfig}
           showCropGuide={showCropGuide}
           setShowCropGuide={setShowCropGuide}
           showGridLines={showGridLines}
