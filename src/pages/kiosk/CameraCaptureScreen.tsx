@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../../db';
+import { db, DEFAULT_IMAGE_PREPROCESSING } from '../../db';
+import type { ImagePreprocessingSettings } from '../../types/photobox';
 import { usePhotobox } from '../../context/PhotoboxContext';
 import { DEFAULT_FRAMES, STUDIO_PORTRAITS } from '../../data/defaultFrames';
 import { playShutterSound } from '../../services/shutterAudio';
@@ -11,6 +12,12 @@ import { CountdownOverlay } from '../../components/kiosk/camera/CountdownOverlay
 import { PhotoTray } from '../../components/kiosk/camera/PhotoTray';
 import { ShutterControls } from '../../components/kiosk/camera/ShutterControls';
 import { CameraToolsModal } from '../../components/kiosk/camera/CameraToolsModal';
+import {
+  applyImagePreprocessingToCanvas,
+  applyImagePreprocessingToDataUrl,
+  getPreprocessingCssFilter,
+  isPreprocessingNeutral,
+} from '../../services/imagePreprocessingService';
 
 export const CameraCaptureScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -65,6 +72,11 @@ export const CameraCaptureScreen: React.FC = () => {
   const [isCapturingSequence, setIsCapturingSequence] = useState<boolean>(false);
   const [localShots, setLocalShots] = useState<string[]>(capturedPhotos);
   const [showTools, setShowTools] = useState<boolean>(false);
+
+  // Live real-time CSS filter for camera viewfinder feeds
+  const liveCssFilter = useMemo(() => {
+    return getPreprocessingCssFilter(settings?.imagePreprocessing);
+  }, [settings?.imagePreprocessing]);
 
   // Safe timer helpers with automatic tracking
   const safeSetTimeout = useCallback((fn: () => void, delayMs: number) => {
@@ -230,7 +242,6 @@ export const CameraCaptureScreen: React.FC = () => {
           video: {
             width: { ideal: 1920, min: 1280 },
             height: { ideal: 1080, min: 720 },
-            facingMode: 'user',
           },
           audio: false,
         });
@@ -284,7 +295,8 @@ export const CameraCaptureScreen: React.FC = () => {
       // 1. High-resolution hardware shutter if DSLR is active and connected
       if (cameraSource === 'gphoto' && gphotoStatus.isConnected) {
         try {
-          return await gphotoService.captureHighResPhoto(shouldMirror);
+          const rawDslr = await gphotoService.captureHighResPhoto(shouldMirror);
+          return await applyImagePreprocessingToDataUrl(rawDslr, settings?.imagePreprocessing);
         } catch (err) {
           console.warn('[CameraCaptureScreen] DSLR shutter failed, using fallback:', err);
         }
@@ -372,10 +384,19 @@ export const CameraCaptureScreen: React.FC = () => {
         ctx.restore();
       }
 
+      // Apply calibrated image preprocessing across builtin/simulator/fallback captures
+      applyImagePreprocessingToCanvas(canvas, settings?.imagePreprocessing);
+
       // High-fidelity JPEG at 0.98 ensures studio sharpness and zero compression artifacts
       return canvas.toDataURL('image/jpeg', 0.98);
     },
-    [cameraSource, getRecycledCanvas, gphotoStatus.isConnected, settings?.mirrorCamera]
+    [
+      cameraSource,
+      getRecycledCanvas,
+      gphotoStatus.isConnected,
+      settings?.mirrorCamera,
+      settings?.imagePreprocessing,
+    ]
   );
 
   // Instant capture handler (captures remaining or retake shot immediately)
@@ -658,6 +679,22 @@ export const CameraCaptureScreen: React.FC = () => {
     }
   }, []);
 
+  const handleUpdatePreprocessing = useCallback(
+    async (updater: Partial<ImagePreprocessingSettings> | ImagePreprocessingSettings) => {
+      const current = settings?.imagePreprocessing || DEFAULT_IMAGE_PREPROCESSING;
+      const updated: ImagePreprocessingSettings = {
+        ...current,
+        ...updater,
+      };
+      try {
+        await db.settings.update('app_settings', { imagePreprocessing: updated });
+      } catch (err) {
+        console.warn('Failed to update image preprocessing settings:', err);
+      }
+    },
+    [settings?.imagePreprocessing]
+  );
+
   const currentPortrait =
     STUDIO_PORTRAITS[activePoseIdx % STUDIO_PORTRAITS.length] || STUDIO_PORTRAITS[0];
 
@@ -741,6 +778,7 @@ export const CameraCaptureScreen: React.FC = () => {
           <img
             src={gphotoLiveFrame}
             alt="DSLR Live View"
+            style={{ filter: liveCssFilter }}
             className={`w-full h-full object-cover select-none pointer-events-none ${
               settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
             }`}
@@ -781,6 +819,7 @@ export const CameraCaptureScreen: React.FC = () => {
             ref={videoRef}
             playsInline
             muted
+            style={{ filter: liveCssFilter }}
             className={`w-full h-full object-cover ${
               settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
             }`}
@@ -793,6 +832,7 @@ export const CameraCaptureScreen: React.FC = () => {
             src={currentPortrait.src}
             alt={currentPortrait.label}
             referrerPolicy="no-referrer"
+            style={{ filter: liveCssFilter }}
             className={`w-full h-full object-cover transition-all duration-300 ${
               settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
             }`}
@@ -884,8 +924,31 @@ export const CameraCaptureScreen: React.FC = () => {
           />
         </div>
 
-        {/* Floating Camera Tools Button (Top Right - z-20) */}
-        <div className="absolute top-3 sm:top-5 right-3 sm:right-5 z-20 pointer-events-auto">
+        {/* Floating Camera Tools Button & Small Preprocessing Preview Pill (Top Right - z-20) */}
+        <div className="absolute top-3 sm:top-5 right-3 sm:right-5 z-20 pointer-events-auto flex items-center gap-2">
+          {!isPreprocessingNeutral(settings?.imagePreprocessing) && (
+            <button
+              type="button"
+              onClick={() => setShowTools(true)}
+              className="min-h-[44px] flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/65 hover:bg-black/90 backdrop-blur-md border border-emerald-500/50 text-emerald-300 text-xs shadow-xl active:scale-95 transition-all cursor-pointer group"
+              title="Pra-pemrosesan citra kamera aktif. Klik untuk melihat pratinjau atau mengubah kalibrasi."
+            >
+              {/* Mini preview thumbnail showing calibrated output */}
+              <div className="relative w-6 h-6 rounded-full overflow-hidden bg-black border border-emerald-400 shrink-0">
+                <img
+                  src={currentPortrait.src}
+                  alt="Thumbnail"
+                  style={{ filter: liveCssFilter }}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <span className="font-semibold text-[11px] hidden sm:inline flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>{t.camera.preprocessing?.activePill || 'Kalibrasi Aktif'}</span>
+              </span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setShowTools((prev) => !prev)}
@@ -930,6 +993,12 @@ export const CameraCaptureScreen: React.FC = () => {
           activeFrameName={activeFrame.name}
           cameraSource={cameraSource}
           setCameraSource={setCameraSource}
+          onSetCameraSourceMode={async (source: 'webrtc' | 'gphoto' | 'simulator') => {
+            setCameraSource(source);
+            await db.settings.update('app_settings', {
+              cameraSourceMode: source === 'simulator' ? 'simulator' : source === 'gphoto' ? 'gphoto' : 'auto',
+            });
+          }}
           gphotoStatus={gphotoStatus}
           onConnectGPhoto={handleConnectGPhoto}
           onDisconnectGPhoto={handleDisconnectGPhoto}
@@ -943,6 +1012,9 @@ export const CameraCaptureScreen: React.FC = () => {
           activePoseIdx={activePoseIdx}
           setActivePoseIdx={setActivePoseIdx}
           t={t}
+          imagePreprocessing={settings?.imagePreprocessing}
+          onUpdatePreprocessing={handleUpdatePreprocessing}
+          onTestCapture={async () => await captureSinglePhoto(activePoseIdx)}
         />
       </div>
     </div>

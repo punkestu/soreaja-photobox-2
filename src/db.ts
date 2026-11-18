@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { AppSettings, SessionRecord, ActiveSessionRecord, FramePackInfo } from './types/photobox';
+import type { AppSettings, SessionRecord, ActiveSessionRecord, FramePackInfo, ImagePreprocessingSettings } from './types/photobox';
 
 export class PhotoboxDatabase extends Dexie {
   settings!: Table<AppSettings, string>;
@@ -66,6 +66,17 @@ export async function resetAllData(): Promise<void> {
 export const DEFAULT_DRIVE_URL =
   'https://drive.google.com/drive/folders/1SoreAjaPhotobox2StudioArchive';
 
+export const DEFAULT_IMAGE_PREPROCESSING: ImagePreprocessingSettings = {
+  enabled: true,
+  brightness: 0,
+  contrast: 0,
+  saturation: 0,
+  ambiance: 0,
+  highlights: 0,
+  shadows: 0,
+  warmth: 0,
+};
+
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   id: 'app_settings',
   driveUrl: DEFAULT_DRIVE_URL,
@@ -92,6 +103,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   language: 'id',
   idleScreenMode: 'standard',
   activeFramePack: 'default',
+  imagePreprocessing: DEFAULT_IMAGE_PREPROCESSING,
   updatedAt: new Date().toISOString(),
 };
 
@@ -103,6 +115,7 @@ export async function ensureDefaultSettings(): Promise<AppSettings> {
         ...DEFAULT_APP_SETTINGS,
         ...existing,
         activeFramePack: existing.activeFramePack || 'default',
+        imagePreprocessing: existing.imagePreprocessing || DEFAULT_IMAGE_PREPROCESSING,
       };
     }
     await db.settings.put(DEFAULT_APP_SETTINGS);

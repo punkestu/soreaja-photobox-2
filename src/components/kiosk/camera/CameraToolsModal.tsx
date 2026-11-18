@@ -3,6 +3,13 @@ import { STUDIO_PORTRAITS } from '../../../data/defaultFrames';
 import type { TranslationDictionary } from '../../../i18n/translations';
 import type { CropInfo } from './CropGuideOverlay';
 import type { GPhotoStatus } from '../../../services/gphotoService';
+import type { ImagePreprocessingSettings } from '../../../types/photobox';
+import {
+  PREPROCESSING_PRESETS,
+  isPreprocessingNeutral,
+  getPreprocessingCssFilter,
+} from '../../../services/imagePreprocessingService';
+import { DEFAULT_IMAGE_PREPROCESSING } from '../../../db';
 
 interface CameraToolsModalProps {
   showTools: boolean;
@@ -12,6 +19,7 @@ interface CameraToolsModalProps {
   activeFrameName: string;
   cameraSource: 'webrtc' | 'gphoto' | 'simulator';
   setCameraSource: (val: 'webrtc' | 'gphoto' | 'simulator') => void;
+  onSetCameraSourceMode?: (val: 'webrtc' | 'gphoto' | 'simulator') => Promise<void>;
   gphotoStatus: GPhotoStatus;
   onConnectGPhoto: () => Promise<void>;
   onDisconnectGPhoto: () => Promise<void>;
@@ -25,6 +33,9 @@ interface CameraToolsModalProps {
   activePoseIdx: number;
   setActivePoseIdx: (idx: number) => void;
   t: TranslationDictionary;
+  imagePreprocessing?: ImagePreprocessingSettings;
+  onUpdatePreprocessing?: (updater: Partial<ImagePreprocessingSettings> | ImagePreprocessingSettings) => Promise<void>;
+  onTestCapture?: () => Promise<string>;
 }
 
 export const CameraToolsModal: React.FC<CameraToolsModalProps> = memo(({
@@ -35,6 +46,7 @@ export const CameraToolsModal: React.FC<CameraToolsModalProps> = memo(({
   activeFrameName,
   cameraSource,
   setCameraSource,
+  onSetCameraSourceMode,
   gphotoStatus,
   onConnectGPhoto,
   onDisconnectGPhoto,
@@ -48,8 +60,15 @@ export const CameraToolsModal: React.FC<CameraToolsModalProps> = memo(({
   activePoseIdx,
   setActivePoseIdx,
   t,
+  imagePreprocessing = DEFAULT_IMAGE_PREPROCESSING,
+  onUpdatePreprocessing,
+  onTestCapture,
 }) => {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [isPreprocessOpen, setIsPreprocessOpen] = useState<boolean>(true);
+  const [previewPoseIdx, setPreviewPoseIdx] = useState<number>(activePoseIdx);
+  const [isTestingCapture, setIsTestingCapture] = useState<boolean>(false);
+  const [realTestSnapshot, setRealTestSnapshot] = useState<string | null>(null);
 
   if (!showTools) return null;
 
@@ -106,34 +125,40 @@ export const CameraToolsModal: React.FC<CameraToolsModalProps> = memo(({
             <div className="grid grid-cols-3 gap-1.5">
               <button
                 type="button"
-                onClick={() => setCameraSource('webrtc')}
-                className={`py-2 px-1 text-center text-xs font-bold rounded-lg transition-all border ${
-                  cameraSource === 'webrtc'
-                    ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
-                    : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
-                }`}
+                onClick={async () => {
+                  setCameraSource('webrtc');
+                  if (onSetCameraSourceMode) await onSetCameraSourceMode('webrtc');
+                }}
+                className={`py-2 px-1 text-center text-xs font-bold rounded-lg transition-all border ${cameraSource === 'webrtc'
+                  ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
+                  : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+                  }`}
               >
                 📷 {t.camera.webRtc}
               </button>
               <button
                 type="button"
-                onClick={() => setCameraSource('gphoto')}
-                className={`py-2 px-1 text-center text-xs font-bold rounded-lg transition-all border ${
-                  cameraSource === 'gphoto'
-                    ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
-                    : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
-                }`}
+                onClick={async () => {
+                  setCameraSource('gphoto');
+                  if (onSetCameraSourceMode) await onSetCameraSourceMode('gphoto');
+                }}
+                className={`py-2 px-1 text-center text-xs font-bold rounded-lg transition-all border ${cameraSource === 'gphoto'
+                  ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
+                  : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+                  }`}
               >
                 📸 {t.camera.dslr}
               </button>
               <button
                 type="button"
-                onClick={() => setCameraSource('simulator')}
-                className={`py-2 px-1 text-center text-xs font-bold rounded-lg transition-all border ${
-                  cameraSource === 'simulator'
-                    ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
-                    : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
-                }`}
+                onClick={async () => {
+                  setCameraSource('simulator');
+                  if (onSetCameraSourceMode) await onSetCameraSourceMode('simulator');
+                }}
+                className={`py-2 px-1 text-center text-xs font-bold rounded-lg transition-all border ${cameraSource === 'simulator'
+                  ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
+                  : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+                  }`}
               >
                 🖥️ {t.camera.sim}
               </button>
@@ -146,25 +171,23 @@ export const CameraToolsModal: React.FC<CameraToolsModalProps> = memo(({
                   <span className="text-zinc-400">Status USB:</span>
                   <span className="flex items-center gap-1.5 font-medium truncate max-w-[180px]">
                     <span
-                      className={`w-2 h-2 rounded-full shrink-0 ${
-                        gphotoStatus.isConnected
-                          ? 'bg-emerald-400 animate-pulse'
-                          : gphotoStatus.isConnecting
+                      className={`w-2 h-2 rounded-full shrink-0 ${gphotoStatus.isConnected
+                        ? 'bg-emerald-400 animate-pulse'
+                        : gphotoStatus.isConnecting
                           ? 'bg-amber-400 animate-pulse'
                           : 'bg-zinc-500'
-                      }`}
+                        }`}
                     />
                     <span
-                      className={`truncate ${
-                        gphotoStatus.isConnected ? 'text-emerald-400' : 'text-zinc-400'
-                      }`}
+                      className={`truncate ${gphotoStatus.isConnected ? 'text-emerald-400' : 'text-zinc-400'
+                        }`}
                       title={gphotoStatus.modelName || ''}
                     >
                       {gphotoStatus.isConnected
                         ? gphotoStatus.modelName || t.camera.dslrConnected
                         : gphotoStatus.isConnecting
-                        ? t.camera.dslrConnecting
-                        : t.camera.dslrDisconnected}
+                          ? t.camera.dslrConnecting
+                          : t.camera.dslrDisconnected}
                     </span>
                   </span>
                 </div>
@@ -210,27 +233,445 @@ export const CameraToolsModal: React.FC<CameraToolsModalProps> = memo(({
               <button
                 type="button"
                 onClick={() => setShowCropGuide((prev) => !prev)}
-                className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${
-                  showCropGuide
-                    ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
-                    : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
-                }`}
+                className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${showCropGuide
+                  ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)]'
+                  : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+                  }`}
               >
                 📐 {t.camera.cropToggle}
               </button>
               <button
                 type="button"
                 onClick={() => setShowGridLines((prev) => !prev)}
-                className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${
-                  showGridLines
-                    ? 'bg-zinc-700 text-white border-zinc-600'
-                    : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
-                }`}
+                className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all border ${showGridLines
+                  ? 'bg-zinc-700 text-white border-zinc-600'
+                  : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+                  }`}
               >
                 ⊞ {t.camera.gridToggle}
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Unified Image Preprocessing Section (Applies to ALL Cameras) */}
+        <div className="bg-zinc-900/95 rounded-xl p-3.5 border border-zinc-800 space-y-3">
+          <div className="flex items-center justify-between border-b border-zinc-800 pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-zinc-200 uppercase tracking-wider flex items-center gap-1.5">
+                <span>🎨</span>
+                <span>{t.camera.preprocessing?.title || 'Pra-pemrosesan Citra Kamera'}</span>
+              </span>
+              {!isPreprocessingNeutral(imagePreprocessing) && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-500/40 text-emerald-400 font-semibold animate-pulse">
+                  Aktif
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {onUpdatePreprocessing && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onUpdatePreprocessing({ enabled: !imagePreprocessing.enabled })}
+                    className={`text-[11px] px-2.5 py-1 rounded-lg border font-semibold transition-all cursor-pointer ${imagePreprocessing.enabled !== false
+                      ? 'bg-[var(--theme-accent,#E11D48)] text-white border-transparent'
+                      : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                      }`}
+                  >
+                    {imagePreprocessing.enabled !== false ? 'Aktif' : 'Nonaktif'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onUpdatePreprocessing(DEFAULT_IMAGE_PREPROCESSING)}
+                    className="text-[11px] px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700 transition-all cursor-pointer"
+                    title={t.camera.preprocessing?.reset}
+                  >
+                    ↺ {t.camera.preprocessing?.reset || 'Reset'}
+                  </button>
+                </>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setIsPreprocessOpen((prev) => !prev)}
+                className="text-xs text-zinc-400 hover:text-white p-1 cursor-pointer"
+                title={isPreprocessOpen ? 'Sembunyikan' : 'Buka'}
+              >
+                {isPreprocessOpen ? '▲' : '▼'}
+              </button>
+            </div>
+          </div>
+
+          {isPreprocessOpen && (
+            <div className="space-y-3">
+              {/* Presets Row */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                  {t.camera.preprocessing?.presetsTitle || 'Preset Studio:'}
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {PREPROCESSING_PRESETS.map((preset) => {
+                    const isMatched =
+                      (imagePreprocessing.brightness ?? 0) === preset.settings.brightness &&
+                      (imagePreprocessing.contrast ?? 0) === preset.settings.contrast &&
+                      (imagePreprocessing.saturation ?? 0) === preset.settings.saturation &&
+                      (imagePreprocessing.ambiance ?? 0) === preset.settings.ambiance &&
+                      (imagePreprocessing.highlights ?? 0) === preset.settings.highlights &&
+                      (imagePreprocessing.shadows ?? 0) === preset.settings.shadows &&
+                      (imagePreprocessing.warmth ?? 0) === preset.settings.warmth;
+
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => onUpdatePreprocessing?.({ ...preset.settings, enabled: true })}
+                        className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition-all cursor-pointer flex items-center gap-1 ${isMatched
+                          ? 'bg-white text-zinc-950 border-white font-bold shadow-sm'
+                          : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-white'
+                          }`}
+                      >
+                        <span>{preset.icon}</span>
+                        <span>{preset.nameId}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Small Live Preview if there was a change in preprocessing */}
+              {!isPreprocessingNeutral(imagePreprocessing) && (
+                <div className="bg-zinc-950 p-3 rounded-xl border border-emerald-500/40 space-y-2.5 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-emerald-400 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>{t.camera.preprocessing?.smallPreviewTitle || 'Pratinjau Hasil Perubahan:'}</span>
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-zinc-500 mr-1 hidden sm:inline">Pose:</span>
+                      {STUDIO_PORTRAITS.map((p, idx) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setPreviewPoseIdx(idx)}
+                          className={`w-5 h-5 text-[10px] font-mono rounded cursor-pointer transition-all ${previewPoseIdx === idx
+                            ? 'bg-emerald-500 text-black font-bold'
+                            : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400'
+                            }`}
+                        >
+                          {idx + 1}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Dual side-by-side compact thumbnails: Sebelum (Asli) vs Sesudah (Hasil) */}
+                  <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                    <div className="flex items-center gap-2 shrink-0">
+                      {/* 1. Asli */}
+                      <div className="space-y-1 text-center">
+                        <div className="relative w-24 h-18 sm:w-28 sm:h-20 rounded-lg overflow-hidden bg-black border border-zinc-700">
+                          <img
+                            src={STUDIO_PORTRAITS[previewPoseIdx % STUDIO_PORTRAITS.length].src}
+                            alt="Asli"
+                            className="w-full h-full object-cover"
+                          />
+                          <span className="absolute bottom-1 left-1 px-1 py-0.2 rounded text-[8px] font-bold bg-black/80 text-zinc-300">
+                            {t.camera.preprocessing?.beforeLabel || 'Asli'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <span className="text-zinc-500 font-bold text-xs">→</span>
+
+                      {/* 2. Hasil Kalibrasi */}
+                      <div className="space-y-1 text-center">
+                        <div className="relative w-24 h-18 sm:w-28 sm:h-20 rounded-lg overflow-hidden bg-black border border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.25)]">
+                          <img
+                            src={STUDIO_PORTRAITS[previewPoseIdx % STUDIO_PORTRAITS.length].src}
+                            alt="Hasil"
+                            style={{
+                              filter:
+                                imagePreprocessing.enabled !== false
+                                  ? getPreprocessingCssFilter(imagePreprocessing)
+                                  : 'none',
+                            }}
+                            className="w-full h-full object-cover"
+                          />
+                          <span className="absolute bottom-1 left-1 px-1 py-0.2 rounded text-[8px] font-bold bg-emerald-600 text-white">
+                            {t.camera.preprocessing?.afterLabel || 'Hasil'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Adjusted Parameters Summary Chips */}
+                    <div className="flex-1 min-w-0 space-y-1 w-full">
+                      <span className="text-[10px] text-zinc-400 block font-medium">
+                        {t.camera.preprocessing?.changedParams || 'Parameter yang disesuaikan:'}
+                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {imagePreprocessing.brightness !== 0 && (
+                          <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[10px] text-zinc-200 font-mono">
+                            ☀️ {imagePreprocessing.brightness > 0 ? `+${imagePreprocessing.brightness}` : imagePreprocessing.brightness}
+                          </span>
+                        )}
+                        {imagePreprocessing.contrast !== 0 && (
+                          <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[10px] text-zinc-200 font-mono">
+                            🌓 {imagePreprocessing.contrast > 0 ? `+${imagePreprocessing.contrast}` : imagePreprocessing.contrast}
+                          </span>
+                        )}
+                        {imagePreprocessing.saturation !== 0 && (
+                          <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[10px] text-zinc-200 font-mono">
+                            🎨 {imagePreprocessing.saturation > 0 ? `+${imagePreprocessing.saturation}` : imagePreprocessing.saturation}
+                          </span>
+                        )}
+                        {imagePreprocessing.ambiance !== 0 && (
+                          <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[10px] text-zinc-200 font-mono">
+                            ✨ {imagePreprocessing.ambiance > 0 ? `+${imagePreprocessing.ambiance}` : imagePreprocessing.ambiance}
+                          </span>
+                        )}
+                        {imagePreprocessing.highlights !== 0 && (
+                          <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[10px] text-zinc-200 font-mono">
+                            🔆 {imagePreprocessing.highlights > 0 ? `+${imagePreprocessing.highlights}` : imagePreprocessing.highlights}
+                          </span>
+                        )}
+                        {imagePreprocessing.shadows !== 0 && (
+                          <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[10px] text-zinc-200 font-mono">
+                            👥 {imagePreprocessing.shadows > 0 ? `+${imagePreprocessing.shadows}` : imagePreprocessing.shadows}
+                          </span>
+                        )}
+                        {imagePreprocessing.warmth !== 0 && (
+                          <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[10px] text-zinc-200 font-mono">
+                            🌡️ {imagePreprocessing.warmth > 0 ? `+${imagePreprocessing.warmth}` : imagePreprocessing.warmth}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Test Capture Action inside modal */}
+                  {onTestCapture && (
+                    <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between">
+                      <span className="text-[10px] text-zinc-400">
+                        Ambil foto langsung dari sensor kamera:
+                      </span>
+                      <button
+                        type="button"
+                        disabled={isTestingCapture}
+                        onClick={async () => {
+                          setIsTestingCapture(true);
+                          try {
+                            const snap = await onTestCapture();
+                            setRealTestSnapshot(snap);
+                          } catch (err) {
+                            console.warn('Test capture in tools failed:', err);
+                          } finally {
+                            setIsTestingCapture(false);
+                          }
+                        }}
+                        className="px-2.5 py-1 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-all active:scale-95 cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
+                      >
+                        <span>{isTestingCapture ? '⏳' : '📸'}</span>
+                        <span>{isTestingCapture ? 'Menjepret...' : (t.camera.preprocessing?.testCaptureBtn || 'Uji Jepret Kamera')}</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Real Test Snapshot Result Card */}
+                  {realTestSnapshot && (
+                    <div className="pt-2 border-t border-zinc-800 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs text-emerald-400 font-semibold">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                          <span>Hasil Jepretan Nyata Sensor Kamera:</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setRealTestSnapshot(null)}
+                          className="text-[10px] text-zinc-400 hover:text-white px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 cursor-pointer"
+                        >
+                          ✕ Tutup
+                        </button>
+                      </div>
+                      <div className="relative aspect-video max-h-48 w-full rounded-lg overflow-hidden bg-black border border-emerald-500 shadow-lg flex items-center justify-center">
+                        <img
+                          src={realTestSnapshot}
+                          alt="Real Test Snapshot"
+                          className="w-full h-full object-contain"
+                        />
+                        <span className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-600 text-white shadow-md">
+                          OUTPUT KAMERA NYATA (TERPROSES)
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 7 Adjustment Sliders in 2 Columns */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                {/* 1. Brightness */}
+                <div className="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800/80 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-300 font-semibold flex items-center gap-1.5">
+                      <span>☀️</span>
+                      <span>{t.camera.preprocessing?.brightness || 'Kecerahan'}</span>
+                    </span>
+                    <span className="font-mono text-[11px] text-zinc-400 font-bold px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800">
+                      {imagePreprocessing.brightness > 0 ? `+${imagePreprocessing.brightness}` : imagePreprocessing.brightness}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={-100}
+                    max={100}
+                    step={1}
+                    value={imagePreprocessing.brightness ?? 0}
+                    onChange={(e) => onUpdatePreprocessing?.({ brightness: Number(e.target.value) })}
+                    className="w-full accent-[var(--theme-accent,#E11D48)] cursor-pointer"
+                  />
+                </div>
+
+                {/* 2. Contrast */}
+                <div className="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800/80 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-300 font-semibold flex items-center gap-1.5">
+                      <span>🌓</span>
+                      <span>{t.camera.preprocessing?.contrast || 'Kontras'}</span>
+                    </span>
+                    <span className="font-mono text-[11px] text-zinc-400 font-bold px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800">
+                      {imagePreprocessing.contrast > 0 ? `+${imagePreprocessing.contrast}` : imagePreprocessing.contrast}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={-100}
+                    max={100}
+                    step={1}
+                    value={imagePreprocessing.contrast ?? 0}
+                    onChange={(e) => onUpdatePreprocessing?.({ contrast: Number(e.target.value) })}
+                    className="w-full accent-[var(--theme-accent,#E11D48)] cursor-pointer"
+                  />
+                </div>
+
+                {/* 3. Saturation */}
+                <div className="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800/80 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-300 font-semibold flex items-center gap-1.5">
+                      <span>🎨</span>
+                      <span>{t.camera.preprocessing?.saturation || 'Saturasi'}</span>
+                    </span>
+                    <span className="font-mono text-[11px] text-zinc-400 font-bold px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800">
+                      {imagePreprocessing.saturation > 0 ? `+${imagePreprocessing.saturation}` : imagePreprocessing.saturation}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={-100}
+                    max={100}
+                    step={1}
+                    value={imagePreprocessing.saturation ?? 0}
+                    onChange={(e) => onUpdatePreprocessing?.({ saturation: Number(e.target.value) })}
+                    className="w-full accent-[var(--theme-accent,#E11D48)] cursor-pointer"
+                  />
+                </div>
+
+                {/* 4. Ambiance */}
+                <div className="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800/80 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-300 font-semibold flex items-center gap-1.5">
+                      <span>✨</span>
+                      <span>{t.camera.preprocessing?.ambiance || 'Ambiance'}</span>
+                    </span>
+                    <span className="font-mono text-[11px] text-zinc-400 font-bold px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800">
+                      {imagePreprocessing.ambiance > 0 ? `+${imagePreprocessing.ambiance}` : imagePreprocessing.ambiance}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={-100}
+                    max={100}
+                    step={1}
+                    value={imagePreprocessing.ambiance ?? 0}
+                    onChange={(e) => onUpdatePreprocessing?.({ ambiance: Number(e.target.value) })}
+                    className="w-full accent-[var(--theme-accent,#E11D48)] cursor-pointer"
+                  />
+                </div>
+
+                {/* 5. Highlights */}
+                <div className="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800/80 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-300 font-semibold flex items-center gap-1.5">
+                      <span>🔆</span>
+                      <span>{t.camera.preprocessing?.highlights || 'Highlights'}</span>
+                    </span>
+                    <span className="font-mono text-[11px] text-zinc-400 font-bold px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800">
+                      {imagePreprocessing.highlights > 0 ? `+${imagePreprocessing.highlights}` : imagePreprocessing.highlights}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={-100}
+                    max={100}
+                    step={1}
+                    value={imagePreprocessing.highlights ?? 0}
+                    onChange={(e) => onUpdatePreprocessing?.({ highlights: Number(e.target.value) })}
+                    className="w-full accent-[var(--theme-accent,#E11D48)] cursor-pointer"
+                  />
+                </div>
+
+                {/* 6. Shadows */}
+                <div className="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800/80 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-300 font-semibold flex items-center gap-1.5">
+                      <span>👥</span>
+                      <span>{t.camera.preprocessing?.shadows || 'Shadows'}</span>
+                    </span>
+                    <span className="font-mono text-[11px] text-zinc-400 font-bold px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800">
+                      {imagePreprocessing.shadows > 0 ? `+${imagePreprocessing.shadows}` : imagePreprocessing.shadows}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={-100}
+                    max={100}
+                    step={1}
+                    value={imagePreprocessing.shadows ?? 0}
+                    onChange={(e) => onUpdatePreprocessing?.({ shadows: Number(e.target.value) })}
+                    className="w-full accent-[var(--theme-accent,#E11D48)] cursor-pointer"
+                  />
+                </div>
+
+                {/* 7. Warmth */}
+                <div className="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800/80 space-y-1.5 sm:col-span-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-300 font-semibold flex items-center gap-1.5">
+                      <span>🌡️</span>
+                      <span>{t.camera.preprocessing?.warmth || 'Temperatur Warna (Warmth)'}</span>
+                      <span className="text-[10px] text-zinc-500 font-normal">
+                        ({imagePreprocessing.warmth < 0 ? 'Dingin' : imagePreprocessing.warmth > 0 ? 'Hangat' : 'Netral'})
+                      </span>
+                    </span>
+                    <span className="font-mono text-[11px] text-zinc-400 font-bold px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800">
+                      {imagePreprocessing.warmth > 0 ? `+${imagePreprocessing.warmth}` : imagePreprocessing.warmth}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={-100}
+                    max={100}
+                    step={1}
+                    value={imagePreprocessing.warmth ?? 0}
+                    onChange={(e) => onUpdatePreprocessing?.({ warmth: Number(e.target.value) })}
+                    className="w-full accent-[var(--theme-accent,#E11D48)] cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* DSLR Hardware Settings: Directly follows camera configuration */}
@@ -426,11 +867,10 @@ export const CameraToolsModal: React.FC<CameraToolsModalProps> = memo(({
                   key={pose.id}
                   type="button"
                   onClick={() => setActivePoseIdx(idx)}
-                  className={`p-2 text-xs font-mono-tabular rounded-xl border flex flex-col items-center gap-1 transition-all cursor-pointer ${
-                    activePoseIdx === idx
-                      ? 'bg-white text-zinc-950 font-bold border-white shadow-md scale-102'
-                      : 'bg-zinc-950/80 text-zinc-300 border-zinc-800 hover:border-zinc-700'
-                  }`}
+                  className={`p-2 text-xs font-mono-tabular rounded-xl border flex flex-col items-center gap-1 transition-all cursor-pointer ${activePoseIdx === idx
+                    ? 'bg-white text-zinc-950 font-bold border-white shadow-md scale-102'
+                    : 'bg-zinc-950/80 text-zinc-300 border-zinc-800 hover:border-zinc-700'
+                    }`}
                 >
                   <img
                     src={pose.src}

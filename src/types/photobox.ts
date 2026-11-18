@@ -46,6 +46,17 @@ export type PhotoFilter = 'original' | 'warm-sore' | 'noir-bw' | 'vintage-film' 
 
 export type AppLanguage = 'id' | 'en';
 
+export interface ImagePreprocessingSettings {
+  enabled: boolean;
+  brightness: number; // -100 to 100 (default 0)
+  contrast: number; // -100 to 100 (default 0)
+  saturation: number; // -100 to 100 (default 0)
+  ambiance: number; // -100 to 100 (default 0)
+  highlights: number; // -100 to 100 (default 0)
+  shadows: number; // -100 to 100 (default 0)
+  warmth: number; // -100 to 100 (default 0)
+}
+
 export interface AppSettings {
   id: string; // 'app_settings'
   driveUrl: string;
@@ -72,6 +83,7 @@ export interface AppSettings {
   language?: AppLanguage; // 'id' | 'en'
   idleScreenMode?: 'standard' | 'fullscreen-camera'; // Mode layar tunggu standby
   activeFramePack?: string; // ID paket bingkai yang aktif (misal 'default', 'pasar-sejati')
+  imagePreprocessing?: ImagePreprocessingSettings; // Pengaturan pra-pemrosesan citra kamera
   updatedAt?: string;
 }
 

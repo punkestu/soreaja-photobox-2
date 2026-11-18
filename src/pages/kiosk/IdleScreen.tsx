@@ -7,6 +7,7 @@ import { KIOSK_HERO_BACKDROP, STUDIO_PORTRAITS } from '../../data/defaultFrames'
 import { BACKDROP_PRESETS } from '../../data/themeConfig';
 import { SAMPLE_IDLE_STRIPS, type IdlePolaroidItem } from '../../data/sampleSessions';
 import { BrandLogo } from '../../components/common/BrandLogo';
+import { getPreprocessingCssFilter } from '../../services/imagePreprocessingService';
 
 export const IdleScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -87,6 +88,10 @@ export const IdleScreen: React.FC = () => {
   const [cameraReady, setCameraReady] = useState<boolean>(false);
   const [useSimulator, setUseSimulator] = useState<boolean>(false);
 
+  const liveCssFilter = useMemo(() => {
+    return getPreprocessingCssFilter(settings?.imagePreprocessing);
+  }, [settings?.imagePreprocessing]);
+
   // Initialize camera stream when in fullscreen-camera mode
   useEffect(() => {
     if (currentMode !== 'fullscreen-camera') {
@@ -111,7 +116,6 @@ export const IdleScreen: React.FC = () => {
           video: {
             width: { ideal: 1920 },
             height: { ideal: 1080 },
-            facingMode: 'user',
           },
           audio: false,
         });
@@ -232,6 +236,7 @@ export const IdleScreen: React.FC = () => {
           playsInline
           autoPlay
           muted
+          style={{ filter: liveCssFilter }}
           className={`absolute inset-0 w-full h-full object-cover pointer-events-none ${
             useSimulator ? 'hidden' : 'block'
           } ${settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''}`}
@@ -242,6 +247,7 @@ export const IdleScreen: React.FC = () => {
           <img
             src={STUDIO_PORTRAITS[0].src}
             alt="Studio Live Preview"
+            style={{ filter: liveCssFilter }}
             className={`absolute inset-0 w-full h-full object-cover pointer-events-none ${
               settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
             }`}
