@@ -228,8 +228,8 @@ export const CameraCaptureScreen: React.FC = () => {
       try {
         const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: {
-            width: { ideal: 1280 },
-            height: { ideal: 960 },
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 },
             facingMode: 'user',
           },
           audio: false,
@@ -290,22 +290,36 @@ export const CameraCaptureScreen: React.FC = () => {
         }
       }
 
-      // 2. High-speed recycled canvas capture (WebRTC video, DSLR live frame, or Simulator)
-      const width = 800;
-      const height = 600;
+      // 2. High-speed full-resolution recycled canvas capture (WebRTC video, DSLR live frame, or Simulator)
+      const videoEl = videoRef.current;
+      const isWebRTC =
+        cameraSource === 'webrtc' &&
+        videoEl &&
+        videoEl.readyState >= 2 &&
+        videoEl.videoWidth > 0;
+      const poseIndex = shotIndexZeroBased % STUDIO_PORTRAITS.length;
+      const simImg = simulatorImagesRef.current[poseIndex];
+
+      const width = isWebRTC
+        ? Math.max(1280, videoEl.videoWidth)
+        : simImg && simImg.naturalWidth > 0
+        ? simImg.naturalWidth
+        : 1200;
+      const height = isWebRTC
+        ? Math.max(960, videoEl.videoHeight)
+        : simImg && simImg.naturalHeight > 0
+        ? simImg.naturalHeight
+        : 900;
+
       const canvas = getRecycledCanvas(width, height);
       const ctx = canvas.getContext('2d');
       if (!ctx) return '';
 
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       ctx.clearRect(0, 0, width, height);
-      const videoEl = videoRef.current;
 
-      if (
-        cameraSource === 'webrtc' &&
-        videoEl &&
-        videoEl.readyState >= 2 &&
-        videoEl.videoWidth > 0
-      ) {
+      if (isWebRTC && videoEl) {
         ctx.save();
         if (shouldMirror) {
           ctx.translate(width, 0);
@@ -332,9 +346,7 @@ export const CameraCaptureScreen: React.FC = () => {
           ctx.translate(width, 0);
           ctx.scale(-1, 1);
         }
-        // Draw from Studio Simulator Portrait
-        const poseIndex = shotIndexZeroBased % STUDIO_PORTRAITS.length;
-        const simImg = simulatorImagesRef.current[poseIndex];
+        // Draw from Studio Simulator Portrait at full natural resolution
         if (simImg && simImg.complete && simImg.naturalWidth > 0) {
           const iRatio = simImg.naturalWidth / simImg.naturalHeight;
           const cRatio = width / height;
@@ -351,17 +363,17 @@ export const CameraCaptureScreen: React.FC = () => {
           }
           ctx.drawImage(simImg, sx, sy, sw, sh, 0, 0, width, height);
         } else {
-          ctx.fillStyle = '#27272A';
+          ctx.fillStyle = '#18181B';
           ctx.fillRect(0, 0, width, height);
           ctx.fillStyle = '#F4F4F0';
-          ctx.font = '700 36px "Syne", sans-serif';
-          ctx.fillText(`SOREAJA STUDIO · POSE 0${shotIndexZeroBased + 1}`, 60, 300);
+          ctx.font = '700 48px "Syne", sans-serif';
+          ctx.fillText(`SOREAJA STUDIO · POSE 0${shotIndexZeroBased + 1}`, 80, height / 2);
         }
         ctx.restore();
       }
 
-      // JPEG at 0.92 gives ~5x faster encoding and ~8x smaller base64 payloads
-      return canvas.toDataURL('image/jpeg', 0.92);
+      // High-fidelity JPEG at 0.98 ensures studio sharpness and zero compression artifacts
+      return canvas.toDataURL('image/jpeg', 0.98);
     },
     [cameraSource, getRecycledCanvas, gphotoStatus.isConnected, settings?.mirrorCamera]
   );
