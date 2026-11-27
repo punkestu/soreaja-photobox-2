@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { db, DEFAULT_DRIVE_URL, DEFAULT_APP_SETTINGS, DEFAULT_IMAGE_PREPROCESSING } from '../../db';
+import { db, DEFAULT_DRIVE_URL, DEFAULT_APP_SETTINGS, DEFAULT_IMAGE_PREPROCESSING, DEFAULT_PHOTO_ENHANCER } from '../../db';
 import {
   THEME_COLOR_PRESETS,
   BACKDROP_PRESETS,
@@ -14,13 +14,18 @@ import { usePhotobox } from '../../context/PhotoboxContext';
 import { ResetAllDataModal } from '../../components/common/ResetAllDataModal';
 import { BrandLogo } from '../../components/common/BrandLogo';
 import { gphotoService, type GPhotoStatus } from '../../services/gphotoService';
-import type { ImagePreprocessingSettings } from '../../types/photobox';
+import type { ImagePreprocessingSettings, PhotoEnhancerSettings } from '../../types/photobox';
 import {
   PREPROCESSING_PRESETS,
   isPreprocessingNeutral,
   getPreprocessingCssFilter,
   applyImagePreprocessingToDataUrl,
 } from '../../services/imagePreprocessingService';
+import {
+  ENHANCER_PRESETS,
+  enhancePhotoDataUrl,
+  normalizeEnhancerSettings,
+} from '../../services/photoEnhancerService';
 
 export const AdminSettings: React.FC = () => {
   const {
@@ -51,6 +56,24 @@ export const AdminSettings: React.FC = () => {
     DEFAULT_APP_SETTINGS.imagePreprocessing || DEFAULT_IMAGE_PREPROCESSING
   );
   const [previewPoseIdx, setPreviewPoseIdx] = useState<number>(0);
+
+  // Lightweight Studio Photo Enhancer Settings & Benchmark State
+  const [photoEnhancer, setPhotoEnhancer] = useState<PhotoEnhancerSettings>(
+    DEFAULT_APP_SETTINGS.photoEnhancer || DEFAULT_PHOTO_ENHANCER
+  );
+  const [isTestingEnhancer, setIsTestingEnhancer] = useState<boolean>(false);
+  const [enhancerProgress, setEnhancerProgress] = useState<number>(0);
+  const [enhancerTestResult, setEnhancerTestResult] = useState<{
+    beforeUrl: string;
+    afterUrl: string;
+    durationMs: number;
+    inputDims: string;
+    outputDims: string;
+    backend?: string;
+    fallbackUsed?: boolean;
+    error?: string;
+  } | null>(null);
+  const [enhancerCompareView, setEnhancerCompareView] = useState<'after' | 'before'>('after');
 
   // Real Test Capture State
   interface TestCaptureResult {
@@ -348,6 +371,35 @@ export const AdminSettings: React.FC = () => {
     a.click();
   };
 
+  const handleTestPhotoEnhancer = async () => {
+    setIsTestingEnhancer(true);
+    setEnhancerProgress(0);
+    try {
+      const sampleSrc =
+        testCaptureResult?.processedUrl ||
+        STUDIO_PORTRAITS[previewPoseIdx % STUDIO_PORTRAITS.length].src;
+      const res = await enhancePhotoDataUrl(
+        sampleSrc,
+        photoEnhancer,
+        (pct) => setEnhancerProgress(pct),
+        true
+      );
+      setEnhancerTestResult({
+        beforeUrl: sampleSrc,
+        afterUrl: res.url,
+        durationMs: res.durationMs,
+        inputDims: `${res.inputWidth}×${res.inputHeight}px`,
+        outputDims: `${res.outputWidth}×${res.outputHeight}px`,
+        backend: res.backend,
+        fallbackUsed: res.fallbackUsed,
+        error: res.error,
+      });
+      setEnhancerCompareView('after');
+    } finally {
+      setIsTestingEnhancer(false);
+    }
+  };
+
   // Tema & Background Kiosk
   const [themeColor, setThemeColor] = useState<string>(DEFAULT_APP_SETTINGS.themeColor || '#E11D48');
   const [themePreset, setThemePreset] = useState<string>(DEFAULT_APP_SETTINGS.themePreset || 'crimson');
@@ -489,6 +541,9 @@ export const AdminSettings: React.FC = () => {
         if (data.imagePreprocessing) {
           setImagePreprocessing(data.imagePreprocessing);
         }
+        if (data.photoEnhancer) {
+          setPhotoEnhancer(normalizeEnhancerSettings(data.photoEnhancer));
+        }
       }
     });
   }, []);
@@ -520,12 +575,21 @@ export const AdminSettings: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      setUploadNotice('Harap pilih file gambar (JPG, PNG, atau WebP).');
+    const lowerName = file.name.toLowerCase();
+    const isGif = file.type === 'image/gif' || lowerName.endsWith('.gif');
+    const isWebp = file.type === 'image/webp' || lowerName.endsWith('.webp');
+
+    if (!file.type.startsWith('image/') && !isGif) {
+      setUploadNotice('Harap pilih file gambar (JPG, PNG, WebP, atau GIF).');
+      e.target.value = '';
       return;
     }
 
-    setUploadNotice('Memproses dan mengoptimalkan gambar latar...');
+    setUploadNotice(
+      isGif
+        ? 'Memuat animasi GIF latar...'
+        : 'Memproses dan mengoptimalkan gambar latar...'
+    );
     const reader = new FileReader();
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string;
@@ -533,6 +597,19 @@ export const AdminSettings: React.FC = () => {
 
       const img = new Image();
       img.onload = () => {
+        // Preserve animated GIFs (and compact WebPs) directly without canvas flattening
+        if (isGif || (isWebp && file.size <= 6 * 1024 * 1024)) {
+          const gifDataUrl =
+            isGif && !dataUrl.startsWith('data:image/gif')
+              ? dataUrl.replace(/^data:[^;]*;/, 'data:image/gif;')
+              : dataUrl;
+          setKioskBackground(gifDataUrl);
+          setUploadNotice(
+            `${isGif ? 'GIF animasi' : 'Gambar'} berhasil dimuat (${file.name} · ${img.width}×${img.height}px). Klik Simpan Pengaturan untuk menerapkan.`
+          );
+          return;
+        }
+
         const maxWidth = 1920;
         const maxHeight = 1080;
         let width = img.width;
@@ -564,6 +641,7 @@ export const AdminSettings: React.FC = () => {
       img.src = dataUrl;
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleApplyCustomUrl = () => {
@@ -694,6 +772,7 @@ export const AdminSettings: React.FC = () => {
       idleScreenMode,
       language,
       imagePreprocessing,
+      photoEnhancer,
       updatedAt: new Date().toISOString(),
     });
 
@@ -734,6 +813,7 @@ export const AdminSettings: React.FC = () => {
     setCustomBackdropUrl('');
     setIdleScreenMode(DEFAULT_APP_SETTINGS.idleScreenMode || 'standard');
     setImagePreprocessing(DEFAULT_IMAGE_PREPROCESSING);
+    setPhotoEnhancer(DEFAULT_PHOTO_ENHANCER);
     setUploadNotice(null);
     setTestApiResult(null);
     applyThemeColor('#E11D48');
@@ -765,6 +845,8 @@ export const AdminSettings: React.FC = () => {
     setKioskBackground('');
     setKioskBackgroundOverlayOpacity(60);
     setCustomBackdropUrl('');
+    setImagePreprocessing(DEFAULT_IMAGE_PREPROCESSING);
+    setPhotoEnhancer(DEFAULT_PHOTO_ENHANCER);
     setUploadNotice(null);
     setTestApiResult(null);
     applyThemeColor('#E11D48');
@@ -1049,15 +1131,15 @@ export const AdminSettings: React.FC = () => {
                 {/* Unggah Foto Kustom Sendiri */}
                 <div className="space-y-2 pt-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-neutral-700">Atau Unggah Foto Kustom Anda Sendiri (Offline):</p>
-                    <span className="text-[11px] text-neutral-500">JPG, PNG, WebP</span>
+                    <p className="text-xs font-semibold text-neutral-700">Atau Unggah Foto / GIF Kustom Anda Sendiri (Offline):</p>
+                    <span className="text-[11px] text-neutral-500">JPG, PNG, WebP, GIF</span>
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/webp,image/gif,image/*"
                       onChange={handleFileUpload}
                       className="hidden"
                     />
@@ -2461,6 +2543,283 @@ export const AdminSettings: React.FC = () => {
                     />
                     <p className="text-[11px] text-neutral-500">Mengatur white balance antara sejuk (dingin) dan keemasan (hangat).</p>
                   </div>
+                </div>
+              </div>
+
+              {/* Bagian: Studio Photo Enhancer (Ringan - Toggleable) */}
+              <div className="pt-4 border-t border-neutral-200 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2 flex-wrap">
+                      <span>✨ {t.admin.photoEnhancer.title}</span>
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
+                          photoEnhancer.enabled
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                            : 'bg-neutral-100 text-neutral-600 border-neutral-300'
+                        }`}
+                      >
+                        {photoEnhancer.enabled
+                          ? t.admin.photoEnhancer.activeBadge
+                          : t.admin.photoEnhancer.inactiveBadge}
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-mono border bg-sky-50 text-sky-700 border-sky-200">
+                        {t.admin.photoEnhancer.engineReady}
+                      </span>
+                    </h3>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      {t.admin.photoEnhancer.subtitle}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      data-testid="toggle-photo-enhancer-btn"
+                      onClick={() =>
+                        setPhotoEnhancer((prev) => ({ ...prev, enabled: !prev.enabled }))
+                      }
+                      className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${
+                        photoEnhancer.enabled
+                          ? 'bg-neutral-900 text-white border-neutral-900'
+                          : 'bg-neutral-100 text-neutral-600 border-neutral-300 hover:bg-neutral-200'
+                      }`}
+                    >
+                      {photoEnhancer.enabled
+                        ? t.admin.photoEnhancer.activeBadge
+                        : t.admin.photoEnhancer.inactiveBadge}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPhotoEnhancer(DEFAULT_PHOTO_ENHANCER)}
+                      className="px-3 py-1.5 text-xs font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 rounded-lg transition-colors cursor-pointer"
+                    >
+                      ↺ Reset
+                    </button>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-3 cursor-pointer bg-neutral-50 p-3 rounded-xl border border-neutral-200">
+                  <input
+                    type="checkbox"
+                    checked={photoEnhancer.enabled}
+                    onChange={(e) =>
+                      setPhotoEnhancer((prev) => ({ ...prev, enabled: e.target.checked }))
+                    }
+                    style={{ accentColor: themeColor }}
+                    className="w-4 h-4 rounded cursor-pointer"
+                  />
+                  <span className="text-sm font-medium text-neutral-800">
+                    {t.admin.photoEnhancer.enableLabel}
+                  </span>
+                </label>
+
+                <div className="space-y-3 bg-[#FAF9F5] p-4 rounded-xl border border-neutral-200">
+                  <div>
+                    <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide block mb-2">
+                      {t.admin.photoEnhancer.presetLabel}
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {ENHANCER_PRESETS.map((preset) => {
+                        const isSelected = photoEnhancer.preset === preset.id;
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() =>
+                              setPhotoEnhancer((prev) => ({
+                                ...prev,
+                                preset: preset.id,
+                                upscaleScale: preset.upscaleScale,
+                                sharpenAmount: preset.sharpenAmount,
+                                denoiseLevel: preset.denoiseLevel,
+                                autoTone: preset.autoTone,
+                              }))
+                            }
+                            className={`text-left p-3 rounded-xl border transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-white border-neutral-900 ring-1 ring-neutral-900 shadow-xs'
+                                : 'bg-white/60 border-neutral-200 hover:border-neutral-300'
+                            }`}
+                          >
+                            <p className="text-xs font-bold text-neutral-900">
+                              {language === 'en' ? preset.nameEn : preset.nameId}
+                            </p>
+                            <p className="text-[11px] text-neutral-500 mt-1 leading-snug">
+                              {language === 'en' ? preset.descEn : preset.descId}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                    <label className="space-y-1 text-xs">
+                      <span className="font-semibold text-neutral-700 block">
+                        {t.admin.photoEnhancer.scaleLabel}
+                      </span>
+                      <select
+                        value={photoEnhancer.upscaleScale}
+                        onChange={(e) =>
+                          setPhotoEnhancer((prev) => ({
+                            ...prev,
+                            upscaleScale: Number(e.target.value) as 1 | 1.5 | 2,
+                          }))
+                        }
+                        className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-lg text-xs font-mono text-neutral-900"
+                      >
+                        <option value={1}>1× (Native · Fastest)</option>
+                        <option value={1.5}>1.5× (Studio Crisp)</option>
+                        <option value={2}>2× (HD Max 2400px)</option>
+                      </select>
+                    </label>
+
+                    <div className="space-y-1 text-xs">
+                      <div className="flex justify-between font-semibold text-neutral-700">
+                        <span>{t.admin.photoEnhancer.sharpenLabel}</span>
+                        <span className="font-mono">{photoEnhancer.sharpenAmount}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={5}
+                        value={photoEnhancer.sharpenAmount}
+                        onChange={(e) =>
+                          setPhotoEnhancer((prev) => ({
+                            ...prev,
+                            sharpenAmount: Number(e.target.value),
+                          }))
+                        }
+                        className="w-full accent-[var(--theme-accent,#E11D48)] cursor-pointer mt-1.5"
+                      />
+                    </div>
+
+                    <div className="space-y-1 text-xs">
+                      <div className="flex justify-between font-semibold text-neutral-700">
+                        <span>{t.admin.photoEnhancer.denoiseLabel}</span>
+                        <span className="font-mono">{photoEnhancer.denoiseLevel}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={5}
+                        value={photoEnhancer.denoiseLevel}
+                        onChange={(e) =>
+                          setPhotoEnhancer((prev) => ({
+                            ...prev,
+                            denoiseLevel: Number(e.target.value),
+                          }))
+                        }
+                        className="w-full accent-[var(--theme-accent,#E11D48)] cursor-pointer mt-1.5"
+                      />
+                    </div>
+                  </div>
+
+                  <label className="flex items-center gap-2.5 cursor-pointer pt-1">
+                    <input
+                      type="checkbox"
+                      checked={photoEnhancer.autoTone}
+                      onChange={(e) =>
+                        setPhotoEnhancer((prev) => ({
+                          ...prev,
+                          autoTone: e.target.checked,
+                        }))
+                      }
+                      style={{ accentColor: themeColor }}
+                      className="w-4 h-4 rounded cursor-pointer"
+                    />
+                    <span className="text-xs text-neutral-700">
+                      {t.admin.photoEnhancer.autoToneLabel}
+                    </span>
+                  </label>
+
+                  {/* Test & Benchmark Row */}
+                  <div className="pt-2 border-t border-neutral-200/80 flex flex-wrap items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      disabled={isTestingEnhancer}
+                      onClick={handleTestPhotoEnhancer}
+                      className="px-3.5 py-2 text-xs font-bold text-white rounded-lg shadow-xs transition-all cursor-pointer disabled:opacity-60 flex items-center gap-2"
+                      style={{ backgroundColor: themeColor }}
+                    >
+                      <span>⚡</span>
+                      <span>
+                        {isTestingEnhancer
+                          ? `${t.admin.photoEnhancer.testingBtn} (${enhancerProgress}%)`
+                          : t.admin.photoEnhancer.testBtn}
+                      </span>
+                    </button>
+
+                    {enhancerTestResult && (
+                      <div className="text-[11px] font-mono text-neutral-600 flex flex-wrap items-center gap-2">
+                        <span className="px-2 py-0.5 bg-white rounded border border-neutral-200">
+                          ⏱️ {enhancerTestResult.durationMs}ms
+                        </span>
+                        <span className="px-2 py-0.5 bg-white rounded border border-neutral-200">
+                          {enhancerTestResult.inputDims} → {enhancerTestResult.outputDims}
+                        </span>
+                        {enhancerTestResult.backend && (
+                          <span className="px-2 py-0.5 bg-white rounded border border-neutral-200 uppercase">
+                            {enhancerTestResult.backend}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {enhancerTestResult && (
+                    <div className="space-y-2 pt-2">
+                      {(enhancerTestResult.durationMs > 4000 || enhancerTestResult.fallbackUsed) && (
+                        <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-xs">
+                          ⚠️{' '}
+                          {enhancerTestResult.fallbackUsed
+                            ? enhancerTestResult.error || 'Fallback triggered.'
+                            : t.admin.photoEnhancer.slowWarning}
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEnhancerCompareView('before')}
+                          className={`px-2.5 py-1 text-[11px] font-semibold rounded-md border cursor-pointer ${
+                            enhancerCompareView === 'before'
+                              ? 'bg-neutral-900 text-white border-neutral-900'
+                              : 'bg-white text-neutral-700 border-neutral-300'
+                          }`}
+                        >
+                          {t.admin.photoEnhancer.beforeLabel}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEnhancerCompareView('after')}
+                          className={`px-2.5 py-1 text-[11px] font-semibold rounded-md border cursor-pointer ${
+                            enhancerCompareView === 'after'
+                              ? 'bg-neutral-900 text-white border-neutral-900'
+                              : 'bg-white text-neutral-700 border-neutral-300'
+                          }`}
+                        >
+                          {t.admin.photoEnhancer.afterLabel}
+                        </button>
+                      </div>
+
+                      <div className="bg-neutral-900 rounded-xl p-2 flex justify-center">
+                        <img
+                          src={
+                            enhancerCompareView === 'before'
+                              ? enhancerTestResult.beforeUrl
+                              : enhancerTestResult.afterUrl
+                          }
+                          alt="Photo enhancer benchmark comparison"
+                          className="max-h-56 w-auto rounded-lg object-contain"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

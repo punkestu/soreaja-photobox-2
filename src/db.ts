@@ -1,5 +1,12 @@
 import Dexie, { type Table } from 'dexie';
-import type { AppSettings, SessionRecord, ActiveSessionRecord, FramePackInfo, ImagePreprocessingSettings } from './types/photobox';
+import type {
+  AppSettings,
+  SessionRecord,
+  ActiveSessionRecord,
+  FramePackInfo,
+  ImagePreprocessingSettings,
+  PhotoEnhancerSettings,
+} from './types/photobox';
 
 export class PhotoboxDatabase extends Dexie {
   settings!: Table<AppSettings, string>;
@@ -77,6 +84,15 @@ export const DEFAULT_IMAGE_PREPROCESSING: ImagePreprocessingSettings = {
   warmth: 0,
 };
 
+export const DEFAULT_PHOTO_ENHANCER: PhotoEnhancerSettings = {
+  enabled: false,
+  preset: 'studio-crisp',
+  upscaleScale: 1.5,
+  sharpenAmount: 45,
+  denoiseLevel: 20,
+  autoTone: true,
+};
+
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   id: 'app_settings',
   driveUrl: DEFAULT_DRIVE_URL,
@@ -104,6 +120,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   idleScreenMode: 'standard',
   activeFramePack: 'default',
   imagePreprocessing: DEFAULT_IMAGE_PREPROCESSING,
+  photoEnhancer: DEFAULT_PHOTO_ENHANCER,
   updatedAt: new Date().toISOString(),
 };
 
@@ -116,6 +133,16 @@ export async function ensureDefaultSettings(): Promise<AppSettings> {
         ...existing,
         activeFramePack: existing.activeFramePack || 'default',
         imagePreprocessing: existing.imagePreprocessing || DEFAULT_IMAGE_PREPROCESSING,
+        photoEnhancer:
+          existing.photoEnhancer &&
+          (existing.photoEnhancer.preset === 'natural-clean' ||
+            existing.photoEnhancer.preset === 'studio-crisp' ||
+            existing.photoEnhancer.preset === 'hd-upscale')
+            ? { ...DEFAULT_PHOTO_ENHANCER, ...existing.photoEnhancer }
+            : {
+                ...DEFAULT_PHOTO_ENHANCER,
+                enabled: Boolean(existing.photoEnhancer?.enabled),
+              },
       };
     }
     await db.settings.put(DEFAULT_APP_SETTINGS);

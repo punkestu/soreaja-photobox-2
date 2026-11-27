@@ -57,6 +57,17 @@ export interface ImagePreprocessingSettings {
   warmth: number; // -100 to 100 (default 0)
 }
 
+export type PhotoEnhancerPreset = 'natural-clean' | 'studio-crisp' | 'hd-upscale';
+
+export interface PhotoEnhancerSettings {
+  enabled: boolean; // Default: false; toggleable anytime for low-end devices
+  preset: PhotoEnhancerPreset;
+  upscaleScale: 1 | 1.5 | 2; // Output resolution multiplier (capped safely at max output dimension)
+  sharpenAmount: number; // 0 to 100 luminance unsharp mask strength
+  denoiseLevel: number; // 0 to 100 edge-preserving grain smoothing
+  autoTone: boolean; // Gentle studio dynamic-range & clarity boost
+}
+
 export interface AppSettings {
   id: string; // 'app_settings'
   driveUrl: string;
@@ -84,6 +95,7 @@ export interface AppSettings {
   idleScreenMode?: 'standard' | 'fullscreen-camera'; // Mode layar tunggu standby
   activeFramePack?: string; // ID paket bingkai yang aktif (misal 'default', 'pasar-sejati')
   imagePreprocessing?: ImagePreprocessingSettings; // Pengaturan pra-pemrosesan citra kamera
+  photoEnhancer?: PhotoEnhancerSettings; // Pengaturan UpscalerJS AI Photo Enhancer (toggleable)
   updatedAt?: string;
 }
 

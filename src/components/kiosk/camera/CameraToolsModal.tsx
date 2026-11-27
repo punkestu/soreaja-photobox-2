@@ -3,13 +3,13 @@ import { STUDIO_PORTRAITS } from '../../../data/defaultFrames';
 import type { TranslationDictionary } from '../../../i18n/translations';
 import type { CropInfo } from './CropGuideOverlay';
 import type { GPhotoStatus } from '../../../services/gphotoService';
-import type { ImagePreprocessingSettings } from '../../../types/photobox';
+import type { ImagePreprocessingSettings, PhotoEnhancerSettings } from '../../../types/photobox';
 import {
   PREPROCESSING_PRESETS,
   isPreprocessingNeutral,
   getPreprocessingCssFilter,
 } from '../../../services/imagePreprocessingService';
-import { DEFAULT_IMAGE_PREPROCESSING } from '../../../db';
+import { DEFAULT_IMAGE_PREPROCESSING, DEFAULT_PHOTO_ENHANCER } from '../../../db';
 
 interface CameraToolsModalProps {
   showTools: boolean;
@@ -36,6 +36,8 @@ interface CameraToolsModalProps {
   imagePreprocessing?: ImagePreprocessingSettings;
   onUpdatePreprocessing?: (updater: Partial<ImagePreprocessingSettings> | ImagePreprocessingSettings) => Promise<void>;
   onTestCapture?: () => Promise<string>;
+  photoEnhancer?: PhotoEnhancerSettings;
+  onTogglePhotoEnhancer?: (enabled: boolean) => Promise<void>;
 }
 
 export const CameraToolsModal: React.FC<CameraToolsModalProps> = memo(({
@@ -63,6 +65,8 @@ export const CameraToolsModal: React.FC<CameraToolsModalProps> = memo(({
   imagePreprocessing = DEFAULT_IMAGE_PREPROCESSING,
   onUpdatePreprocessing,
   onTestCapture,
+  photoEnhancer = DEFAULT_PHOTO_ENHANCER,
+  onTogglePhotoEnhancer,
 }) => {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [isPreprocessOpen, setIsPreprocessOpen] = useState<boolean>(true);
@@ -253,6 +257,46 @@ export const CameraToolsModal: React.FC<CameraToolsModalProps> = memo(({
             </div>
           </div>
         </div>
+
+        {/* Quick Toggle: AI Photo Enhancer (UpscalerJS) */}
+        {onTogglePhotoEnhancer && (
+          <div className="bg-zinc-900/95 rounded-xl p-3.5 border border-zinc-800 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs sm:text-sm font-bold text-white">
+                  ✨ {t.camera.enhancer.title}
+                </span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                    photoEnhancer.enabled
+                      ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50'
+                      : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                  }`}
+                >
+                  {photoEnhancer.enabled
+                    ? t.camera.enhancer.enabledBadge
+                    : t.camera.enhancer.disabledBadge}
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-400 mt-0.5">
+                {t.camera.enhancer.lowEndHint}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              data-testid="camera-tools-toggle-enhancer-btn"
+              onClick={() => onTogglePhotoEnhancer(!photoEnhancer.enabled)}
+              className={`min-h-[38px] px-3.5 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer shrink-0 active:scale-95 ${
+                photoEnhancer.enabled
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500'
+                  : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border-zinc-700'
+              }`}
+            >
+              {photoEnhancer.enabled ? 'ON' : 'OFF'}
+            </button>
+          </div>
+        )}
 
         {/* Unified Image Preprocessing Section (Applies to ALL Cameras) */}
         <div className="bg-zinc-900/95 rounded-xl p-3.5 border border-zinc-800 space-y-3">

@@ -1,8 +1,11 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, DEFAULT_IMAGE_PREPROCESSING } from '../../db';
+import { db, DEFAULT_IMAGE_PREPROCESSING, DEFAULT_PHOTO_ENHANCER } from '../../db';
 import type { ImagePreprocessingSettings } from '../../types/photobox';
+import {
+  enhancePhotoDataUrl,
+} from '../../services/photoEnhancerService';
 import { usePhotobox } from '../../context/PhotoboxContext';
 import { DEFAULT_FRAMES, STUDIO_PORTRAITS } from '../../data/defaultFrames';
 import { playShutterSound } from '../../services/shutterAudio';
@@ -35,6 +38,7 @@ export const CameraCaptureScreen: React.FC = () => {
   } = usePhotobox();
 
   const settings = useLiveQuery(() => db.settings.get('app_settings'), []);
+  const [enhancingStatusText, setEnhancingStatusText] = useState<string | null>(null);
 
   const activeFrame = selectedFrame || DEFAULT_FRAMES[0];
   const isRetakeMode = retakeIndex !== null;
@@ -399,6 +403,33 @@ export const CameraCaptureScreen: React.FC = () => {
     ]
   );
 
+  const applyOptionalEnhancement = useCallback(
+    async (photos: string[]): Promise<string[]> => {
+      const enhancerCfg = settings?.photoEnhancer;
+      if (!enhancerCfg?.enabled || photos.length === 0) {
+        return photos;
+      }
+
+      const enhanced: string[] = [];
+
+      for (let i = 0; i < photos.length; i++) {
+        setEnhancingStatusText(
+          `${t.camera.enhancer.enhancingProgress} (${i + 1}/${photos.length})...`
+        );
+        const res = await enhancePhotoDataUrl(photos[i], enhancerCfg, (pct) => {
+          setEnhancingStatusText(
+            `${t.camera.enhancer.enhancingProgress} (${i + 1}/${photos.length}) · ${pct}%`
+          );
+        });
+        enhanced.push(res.url);
+      }
+
+      setEnhancingStatusText(null);
+      return enhanced;
+    },
+    [settings?.photoEnhancer, t.camera.enhancer.enhancingProgress]
+  );
+
   // Instant capture handler (captures remaining or retake shot immediately)
   const handleInstantCapture = useCallback(async () => {
     clearAllTimers();
@@ -419,7 +450,8 @@ export const CameraCaptureScreen: React.FC = () => {
         const newPhoto = await captureSinglePhoto(activePoseIdx);
         setIsImageLoading(false);
         setIsSaving(true);
-        updatePhotoAtIndex(retakeIndex, newPhoto);
+        const [finalPhoto] = await applyOptionalEnhancement([newPhoto]);
+        updatePhotoAtIndex(retakeIndex, finalPhoto);
         setRetakeIndex(null);
         setIsSaving(false);
         navigate('/app/review-photos');
@@ -433,17 +465,20 @@ export const CameraCaptureScreen: React.FC = () => {
       }
       setIsImageLoading(false);
       setIsSaving(true);
-      setLocalShots(generated);
-      setCapturedPhotos(generated);
+      const finalPhotos = await applyOptionalEnhancement(generated);
+      setLocalShots(finalPhotos);
+      setCapturedPhotos(finalPhotos);
       setIsSaving(false);
       navigate('/app/review-photos');
     } catch (err) {
       console.error('[CameraCaptureScreen] Instant capture failed:', err);
+      setEnhancingStatusText(null);
       setIsImageLoading(false);
       setIsSaving(false);
     }
   }, [
     activePoseIdx,
+    applyOptionalEnhancement,
     captureSinglePhoto,
     clearAllTimers,
     isRetakeMode,
@@ -495,16 +530,17 @@ export const CameraCaptureScreen: React.FC = () => {
             // Show image loading screen while processing capture from camera
             setIsImageLoading(true);
             captureSinglePhoto(activePoseIdx)
-              .then((newPhoto) => {
+              .then(async (newPhoto) => {
                 setIsImageLoading(false);
                 setIsSaving(true);
-                updatePhotoAtIndex(retakeIndex, newPhoto);
+                const [finalPhoto] = await applyOptionalEnhancement([newPhoto]);
+                updatePhotoAtIndex(retakeIndex, finalPhoto);
                 setRetakeIndex(null);
                 safeSetTimeout(() => {
                   setIsCapturingSequence(false);
                   setIsSaving(false);
                   navigate('/app/review-photos');
-                }, 600);
+                }, 400);
               })
               .catch((err) => {
                 console.error('[CameraCaptureScreen] Retake capture error:', err);
@@ -556,7 +592,7 @@ export const CameraCaptureScreen: React.FC = () => {
             // 4. Show image loading screen while fetching/processing from camera
             setIsImageLoading(true);
             captureSinglePhoto(shotIdx)
-              .then((snap) => {
+              .then(async (snap) => {
                 setIsImageLoading(false);
                 accumulated.push(snap);
                 const currentShots = [...accumulated];
@@ -568,13 +604,16 @@ export const CameraCaptureScreen: React.FC = () => {
                   // Next shot also starts with auto preparation progress!
                   runNextShot(nextIdx);
                 } else {
-                  // All photos captured: show saving loading screen!
+                  // All photos captured: show saving loading screen & run optional AI enhancement
                   setIsSaving(true);
+                  const finalShots = await applyOptionalEnhancement(currentShots);
+                  setLocalShots(finalShots);
+                  setCapturedPhotos(finalShots);
                   safeSetTimeout(() => {
                     setIsCapturingSequence(false);
                     setIsSaving(false);
                     navigate('/app/review-photos');
-                  }, 800);
+                  }, 400);
                 }
               })
               .catch((err) => {
@@ -592,6 +631,7 @@ export const CameraCaptureScreen: React.FC = () => {
     runNextShot(0);
   }, [
     activePoseIdx,
+    applyOptionalEnhancement,
     captureSinglePhoto,
     clearAllTimers,
     clearRegisteredInterval,
@@ -864,7 +904,7 @@ export const CameraCaptureScreen: React.FC = () => {
           isImageLoading={isImageLoading}
           getReadyText={t.camera.getReady}
           savingTitle={t.camera.savingTitle}
-          savingSubtitle={t.camera.savingSubtitle}
+          savingSubtitle={enhancingStatusText || t.camera.savingSubtitle}
           imageLoadingTitle={t.camera.imageLoadingTitle}
           imageLoadingSubtitle={t.camera.imageLoadingSubtitle}
         />
@@ -1010,6 +1050,13 @@ export const CameraCaptureScreen: React.FC = () => {
           imagePreprocessing={settings?.imagePreprocessing}
           onUpdatePreprocessing={handleUpdatePreprocessing}
           onTestCapture={async () => await captureSinglePhoto(activePoseIdx)}
+          photoEnhancer={settings?.photoEnhancer}
+          onTogglePhotoEnhancer={async (enabled: boolean) => {
+            const current = settings?.photoEnhancer || DEFAULT_PHOTO_ENHANCER;
+            await db.settings.update('app_settings', {
+              photoEnhancer: { ...current, enabled },
+            });
+          }}
         />
       </div>
     </div>
