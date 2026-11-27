@@ -123,8 +123,8 @@ export const PrintResultScreen: React.FC = () => {
         capturedPhotos.length > 0
           ? capturedPhotos
           : Array.from({ length: activeFrame.photoCount }).map(
-              (_, i) => STUDIO_PORTRAITS[i % STUDIO_PORTRAITS.length].src
-            );
+            (_, i) => STUDIO_PORTRAITS[i % STUDIO_PORTRAITS.length].src
+          );
 
       let layoutToUse = finalLayoutBase64;
       let doubleStripToUse = doubleStripBase64;
@@ -262,8 +262,8 @@ export const PrintResultScreen: React.FC = () => {
       settings?.printApiEndpoint
         ? `Mengirim ${isDouble ? '2-strip (berdampingan)' : '1-foto 4R'} ke Printer Warna (${targetPrinter || 'Color'})...`
         : isDouble
-        ? 'Menghubungkan ke Printer Warna (Dye-Sub 4R - 2 Strip Side-by-Side)...'
-        : 'Menghubungkan ke Printer Warna (Dye-Sub 4R - Full Card)...'
+          ? 'Menghubungkan ke Printer Warna (Dye-Sub 4R - 2 Strip Side-by-Side)...'
+          : 'Menghubungkan ke Printer Warna (Dye-Sub 4R - Full Card)...'
     );
     try {
       const res = await printColor(
@@ -353,8 +353,8 @@ export const PrintResultScreen: React.FC = () => {
               {isPrintingThermal
                 ? t.printResult.printing
                 : thermalPrintCount > 0
-                ? `${t.printResult.printThermal} (${thermalPrintCount}x)`
-                : t.printResult.printThermal}
+                  ? `${t.printResult.printThermal} (${thermalPrintCount}x)`
+                  : t.printResult.printThermal}
             </span>
           </button>
 
@@ -369,8 +369,8 @@ export const PrintResultScreen: React.FC = () => {
               {isPrintingColor
                 ? t.printResult.printing
                 : colorPrintCount > 0
-                ? `${t.printResult.printColor} (${colorPrintCount}x)`
-                : t.printResult.printColor}
+                  ? `${t.printResult.printColor} (${colorPrintCount}x)`
+                  : t.printResult.printColor}
             </span>
           </button>
 
@@ -456,7 +456,6 @@ export const PrintResultScreen: React.FC = () => {
                   title={t.printResult.reshowAnimation}
                 >
                   <Play className="w-3.5 h-3.5 fill-current" />
-                  <span>{t.printResult.reshowAnimation}</span>
                 </button>
                 {doubleStripBase64 && (
                   <button
@@ -501,22 +500,20 @@ export const PrintResultScreen: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setStripDisplayMode('single')}
-                    className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
-                      stripDisplayMode === 'single'
+                    className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 ${stripDisplayMode === 'single'
                         ? 'bg-zinc-700 text-white'
                         : 'text-zinc-400 hover:text-white'
-                    }`}
+                      }`}
                   >
                     📱 1-Strip
                   </button>
                   <button
                     type="button"
                     onClick={() => setStripDisplayMode('double')}
-                    className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 ${
-                      stripDisplayMode === 'double'
+                    className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 ${stripDisplayMode === 'double'
                         ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
                         : 'text-zinc-400 hover:text-white'
-                    }`}
+                      }`}
                   >
                     <span>👥 2-Strip (4R)</span>
                     <span className="text-[10px] px-1 bg-white/20 text-white rounded font-mono">
