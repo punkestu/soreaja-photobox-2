@@ -19,7 +19,7 @@ export const CountdownOverlay: React.FC<CountdownOverlayProps> = memo(({
   countdown,
   isPreparing = false,
   prepKey = 0,
-  prepDurationMs = 2500,
+  prepDurationMs = 500,
   isFlashing,
   isSaving = false,
   isImageLoading = false,

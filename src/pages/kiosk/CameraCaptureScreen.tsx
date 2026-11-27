@@ -254,7 +254,7 @@ export const CameraCaptureScreen: React.FC = () => {
         streamRef.current = mediaStream;
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
-          await videoRef.current.play().catch(() => {});
+          await videoRef.current.play().catch(() => { });
         }
         setCameraReady(true);
       } catch {
@@ -315,13 +315,13 @@ export const CameraCaptureScreen: React.FC = () => {
       const width = isWebRTC
         ? Math.max(1280, videoEl.videoWidth)
         : simImg && simImg.naturalWidth > 0
-        ? simImg.naturalWidth
-        : 1200;
+          ? simImg.naturalWidth
+          : 1200;
       const height = isWebRTC
         ? Math.max(960, videoEl.videoHeight)
         : simImg && simImg.naturalHeight > 0
-        ? simImg.naturalHeight
-        : 900;
+          ? simImg.naturalHeight
+          : 900;
 
       const canvas = getRecycledCanvas(width, height);
       const ctx = canvas.getContext('2d');
@@ -464,7 +464,7 @@ export const CameraCaptureScreen: React.FC = () => {
     setIsCapturingSequence(true);
 
     const secondsPerShot = settings?.countdownSeconds || 3;
-    const PREP_DURATION_MS = 2500; // Continuous auto circular progress duration
+    const CAPTURE_COOLDOWN_MS = 1000; // Fast 1.5s capture cooldown/preparation stage
 
     if (isRetakeMode && retakeIndex !== null) {
       // Retake Mode: Preparation stage (auto progress) -> Shot countdown -> Image loading -> Save
@@ -514,7 +514,7 @@ export const CameraCaptureScreen: React.FC = () => {
               });
           }
         }, 900);
-      }, PREP_DURATION_MS);
+      }, CAPTURE_COOLDOWN_MS);
       return;
     }
 
@@ -585,7 +585,7 @@ export const CameraCaptureScreen: React.FC = () => {
               });
           }
         }, 900);
-      }, PREP_DURATION_MS);
+      }, CAPTURE_COOLDOWN_MS);
     };
 
     // Begin sequence starting with shot 0
@@ -779,9 +779,8 @@ export const CameraCaptureScreen: React.FC = () => {
             src={gphotoLiveFrame}
             alt="DSLR Live View"
             style={{ filter: liveCssFilter }}
-            className={`w-full h-full object-cover select-none pointer-events-none ${
-              settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
-            }`}
+            className={`w-full h-full object-cover select-none pointer-events-none ${settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
+              }`}
           />
         )}
 
@@ -820,9 +819,8 @@ export const CameraCaptureScreen: React.FC = () => {
             playsInline
             muted
             style={{ filter: liveCssFilter }}
-            className={`w-full h-full object-cover ${
-              settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
-            }`}
+            className={`w-full h-full object-cover ${settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
+              }`}
           />
         )}
 
@@ -833,9 +831,8 @@ export const CameraCaptureScreen: React.FC = () => {
             alt={currentPortrait.label}
             referrerPolicy="no-referrer"
             style={{ filter: liveCssFilter }}
-            className={`w-full h-full object-cover transition-all duration-300 ${
-              settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
-            }`}
+            className={`w-full h-full object-cover transition-all duration-300 ${settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
+              }`}
           />
         )}
 
@@ -861,7 +858,7 @@ export const CameraCaptureScreen: React.FC = () => {
           countdown={countdown}
           isPreparing={isPreparing}
           prepKey={prepKey}
-          prepDurationMs={2500}
+          prepDurationMs={1500}
           isFlashing={isFlashing}
           isSaving={isSaving}
           isImageLoading={isImageLoading}
@@ -894,13 +891,12 @@ export const CameraCaptureScreen: React.FC = () => {
             <div
               title={t.sessionTimer.timeRemaining}
               aria-label={t.sessionTimer.timeRemaining}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-mono-tabular backdrop-blur-md shadow-lg transition-all select-none ${
-                sessionSecondsLeft === 0
-                  ? 'bg-rose-950/80 border-rose-500/80 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.5)] animate-pulse'
-                  : sessionSecondsLeft <= 60
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-mono-tabular backdrop-blur-md shadow-lg transition-all select-none ${sessionSecondsLeft === 0
+                ? 'bg-rose-950/80 border-rose-500/80 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.5)] animate-pulse'
+                : sessionSecondsLeft <= 60
                   ? 'bg-amber-950/80 border-amber-500/80 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.4)]'
                   : 'bg-black/60 border-white/20 text-zinc-200'
-              }`}
+                }`}
             >
               <span className="text-[11px]">{sessionSecondsLeft === 0 ? '🔔' : '⏳'}</span>
               <span className="font-bold tracking-wider">
@@ -953,11 +949,10 @@ export const CameraCaptureScreen: React.FC = () => {
             type="button"
             onClick={() => setShowTools((prev) => !prev)}
             aria-expanded={showTools}
-            className={`min-h-[44px] min-w-[44px] px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-full backdrop-blur-md transition-all cursor-pointer shadow-xl flex items-center justify-center gap-1.5 border active:scale-95 ${
-              showTools
-                ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)] shadow-[0_0_20px_rgba(225,29,72,0.6)]'
-                : 'text-zinc-200 hover:text-white bg-black/60 hover:bg-black/85 border-white/20'
-            }`}
+            className={`min-h-[44px] min-w-[44px] px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-full backdrop-blur-md transition-all cursor-pointer shadow-xl flex items-center justify-center gap-1.5 border active:scale-95 ${showTools
+              ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)] shadow-[0_0_20px_rgba(225,29,72,0.6)]'
+              : 'text-zinc-200 hover:text-white bg-black/60 hover:bg-black/85 border-white/20'
+              }`}
             title={showTools ? t.camera.closeTools : t.camera.tools}
           >
             <span className="text-base">⚙️</span>
