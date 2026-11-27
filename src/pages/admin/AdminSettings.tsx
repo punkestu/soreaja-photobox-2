@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { db, DEFAULT_DRIVE_URL, DEFAULT_APP_SETTINGS, DEFAULT_IMAGE_PREPROCESSING, DEFAULT_PHOTO_ENHANCER } from '../../db';
+import { db, DEFAULT_DRIVE_URL, DEFAULT_APP_SETTINGS, DEFAULT_IMAGE_PREPROCESSING, DEFAULT_PHOTO_ENHANCER, DEFAULT_IDLE_PAGE_SETTINGS } from '../../db';
 import {
   THEME_COLOR_PRESETS,
   BACKDROP_PRESETS,
@@ -13,8 +14,9 @@ import { testPrintApi, precacheAllFrameAssets } from '../../services/printServic
 import { usePhotobox } from '../../context/PhotoboxContext';
 import { ResetAllDataModal } from '../../components/common/ResetAllDataModal';
 import { BrandLogo } from '../../components/common/BrandLogo';
+import { IdlePageSettingsTab } from '../../components/admin/IdlePageSettingsTab';
 import { gphotoService, type GPhotoStatus } from '../../services/gphotoService';
-import type { ImagePreprocessingSettings, PhotoEnhancerSettings } from '../../types/photobox';
+import type { ImagePreprocessingSettings, PhotoEnhancerSettings, IdlePageSettings } from '../../types/photobox';
 import {
   PREPROCESSING_PRESETS,
   isPreprocessingNeutral,
@@ -412,8 +414,9 @@ export const AdminSettings: React.FC = () => {
   const [idleScreenMode, setIdleScreenMode] = useState<'standard' | 'fullscreen-camera'>(
     DEFAULT_APP_SETTINGS.idleScreenMode || 'standard'
   );
+  const [idlePage, setIdlePage] = useState<IdlePageSettings>(DEFAULT_IDLE_PAGE_SETTINGS);
 
-  const [activeTab, setActiveTab] = useState<'appearance' | 'packs' | 'session' | 'hardware'>('appearance');
+  const [activeTab, setActiveTab] = useState<'appearance' | 'idle' | 'packs' | 'session' | 'hardware'>('appearance');
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showResetAllModal, setShowResetAllModal] = useState(false);
@@ -538,6 +541,11 @@ export const AdminSettings: React.FC = () => {
         if (data.idleScreenMode) {
           setIdleScreenMode(data.idleScreenMode);
         }
+        setIdlePage({
+          ...DEFAULT_IDLE_PAGE_SETTINGS,
+          ...(data.idlePage || {}),
+          mode: data.idlePage?.mode || data.idleScreenMode || 'standard',
+        });
         if (data.imagePreprocessing) {
           setImagePreprocessing(data.imagePreprocessing);
         }
@@ -769,7 +777,8 @@ export const AdminSettings: React.FC = () => {
       themePreset,
       kioskBackground,
       kioskBackgroundOverlayOpacity,
-      idleScreenMode,
+      idleScreenMode: idlePage.mode,
+      idlePage,
       language,
       imagePreprocessing,
       photoEnhancer,
@@ -812,6 +821,7 @@ export const AdminSettings: React.FC = () => {
     setKioskBackgroundOverlayOpacity(60);
     setCustomBackdropUrl('');
     setIdleScreenMode(DEFAULT_APP_SETTINGS.idleScreenMode || 'standard');
+    setIdlePage(DEFAULT_IDLE_PAGE_SETTINGS);
     setImagePreprocessing(DEFAULT_IMAGE_PREPROCESSING);
     setPhotoEnhancer(DEFAULT_PHOTO_ENHANCER);
     setUploadNotice(null);
@@ -845,6 +855,8 @@ export const AdminSettings: React.FC = () => {
     setKioskBackground('');
     setKioskBackgroundOverlayOpacity(60);
     setCustomBackdropUrl('');
+    setIdleScreenMode(DEFAULT_IDLE_PAGE_SETTINGS.mode);
+    setIdlePage(DEFAULT_IDLE_PAGE_SETTINGS);
     setImagePreprocessing(DEFAULT_IMAGE_PREPROCESSING);
     setPhotoEnhancer(DEFAULT_PHOTO_ENHANCER);
     setUploadNotice(null);
@@ -887,6 +899,17 @@ export const AdminSettings: React.FC = () => {
             }`}
         >
           🎨 {t.admin.settingsTabAppearance}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('idle')}
+          style={activeTab === 'idle' ? { borderColor: themeColor, color: themeColor } : {}}
+          className={`min-h-[44px] px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer border-b-2 active:scale-95 ${activeTab === 'idle'
+            ? 'border-b-2 bg-white text-neutral-900 shadow-xs'
+            : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+            }`}
+        >
+          🏠 {t.admin.settingsTabIdle}
         </button>
         <button
           type="button"
@@ -1215,7 +1238,10 @@ export const AdminSettings: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button
                       type="button"
-                      onClick={() => setIdleScreenMode('standard')}
+                      onClick={() => {
+                        setIdleScreenMode('standard');
+                        setIdlePage((prev) => ({ ...prev, mode: 'standard' }));
+                      }}
                       className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${idleScreenMode === 'standard'
                         ? 'border-neutral-900 ring-2 ring-neutral-900 bg-neutral-900 text-white shadow-md'
                         : 'border-neutral-200 bg-white hover:border-neutral-400 text-neutral-800'
@@ -1232,7 +1258,10 @@ export const AdminSettings: React.FC = () => {
 
                     <button
                       type="button"
-                      onClick={() => setIdleScreenMode('fullscreen-camera')}
+                      onClick={() => {
+                        setIdleScreenMode('fullscreen-camera');
+                        setIdlePage((prev) => ({ ...prev, mode: 'fullscreen-camera' }));
+                      }}
                       className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${idleScreenMode === 'fullscreen-camera'
                         ? 'border-neutral-900 ring-2 ring-neutral-900 bg-neutral-900 text-white shadow-md'
                         : 'border-neutral-200 bg-white hover:border-neutral-400 text-neutral-800'
@@ -1250,6 +1279,24 @@ export const AdminSettings: React.FC = () => {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* TAB: WELCOME / IDLE PAGE CUSTOMIZATION */}
+          {activeTab === 'idle' && (
+            <IdlePageSettingsTab
+              idlePage={idlePage}
+              setIdlePage={setIdlePage}
+              themeColor={themeColor}
+              studioName={studioName}
+              eventName={eventName}
+              onSyncMode={(mode) => setIdleScreenMode(mode)}
+              onResetIdleDefaults={() => {
+                setIdlePage(DEFAULT_IDLE_PAGE_SETTINGS);
+                setIdleScreenMode(DEFAULT_IDLE_PAGE_SETTINGS.mode);
+                setUploadNotice('Pengaturan Layar Selamat Datang dikembalikan ke default.');
+              }}
+              onNotice={(msg) => setUploadNotice(msg)}
+            />
           )}
 
           {/* TAB: FRAME PACKS MANAGEMENT */}
@@ -3101,50 +3148,166 @@ export const AdminSettings: React.FC = () => {
         </form>
 
         {/* Live Simulation Panels */}
-        <div className="lg:col-span-5 space-y-6">
+        <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
           {/* Live Start Kiosk Screen Mockup */}
           <div className="bg-neutral-950 text-white rounded-2xl p-5 border border-neutral-800 shadow-xl space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
                   Pratinjau Layar Awal Kiosk
                 </h3>
                 <p className="text-[11px] text-zinc-500">Simulasi langsung tampilan (/app/idle)</p>
               </div>
-              <span className="text-[10px] font-mono-tabular bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded">
-                Live Preview
-              </span>
+              <div className="flex items-center gap-1.5">
+                <Link
+                  to="/app/idle"
+                  className="text-[10px] font-semibold bg-white/10 hover:bg-white/20 text-white px-2.5 py-1 rounded transition-colors"
+                >
+                  ↗ {t.admin.idleSettings.openIdleBtn}
+                </Link>
+                <span className="text-[10px] font-mono-tabular bg-zinc-800 text-zinc-300 px-2 py-1 rounded">
+                  Live Preview
+                </span>
+              </div>
             </div>
 
-            {/* Mock Screen 16:9 */}
-            <div className="relative aspect-[16/10] w-full rounded-xl overflow-hidden border border-zinc-800 flex items-center justify-center p-4 text-center select-none shadow-2xl">
-              <img
-                src={previewBackdropSrc}
-                alt="Pratinjau Backdrop"
-                className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
-                style={{ opacity: kioskBackgroundOverlayOpacity / 100 }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/30" />
+            {/* Mock Screen 16:10 */}
+            <div className="relative aspect-[16/10] w-full rounded-xl overflow-hidden border border-zinc-800 bg-[#09090B] flex items-center justify-center p-4 select-none shadow-2xl">
+              {idlePage.mode === 'fullscreen-camera' ? (
+                <>
+                  <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black flex items-center justify-center">
+                    <span className="text-[10px] font-mono-tabular text-zinc-500 uppercase tracking-widest">
+                      🎥 Live Camera Feed
+                    </span>
+                  </div>
+                  <div className="absolute top-2.5 left-2.5 z-20 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/10">
+                    <BrandLogo src={idlePage.customLogoUrl || undefined} size="xs" showRing={false} />
+                    <span className="text-[9px] font-bold text-white/90 truncate max-w-[120px]">
+                      {studioName || 'SoreAja Studio'}
+                    </span>
+                  </div>
+                  <div className="relative z-10 text-center px-3">
+                    <h4 className="font-display text-sm sm:text-base font-black text-white drop-shadow-lg">
+                      {idlePage.fullscreenCameraPrompt.trim() || t.idle.photoNowSaveLater}
+                    </h4>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <img
+                    src={previewBackdropSrc}
+                    alt="Pratinjau Backdrop"
+                    className={`absolute inset-0 w-full h-full transition-all duration-300 ${
+                      idlePage.backdropFit === 'contain' ? 'object-contain' : 'object-cover'
+                    }`}
+                    style={{
+                      opacity: kioskBackgroundOverlayOpacity / 100,
+                      filter: idlePage.backdropBlurPx > 0 ? `blur(${Math.min(8, idlePage.backdropBlurPx * 0.5)}px)` : undefined,
+                    }}
+                  />
+                  {idlePage.backdropGradientStrength !== 'none' && (
+                    <div
+                      className={`absolute inset-0 ${
+                        idlePage.backdropGradientStrength === 'soft'
+                          ? 'bg-gradient-to-t from-black/60 via-black/25 to-transparent'
+                          : idlePage.backdropGradientStrength === 'dark'
+                            ? 'bg-gradient-to-t from-black via-black/80 to-black/55'
+                            : 'bg-gradient-to-t from-black via-black/60 to-black/30'
+                      }`}
+                    />
+                  )}
 
-              <div className="relative z-10 space-y-2 w-full px-2">
-                <p className="text-[9px] font-mono-tabular text-zinc-300 truncate">
-                  {studioName || 'SoreAja Studio — Booth 02'} · {eventName || 'SoreAja Sunset Session 2026'}
-                </p>
-                <h4 className="font-display text-base sm:text-lg font-extrabold text-[#F4F4F0] tracking-tight">
-                  SoreAja Pose
-                </h4>
-                <p className="font-serif-editorial italic text-xs text-zinc-300">
-                  Abadikan momen sore terbaikmu
-                </p>
-                <div className="pt-1">
-                  <span
-                    style={{ backgroundColor: themeColor }}
-                    className="inline-block px-4 py-1.5 rounded-lg text-[11px] font-bold text-white shadow-lg transition-transform"
+                  {/* Mini Floating Polaroid Indicators */}
+                  {idlePage.showFloatingPolaroids && idlePage.floatingPolaroidCount > 0 && (
+                    <>
+                      <div className="hidden sm:block absolute top-3 left-3 w-7 h-11 bg-white/90 rounded-[2px] shadow-md -rotate-12 opacity-80 p-0.5">
+                        <div className="w-full h-8 bg-zinc-700 rounded-[1px]" />
+                      </div>
+                      {idlePage.floatingPolaroidCount >= 4 && (
+                        <div className="hidden sm:block absolute bottom-3 right-3 w-7 h-11 bg-white/90 rounded-[2px] shadow-md rotate-12 opacity-80 p-0.5">
+                          <div className="w-full h-8 bg-zinc-700 rounded-[1px]" />
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  <div
+                    className={`relative z-10 space-y-1.5 w-full px-3 ${
+                      idlePage.heroLayout === 'editorial-left' ? 'text-left' : 'text-center'
+                    }`}
                   >
-                    Sentuh untuk Memulai
-                  </span>
-                </div>
-              </div>
+                    {idlePage.showTopPill && (
+                      <p
+                        className={`text-[8px] font-mono-tabular text-zinc-300 truncate bg-black/40 px-2 py-0.5 rounded-full w-fit border border-white/10 ${
+                          idlePage.heroLayout === 'editorial-left' ? '' : 'mx-auto'
+                        }`}
+                      >
+                        {idlePage.topPillText.trim() ||
+                          `${studioName || 'SoreAja Studio — Booth 02'} · ${eventName || 'SoreAja Sunset Session 2026'}`}
+                      </p>
+                    )}
+
+                    {idlePage.showLogo && idlePage.heroLayout !== 'minimal' && (
+                      <div
+                        className={`flex ${
+                          idlePage.heroLayout === 'editorial-left' ? 'justify-start' : 'justify-center'
+                        }`}
+                      >
+                        <BrandLogo
+                          src={idlePage.customLogoUrl || undefined}
+                          size={idlePage.logoSize === '2xl' || idlePage.logoSize === 'xl' ? 'md' : 'sm'}
+                          showRing={false}
+                        />
+                      </div>
+                    )}
+
+                    <h4 className="font-display text-sm sm:text-base font-extrabold text-[#F4F4F0] tracking-tight truncate">
+                      {idlePage.headlineText.trim() || t.appName}
+                    </h4>
+                    <p className="font-serif-editorial italic text-[11px] text-zinc-300 truncate">
+                      {idlePage.subtitleText.trim() || t.idle.touchSubtitle}
+                    </p>
+                    <div className="pt-0.5">
+                      <span
+                        style={
+                          idlePage.ctaStyle === 'solid' || idlePage.ctaStyle === 'pill'
+                            ? { backgroundColor: themeColor }
+                            : idlePage.ctaStyle === 'outline'
+                              ? { borderColor: themeColor }
+                              : undefined
+                        }
+                        className={`inline-flex items-center gap-1 px-3 py-1 text-[10px] font-bold text-white shadow-lg transition-transform ${
+                          idlePage.ctaStyle === 'pill'
+                            ? 'rounded-full'
+                            : idlePage.ctaStyle === 'glass'
+                              ? 'rounded-xl bg-white/15 backdrop-blur-md border border-white/30'
+                              : idlePage.ctaStyle === 'outline'
+                                ? 'rounded-lg border-2 bg-black/30'
+                                : 'rounded-lg'
+                        }`}
+                      >
+                        {idlePage.ctaEmoji && <span>{idlePage.ctaEmoji}</span>}
+                        <span>{idlePage.ctaText.trim() || t.idle.touchPrompt}</span>
+                      </span>
+                    </div>
+                    {idlePage.showReadyBadge && idlePage.heroLayout !== 'minimal' && (
+                      <p className="text-[8px] font-mono-tabular text-zinc-400 truncate">
+                        {idlePage.readyBadgeText.trim() || t.idle.readyBadge}
+                      </p>
+                    )}
+                    {idlePage.showLatestSpotlight && idlePage.heroLayout !== 'minimal' && (
+                      <div
+                        className={`inline-flex items-center gap-1 bg-zinc-900/80 border border-white/10 rounded-full px-2 py-0.5 text-[8px] text-zinc-300 ${
+                          idlePage.heroLayout === 'editorial-left' ? '' : 'mx-auto'
+                        }`}
+                      >
+                        <span>📸</span>
+                        <span>{t.idle.latestShowcase}</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="text-[11px] text-zinc-400 space-y-1 bg-zinc-900/60 p-3 rounded-xl border border-zinc-800/80">

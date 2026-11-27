@@ -6,6 +6,7 @@ import type {
   FramePackInfo,
   ImagePreprocessingSettings,
   PhotoEnhancerSettings,
+  IdlePageSettings,
 } from './types/photobox';
 
 export class PhotoboxDatabase extends Dexie {
@@ -93,6 +94,39 @@ export const DEFAULT_PHOTO_ENHANCER: PhotoEnhancerSettings = {
   autoTone: true,
 };
 
+export const DEFAULT_IDLE_PAGE_SETTINGS: IdlePageSettings = {
+  mode: 'standard',
+  heroLayout: 'centered',
+  showTopPill: true,
+  topPillText: '',
+  showCameraModeSwitch: true,
+  showLogo: true,
+  customLogoUrl: '',
+  logoSize: '2xl',
+  headlineText: '',
+  headlineScale: 'lg',
+  subtitleText: '',
+  ctaText: '',
+  ctaEmoji: '👉',
+  ctaStyle: 'solid',
+  ctaSize: 'lg',
+  ctaBounceIcon: true,
+  showReadyBadge: true,
+  readyBadgeText: '',
+  backdropFit: 'cover',
+  backdropBlurPx: 0,
+  backdropGradientStrength: 'medium',
+  showFloatingPolaroids: true,
+  floatingPolaroidCount: 6,
+  floatingPolaroidSource: 'mixed',
+  enableFloatAnimation: true,
+  showLatestSpotlight: true,
+  spotlightIntervalSeconds: 5,
+  fullscreenCameraPrompt: '',
+  tapAnywhereToStart: true,
+  autoFullscreenOnStart: true,
+};
+
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   id: 'app_settings',
   driveUrl: DEFAULT_DRIVE_URL,
@@ -118,6 +152,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   themePreset: 'crimson',
   language: 'id',
   idleScreenMode: 'standard',
+  idlePage: DEFAULT_IDLE_PAGE_SETTINGS,
   activeFramePack: 'default',
   imagePreprocessing: DEFAULT_IMAGE_PREPROCESSING,
   photoEnhancer: DEFAULT_PHOTO_ENHANCER,
@@ -132,6 +167,16 @@ export async function ensureDefaultSettings(): Promise<AppSettings> {
         ...DEFAULT_APP_SETTINGS,
         ...existing,
         activeFramePack: existing.activeFramePack || 'default',
+        idlePage: existing.idlePage
+          ? {
+              ...DEFAULT_IDLE_PAGE_SETTINGS,
+              ...existing.idlePage,
+              mode: existing.idlePage.mode || existing.idleScreenMode || 'standard',
+            }
+          : {
+              ...DEFAULT_IDLE_PAGE_SETTINGS,
+              mode: existing.idleScreenMode || 'standard',
+            },
         imagePreprocessing: existing.imagePreprocessing || DEFAULT_IMAGE_PREPROCESSING,
         photoEnhancer:
           existing.photoEnhancer &&

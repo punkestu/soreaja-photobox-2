@@ -446,7 +446,7 @@ export const PrintResultScreen: React.FC = () => {
                 <p className="text-xs text-zinc-400">Bingkai: {activeFrame.name}</p>
               </div>
 
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center justify-end gap-2 flex-wrap">
                 <button
                   type="button"
                   data-testid="reshow-print-animation-btn"
@@ -501,8 +501,8 @@ export const PrintResultScreen: React.FC = () => {
                     type="button"
                     onClick={() => setStripDisplayMode('single')}
                     className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 ${stripDisplayMode === 'single'
-                        ? 'bg-zinc-700 text-white'
-                        : 'text-zinc-400 hover:text-white'
+                      ? 'bg-zinc-700 text-white'
+                      : 'text-zinc-400 hover:text-white'
                       }`}
                   >
                     📱 1-Strip
@@ -511,8 +511,8 @@ export const PrintResultScreen: React.FC = () => {
                     type="button"
                     onClick={() => setStripDisplayMode('double')}
                     className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 ${stripDisplayMode === 'double'
-                        ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
-                        : 'text-zinc-400 hover:text-white'
+                      ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
+                      : 'text-zinc-400 hover:text-white'
                       }`}
                   >
                     <span>👥 2-Strip (4R)</span>
