@@ -454,17 +454,15 @@ export const FinalPreviewScreen: React.FC = () => {
                   </span>
                 )}
 
-                {previewMode === 'double' && (
-                  <label className="flex items-center gap-1.5 text-xs text-zinc-300 pr-1 cursor-pointer select-none bg-zinc-900/90 px-2 py-1 rounded-lg border border-zinc-800">
-                    <input
-                      type="checkbox"
-                      checked={showCutLine}
-                      onChange={(e) => setShowCutLine(e.target.checked)}
-                      className="w-3.5 h-3.5 accent-[var(--theme-accent,#E11D48)] rounded cursor-pointer"
-                    />
-                    <span className="font-semibold text-zinc-200">✂️ {t.preview.cutLine}</span>
-                  </label>
-                )}
+                <label className="flex items-center gap-1.5 text-xs text-zinc-300 pr-1 cursor-pointer select-none bg-zinc-900/90 px-2 py-1 rounded-lg border border-zinc-800">
+                  <input
+                    type="checkbox"
+                    checked={showCutLine}
+                    onChange={(e) => setShowCutLine(e.target.checked)}
+                    className="w-3.5 h-3.5 accent-[var(--theme-accent,#E11D48)] rounded cursor-pointer"
+                  />
+                  <span className="font-semibold text-zinc-200">✂️ {t.preview.cutLine}</span>
+                </label>
               </div>
 
               {/* Right Side: Zoom In / Zoom Out / Fit Toolbar */}

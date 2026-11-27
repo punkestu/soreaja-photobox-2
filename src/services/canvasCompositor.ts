@@ -95,8 +95,10 @@ export async function generateSideBySideStrip(
   // Dynamic scale factor relative to 1795 baseline height
   const S = Math.max(1, singleH / 1795);
 
-  // 3. Center Cutting Guide (Bold dashed line with prominent scissor badges)
+  // 3. Center Cutting Guide & Outer Dotted Border
   if (includeCutLine) {
+    drawDottedCutBorder(ctx, totalW, totalH, S);
+
     const dividerX = singleW + Math.floor(spacing / 2);
     ctx.save();
     ctx.imageSmoothingEnabled = true;
@@ -420,6 +422,65 @@ export async function compositeFinalLayout(
   return canvas.toDataURL('image/png');
 }
 
+/**
+ * Draws a high-contrast dual-pass dotted cutting guide inset along the outer border
+ * so printed paper edges remain clearly trimmable on both dark and light frame themes.
+ */
+function drawDottedCutBorder(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  scaleFactor = 1
+): void {
+  const S = Math.max(1, scaleFactor);
+  const inset = Math.max(4, Math.round(6 * S));
+  const rectW = Math.max(1, width - inset * 2);
+  const rectH = Math.max(1, height - inset * 2);
+  const dashPattern = [Math.max(2, Math.round(2 * S)), Math.max(10, Math.round(14 * S))];
+
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  // Pass 1: White backing dots for high contrast on dark frames
+  ctx.beginPath();
+  ctx.setLineDash(dashPattern);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.94)';
+  ctx.lineWidth = Math.max(3, Math.round(5 * S));
+  ctx.strokeRect(inset, inset, rectW, rectH);
+
+  // Pass 2: Dark charcoal core dots for high contrast on light frames / paper edges
+  ctx.beginPath();
+  ctx.setLineDash(dashPattern);
+  ctx.strokeStyle = 'rgba(24, 24, 27, 0.94)';
+  ctx.lineWidth = Math.max(2, Math.round(3 * S));
+  ctx.strokeRect(inset, inset, rectW, rectH);
+
+  ctx.restore();
+}
+
+/**
+ * Applies the outer dotted cutting border onto an existing rendered print image.
+ */
+async function addOuterCutBorderToImage(imageBase64: string): Promise<string> {
+  if (!imageBase64) return imageBase64;
+  const img = await loadImage(imageBase64);
+  const canvas = document.createElement('canvas');
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return imageBase64;
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0);
+
+  const S = Math.max(1, img.height / 1795);
+  drawDottedCutBorder(ctx, img.width, img.height, S);
+
+  return canvas.toDataURL('image/png');
+}
+
 export interface CompositeLayoutBundle {
   singleStrip: string;
   doubleStrip: string | null;
@@ -444,8 +505,8 @@ export async function compositeFinalLayoutBundle(
 
   const ratioInfo = checkStripRatio(canvasWidth, canvasHeight);
 
-  // 1. Generate Single Strip Base64 with Placed Stickers at full master resolution
-  const singleStrip = await compositeFinalLayout(
+  // 1. Generate clean Single Strip Base64 with Placed Stickers at full master resolution
+  const rawSingleStrip = await compositeFinalLayout(
     capturedPhotos,
     frame,
     filter,
@@ -456,13 +517,23 @@ export async function compositeFinalLayoutBundle(
     scaleFactor
   );
 
-  // 2. If it is a vertical long strip, generate image with side by side of 2 strip
+  // 2. If it is a vertical long strip, generate image with side by side of 2 strip (from un-bordered source)
   let doubleStrip: string | null = null;
-  if (ratioInfo.isVerticalLongStrip && singleStrip) {
+  if (ratioInfo.isVerticalLongStrip && rawSingleStrip) {
     try {
-      doubleStrip = await generateSideBySideStrip(singleStrip, doubleStripOptions);
+      doubleStrip = await generateSideBySideStrip(rawSingleStrip, doubleStripOptions);
     } catch (err) {
       console.warn('Failed to generate side-by-side double strip:', err);
+    }
+  }
+
+  // 3. Apply outer dotted cut border onto singleStrip when cut line is enabled
+  let singleStrip = rawSingleStrip;
+  if (doubleStripOptions?.includeCutLine !== false && rawSingleStrip) {
+    try {
+      singleStrip = await addOuterCutBorderToImage(rawSingleStrip);
+    } catch (err) {
+      console.warn('Failed to apply outer cut border to single strip:', err);
     }
   }
 

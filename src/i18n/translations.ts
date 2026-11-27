@@ -176,6 +176,16 @@ export const TRANSLATIONS = {
       tapToRetake: 'Sentuh untuk Retake Pose',
       satisfiedQuestion: 'Semua pose sudah sesuai keinginan?',
       combineDesc: 'foto akan digabungkan dengan bingkai',
+      moveLeft: 'Geser Kiri',
+      moveRight: 'Geser Kanan',
+      swapPhoto: 'Tukar',
+      swapHint: 'Sentuh foto lain untuk ditukar dengan Slot #',
+      cancelSwap: 'Batal Tukar',
+      resetOrder: 'Reset Urutan',
+      originalShot: 'Pose #',
+      framedPreviewTitle: 'Pratinjau Bingkai Langsung',
+      framedPreviewSubtitle: 'Susunan foto langsung di dalam bingkai',
+      updatingPreview: 'Memperbarui bingkai...',
     },
     // Final Preview Screen
     preview: {
@@ -645,6 +655,16 @@ export const TRANSLATIONS = {
       tapToRetake: 'Tap to Retake Pose',
       satisfiedQuestion: 'Happy with all expressions and poses?',
       combineDesc: 'photos will be composed into the frame',
+      moveLeft: 'Move Left',
+      moveRight: 'Move Right',
+      swapPhoto: 'Swap',
+      swapHint: 'Tap another photo to swap with Slot #',
+      cancelSwap: 'Cancel Swap',
+      resetOrder: 'Reset Order',
+      originalShot: 'Shot #',
+      framedPreviewTitle: 'Live Framed Preview',
+      framedPreviewSubtitle: 'Your current photo order inside the frame',
+      updatingPreview: 'Updating frame...',
     },
     // Final Preview Screen
     preview: {
