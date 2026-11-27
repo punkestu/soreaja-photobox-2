@@ -199,9 +199,9 @@ export const TRANSLATIONS = {
       cancelSwap: 'Batal Tukar',
       resetOrder: 'Reset Urutan',
       originalShot: 'Pose #',
-      framedPreviewTitle: 'Pratinjau Bingkai Langsung',
-      framedPreviewSubtitle: 'Susunan foto langsung di dalam bingkai',
-      updatingPreview: 'Memperbarui bingkai...',
+      framedPreviewTitle: 'Pratinjau',
+      framedPreviewSubtitle: 'Susunan foto',
+      updatingPreview: 'Memperbarui...',
     },
     // Final Preview Screen
     preview: {
@@ -782,9 +782,9 @@ export const TRANSLATIONS = {
       cancelSwap: 'Cancel Swap',
       resetOrder: 'Reset Order',
       originalShot: 'Shot #',
-      framedPreviewTitle: 'Live Framed Preview',
-      framedPreviewSubtitle: 'Your current photo order inside the frame',
-      updatingPreview: 'Updating frame...',
+      framedPreviewTitle: 'Preview',
+      framedPreviewSubtitle: 'Your photo order',
+      updatingPreview: 'Updating...',
     },
     // Final Preview Screen
     preview: {
