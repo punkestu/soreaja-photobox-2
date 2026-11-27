@@ -107,7 +107,7 @@ export const KioskLayout: React.FC = () => {
   return (
     <div
       className={`w-full bg-[#0A0A0B] text-[#F4F4F0] flex flex-col selection:bg-[var(--theme-accent,#E11D48)] selection:text-white ${isScrollablePage
-        ? 'min-h-screen overflow-x-hidden'
+        ? 'min-h-screen overflow-x-clip'
         : 'h-screen h-[100dvh] max-h-[100dvh] overflow-hidden'
         }`}
     >
@@ -262,7 +262,7 @@ export const KioskLayout: React.FC = () => {
       )}
 
       <main
-        className={`flex-1 w-full ${isScrollablePage ? 'overflow-y-auto' : 'overflow-hidden flex flex-col min-h-0'
+        className={`flex-1 w-full ${isScrollablePage ? 'min-w-0' : 'overflow-hidden flex flex-col min-h-0'
           }`}
       >
         <Outlet />

@@ -351,9 +351,9 @@ export const ReviewPhotosScreen: React.FC = () => {
               }
 
                     {/* Main Split Layout: Left Reorderable Photo Grid + Right Live Framed Preview */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
                       {/* Left: Grid of Captured Photos */}
-                      <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                      <div className="md:col-span-7 lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                         {capturedPhotos.map((photoSrc, index) => {
                           const slot =
                             activeFrame.positions[index] ||
@@ -604,7 +604,7 @@ export const ReviewPhotosScreen: React.FC = () => {
                                   </div>
 
                                   {/* Right: Sticky Live Framed Preview Panel */}
-                                  <aside className="lg:col-span-4 lg:sticky lg:top-20 bg-zinc-900/80 border border-zinc-800/80 rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-xl">
+                                  <aside className="md:col-span-5 lg:col-span-4 md:sticky md:top-20 md:self-start md:max-h-[calc(100vh-6rem)] md:overflow-y-auto bg-zinc-900/80 border border-zinc-800/80 rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-xl">
                                     <div className="flex items-start justify-between gap-2">
                                       <div>
                                         <h2 className="font-display text-base sm:text-lg font-bold text-[#F4F4F0] flex items-center gap-2">
