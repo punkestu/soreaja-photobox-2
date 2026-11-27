@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MotionConfig, motion } from 'motion/react';
-import { RotateCcw, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { usePhotobox } from '../../context/PhotoboxContext';
 
 interface PrintAnimationModalProps {
@@ -111,6 +111,7 @@ export const PrintAnimationModal: React.FC<PrintAnimationModalProps> = ({
           <div className="px-4 pt-3.5 pb-1 flex justify-end shrink-0">
             <button
               type="button"
+              data-testid="print-modal-close-btn"
               onClick={onClose}
               aria-label={t.printResult.printModalClose}
               className="w-9 h-9 rounded-xl bg-zinc-800/90 hover:bg-zinc-700 text-zinc-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer active:scale-95"
@@ -155,7 +156,14 @@ export const PrintAnimationModal: React.FC<PrintAnimationModalProps> = ({
                 }}
                 className="relative inline-flex justify-center pt-4 will-change-transform"
               >
-                <div className="relative rounded-b-xl rounded-t-sm overflow-hidden shadow-[0_20px_45px_rgba(0,0,0,0.85)] ring-1 ring-white/25 bg-white">
+                <button
+                  type="button"
+                  data-testid="print-modal-replay-btn"
+                  onClick={handleReplay}
+                  title={t.printResult.printModalReplay}
+                  aria-label={t.printResult.printModalReplay}
+                  className="relative rounded-b-xl rounded-t-sm overflow-hidden shadow-[0_20px_45px_rgba(0,0,0,0.85)] ring-1 ring-white/25 bg-white cursor-pointer active:scale-[0.99] transition-transform block p-0 border-0"
+                >
                   <img
                     ref={imgRef}
                     data-testid="print-animation-image"
@@ -164,7 +172,7 @@ export const PrintAnimationModal: React.FC<PrintAnimationModalProps> = ({
                     onLoad={() => {
                       window.requestAnimationFrame(() => setIsPaperReady(true));
                     }}
-                    className="max-h-[52vh] sm:max-h-[58vh] w-auto max-w-full object-contain block select-none"
+                    className="max-h-[58vh] sm:max-h-[64vh] w-auto max-w-full object-contain block select-none"
                     draggable={false}
                   />
 
@@ -183,31 +191,9 @@ export const PrintAnimationModal: React.FC<PrintAnimationModalProps> = ({
                       className="pointer-events-none absolute inset-y-0 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/45 to-transparent"
                     />
                   )}
-                </div>
+                </button>
               </motion.div>
             </div>
-          </div>
-
-          {/* Footer Actions */}
-          <div className="px-5 sm:px-6 py-3.5 border-t border-zinc-800/80 bg-zinc-900/95 flex items-center justify-between gap-3 shrink-0">
-            <button
-              type="button"
-              data-testid="print-modal-replay-btn"
-              onClick={handleReplay}
-              className="min-h-[44px] px-4 sm:px-5 py-2 text-xs sm:text-sm font-bold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 active:scale-95 rounded-xl transition-all cursor-pointer border border-zinc-700/80 flex items-center justify-center gap-2"
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span>{t.printResult.printModalReplay}</span>
-            </button>
-
-            <button
-              type="button"
-              data-testid="print-modal-close-btn"
-              onClick={onClose}
-              className="min-h-[44px] px-6 sm:px-8 py-2 text-xs sm:text-sm font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 rounded-xl transition-all cursor-pointer shadow-lg flex items-center justify-center gap-2"
-            >
-              <span>{t.printResult.printModalClose}</span>
-            </button>
           </div>
         </div>
       </div>
