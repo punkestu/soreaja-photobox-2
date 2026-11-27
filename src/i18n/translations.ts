@@ -266,6 +266,10 @@ export const TRANSLATIONS = {
       singleStripDesc: 'Mode 1-Strip Tunggal · Kertas Roll 80mm / Thermal',
       doubleStripDesc: 'Mode 2-Strip Side-by-Side dengan Garis Potong Tebal · Standar 4R (4×6")',
       readyStatus: 'Siap Cetak · Silakan tekan tombol Print Thermal atau Print Warna',
+      reshowAnimation: 'Putar Animasi Cetak',
+      printModalTitle: 'Animasi Hasil Cetak',
+      printModalReplay: 'Putar Ulang',
+      printModalClose: 'Tutup',
     },
     // Admin Portal
     admin: {
@@ -731,6 +735,10 @@ export const TRANSLATIONS = {
       singleStripDesc: 'Single 1-Strip Mode · 80mm Roll / Thermal',
       doubleStripDesc: '2-Strip Side-by-Side Mode with Bold Cut Line · 4R (4×6")',
       readyStatus: 'Ready to Print · Press Thermal Print or Color Print button',
+      reshowAnimation: 'Replay Print Animation',
+      printModalTitle: 'Print Animation Preview',
+      printModalReplay: 'Replay',
+      printModalClose: 'Close',
     },
     // Admin Portal
     admin: {
