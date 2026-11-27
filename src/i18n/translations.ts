@@ -22,6 +22,9 @@ export const TRANSLATIONS = {
       retake: 'Retake',
       continue: 'Lanjut',
       cancel: 'Batal',
+      resetConfirmTitle: 'Reset Sesi Photobox?',
+      resetConfirmDesc: 'Semua foto dan progres pada sesi saat ini akan dihapus dan kembali ke layar awal.',
+      resetConfirmBtn: 'Ya, Reset Sesi',
     },
     sessionTimer: {
       timeRemaining: 'Waktu Sesi',
@@ -72,6 +75,8 @@ export const TRANSLATIONS = {
       filterDoubleStrip: 'Double',
       singleStripBadge: 'Single',
       doubleStripBadge: 'Double',
+      viewSlides: 'Slide',
+      viewGrid: 'Grid',
     },
     // Camera Screen
     camera: {
@@ -166,6 +171,9 @@ export const TRANSLATIONS = {
       subtitle: 'Sentuh foto untuk retake pose, atau klik Lanjut jika sudah puas.',
       photosReady: 'Foto Siap',
       retakeAll: 'Ulang Semua',
+      retakeAllConfirmTitle: 'Ulang Semua Pose Foto?',
+      retakeAllConfirmDesc: 'Semua foto yang sudah diambil pada sesi ini akan dihapus dan kamera akan mulai ulang dari Pose #1.',
+      retakeAllConfirmBtn: 'Ya, Ulang Semua',
       continueToFrame: 'Lanjut ke Bingkai',
       viewMode: 'Tampilan:',
       croppedMode: 'Potongan Bingkai',
@@ -210,6 +218,9 @@ export const TRANSLATIONS = {
       bottomCaptionLabel: 'Teks Bawah Bingkai',
       cleanModeNotice: 'Mode bersih: Tidak ada stempel teks tambahan di atas bingkai.',
       continueToPrint: 'Lanjut ke Cetak & QR',
+      continueConfirmTitle: 'Lanjut ke Cetak & QR?',
+      continueConfirmDesc: 'Pastikan filter, stiker, dan teks bingkai sudah sesuai. Foto akan diproses menjadi hasil akhir.',
+      continueConfirmBtn: 'Ya, Lanjutkan',
       filters: {
         original: 'Original Studio',
         originalDesc: 'Warna asli tangkapan kamera',
@@ -501,6 +512,9 @@ export const TRANSLATIONS = {
       retake: 'Retake',
       continue: 'Next',
       cancel: 'Cancel',
+      resetConfirmTitle: 'Reset Photobox Session?',
+      resetConfirmDesc: 'All captured photos and progress in the current session will be cleared and you will return to the start screen.',
+      resetConfirmBtn: 'Yes, Reset Session',
     },
     sessionTimer: {
       timeRemaining: 'Session Time',
@@ -551,6 +565,8 @@ export const TRANSLATIONS = {
       filterDoubleStrip: 'Double',
       singleStripBadge: 'Single',
       doubleStripBadge: 'Double',
+      viewSlides: 'Slides',
+      viewGrid: 'Grid',
     },
     // Camera Screen
     camera: {
@@ -645,6 +661,9 @@ export const TRANSLATIONS = {
       subtitle: 'Tap any photo to retake its pose, or click Next when satisfied.',
       photosReady: 'Photos Ready',
       retakeAll: 'Retake All',
+      retakeAllConfirmTitle: 'Retake All Photos?',
+      retakeAllConfirmDesc: 'All photos captured in this session will be cleared and the camera will restart from Pose #1.',
+      retakeAllConfirmBtn: 'Yes, Retake All',
       continueToFrame: 'Continue to Frame',
       viewMode: 'View:',
       croppedMode: 'Framed Crop',
@@ -689,6 +708,9 @@ export const TRANSLATIONS = {
       bottomCaptionLabel: 'Bottom Stamp Text',
       cleanModeNotice: 'Clean mode: No text stamps applied over frame.',
       continueToPrint: 'Continue to Print & QR',
+      continueConfirmTitle: 'Continue to Print & QR?',
+      continueConfirmDesc: 'Make sure your tone filter, stickers, and frame text are ready. Your final print layout will be finalized.',
+      continueConfirmBtn: 'Yes, Continue',
       filters: {
         original: 'Original Studio',
         originalDesc: 'True-to-life camera capture colors',

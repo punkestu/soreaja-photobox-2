@@ -13,6 +13,7 @@ import { downloadSingleFile } from '../../services/downloadService';
 import type { PhotoFilter, PlacedSticker } from '../../types/photobox';
 import { STICKER_COLLECTION, type StickerItem } from '../../data/stickers';
 import { InteractiveStickerCanvas } from '../../components/kiosk/InteractiveStickerCanvas';
+import { ConfirmActionModal } from '../../components/kiosk/ConfirmActionModal';
 
 const FILTERS: { id: PhotoFilter; label: string; desc: string }[] = [
   { id: 'original', label: 'Original Studio', desc: 'Warna asli tangkapan kamera' },
@@ -54,6 +55,7 @@ export const FinalPreviewScreen: React.FC = () => {
   const [activeStickerCategory, setActiveStickerCategory] = useState<'sparkles' | 'hearts_y2k' | 'stamps'>('sparkles');
   const [selectedStickerId, setSelectedStickerId] = useState<string | null>(null);
   const [stickerHistory, setStickerHistory] = useState<PlacedSticker[][]>([]);
+  const [isContinueConfirmOpen, setIsContinueConfirmOpen] = useState<boolean>(false);
 
   // Zoom & Pan state for inspecting strip details
   const [zoomLevel, setZoomLevel] = useState<number>(1.0);
@@ -402,7 +404,7 @@ export const FinalPreviewScreen: React.FC = () => {
           <button
             type="button"
             disabled={isCompositing || !finalLayoutBase64}
-            onClick={() => navigate('/app/print-result')}
+            onClick={() => setIsContinueConfirmOpen(true)}
             className="min-h-[40px] px-5 py-1.5 text-xs sm:text-sm md:text-base font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center gap-2"
           >
             <span>{t.preview.continueToPrint}</span>
@@ -898,7 +900,7 @@ export const FinalPreviewScreen: React.FC = () => {
             <button
               type="button"
               disabled={isCompositing || !finalLayoutBase64}
-              onClick={() => navigate('/app/print-result')}
+              onClick={() => setIsContinueConfirmOpen(true)}
               className="w-full min-h-[46px] py-2.5 px-4 text-xs sm:text-sm font-extrabold text-white bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer shadow-lg flex items-center justify-center gap-2"
             >
               <span>{t.preview.continueToPrint}</span>
@@ -916,6 +918,19 @@ export const FinalPreviewScreen: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <ConfirmActionModal
+        isOpen={isContinueConfirmOpen}
+        title={t.preview.continueConfirmTitle}
+        message={t.preview.continueConfirmDesc}
+        confirmLabel={t.preview.continueConfirmBtn}
+        cancelLabel={t.nav.cancel}
+        onConfirm={() => {
+          setIsContinueConfirmOpen(false);
+          navigate('/app/print-result');
+        }}
+        onCancel={() => setIsContinueConfirmOpen(false)}
+      />
     </div>
   );
 };

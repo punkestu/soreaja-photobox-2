@@ -4,6 +4,7 @@ import { usePhotobox } from '../../context/PhotoboxContext';
 import { PWAInstallButton } from '../common/PWAInstallButton';
 import { OfflineIndicator } from '../common/OfflineIndicator';
 import { BrandLogo } from '../common/BrandLogo';
+import { ConfirmActionModal } from './ConfirmActionModal';
 
 export const KioskLayout: React.FC = () => {
   const location = useLocation();
@@ -24,6 +25,7 @@ export const KioskLayout: React.FC = () => {
     addExtraSessionTime,
   } = usePhotobox();
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState<boolean>(false);
 
   const steps = [
     { path: '/app/idle', label: t.steps.step1 },
@@ -217,7 +219,8 @@ export const KioskLayout: React.FC = () => {
             {!isIdleScreen && (
               <button
                 type="button"
-                onClick={handleRestart}
+                data-testid="kiosk-reset-session-btn"
+                onClick={() => setIsResetConfirmOpen(true)}
                 className="min-h-[46px] px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white bg-zinc-900/90 active:scale-95 hover:bg-zinc-800 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800/80 shadow-sm flex items-center gap-1.5"
                 title={t.nav.reset}
               >
@@ -326,6 +329,19 @@ export const KioskLayout: React.FC = () => {
           </div>
         </div>
       )}
+
+      <ConfirmActionModal
+        isOpen={isResetConfirmOpen}
+        title={t.nav.resetConfirmTitle}
+        message={t.nav.resetConfirmDesc}
+        confirmLabel={t.nav.resetConfirmBtn}
+        cancelLabel={t.nav.cancel}
+        onConfirm={() => {
+          setIsResetConfirmOpen(false);
+          handleRestart();
+        }}
+        onCancel={() => setIsResetConfirmOpen(false)}
+      />
     </div>
   );
 };

@@ -13,6 +13,7 @@ import { usePhotobox } from '../../context/PhotoboxContext';
 import { DEFAULT_FRAMES, STUDIO_PORTRAITS } from '../../data/defaultFrames';
 import { db } from '../../db';
 import { compositeFinalLayout } from '../../services/canvasCompositor';
+import { ConfirmActionModal } from '../../components/kiosk/ConfirmActionModal';
 
 export const ReviewPhotosScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -42,6 +43,7 @@ export const ReviewPhotosScreen: React.FC = () => {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [framedPreviewSrc, setFramedPreviewSrc] = useState<string | null>(null);
   const [isUpdatingPreview, setIsUpdatingPreview] = useState<boolean>(false);
+  const [isRetakeAllConfirmOpen, setIsRetakeAllConfirmOpen] = useState<boolean>(false);
 
   const activeFrame = selectedFrame || DEFAULT_FRAMES[0];
   const isRetakingAllRef = useRef<boolean>(false);
@@ -270,7 +272,8 @@ export const ReviewPhotosScreen: React.FC = () => {
 
             <button
               type="button"
-              onClick={handleRetakeAll}
+              data-testid="review-retake-all-btn"
+              onClick={() => setIsRetakeAllConfirmOpen(true)}
               className="min-h-[46px] sm:min-h-[50px] px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-900/90 hover:bg-zinc-800 active:scale-95 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-800 shadow-sm flex items-center gap-1.5"
             >
               <span>↺</span>
@@ -670,6 +673,19 @@ export const ReviewPhotosScreen: React.FC = () => {
                           <span>🎨</span>
                         </button>
                       </div>
+
+      <ConfirmActionModal
+        isOpen={isRetakeAllConfirmOpen}
+        title={t.review.retakeAllConfirmTitle}
+        message={t.review.retakeAllConfirmDesc}
+        confirmLabel={t.review.retakeAllConfirmBtn}
+        cancelLabel={t.nav.cancel}
+        onConfirm={() => {
+          setIsRetakeAllConfirmOpen(false);
+          handleRetakeAll();
+        }}
+        onCancel={() => setIsRetakeAllConfirmOpen(false)}
+      />
                     </div>
                     );
 };
