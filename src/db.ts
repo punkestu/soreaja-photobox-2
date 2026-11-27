@@ -1,5 +1,13 @@
 import Dexie, { type Table } from 'dexie';
-import type { AppSettings, SessionRecord, ActiveSessionRecord, FramePackInfo } from './types/photobox';
+import type {
+  AppSettings,
+  SessionRecord,
+  ActiveSessionRecord,
+  FramePackInfo,
+  ImagePreprocessingSettings,
+  PhotoEnhancerSettings,
+  IdlePageSettings,
+} from './types/photobox';
 
 export class PhotoboxDatabase extends Dexie {
   settings!: Table<AppSettings, string>;
@@ -66,6 +74,59 @@ export async function resetAllData(): Promise<void> {
 export const DEFAULT_DRIVE_URL =
   'https://drive.google.com/drive/folders/1SoreAjaPhotobox2StudioArchive';
 
+export const DEFAULT_IMAGE_PREPROCESSING: ImagePreprocessingSettings = {
+  enabled: true,
+  brightness: 0,
+  contrast: 0,
+  saturation: 0,
+  ambiance: 0,
+  highlights: 0,
+  shadows: 0,
+  warmth: 0,
+};
+
+export const DEFAULT_PHOTO_ENHANCER: PhotoEnhancerSettings = {
+  enabled: false,
+  preset: 'studio-crisp',
+  upscaleScale: 1.5,
+  sharpenAmount: 45,
+  denoiseLevel: 20,
+  autoTone: true,
+};
+
+export const DEFAULT_IDLE_PAGE_SETTINGS: IdlePageSettings = {
+  mode: 'standard',
+  heroLayout: 'centered',
+  showTopPill: true,
+  topPillText: '',
+  showCameraModeSwitch: true,
+  showLogo: true,
+  customLogoUrl: '',
+  logoSize: '2xl',
+  headlineText: '',
+  headlineScale: 'lg',
+  subtitleText: '',
+  ctaText: '',
+  ctaEmoji: '👉',
+  ctaStyle: 'solid',
+  ctaSize: 'lg',
+  ctaBounceIcon: true,
+  showReadyBadge: true,
+  readyBadgeText: '',
+  backdropFit: 'cover',
+  backdropBlurPx: 0,
+  backdropGradientStrength: 'medium',
+  showFloatingPolaroids: true,
+  floatingPolaroidCount: 6,
+  floatingPolaroidSource: 'mixed',
+  enableFloatAnimation: true,
+  showLatestSpotlight: true,
+  spotlightIntervalSeconds: 5,
+  fullscreenCameraPrompt: '',
+  tapAnywhereToStart: true,
+  autoFullscreenOnStart: true,
+};
+
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   id: 'app_settings',
   driveUrl: DEFAULT_DRIVE_URL,
@@ -91,7 +152,10 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   themePreset: 'crimson',
   language: 'id',
   idleScreenMode: 'standard',
+  idlePage: DEFAULT_IDLE_PAGE_SETTINGS,
   activeFramePack: 'default',
+  imagePreprocessing: DEFAULT_IMAGE_PREPROCESSING,
+  photoEnhancer: DEFAULT_PHOTO_ENHANCER,
   updatedAt: new Date().toISOString(),
 };
 
@@ -103,6 +167,27 @@ export async function ensureDefaultSettings(): Promise<AppSettings> {
         ...DEFAULT_APP_SETTINGS,
         ...existing,
         activeFramePack: existing.activeFramePack || 'default',
+        idlePage: existing.idlePage
+          ? {
+              ...DEFAULT_IDLE_PAGE_SETTINGS,
+              ...existing.idlePage,
+              mode: existing.idlePage.mode || existing.idleScreenMode || 'standard',
+            }
+          : {
+              ...DEFAULT_IDLE_PAGE_SETTINGS,
+              mode: existing.idleScreenMode || 'standard',
+            },
+        imagePreprocessing: existing.imagePreprocessing || DEFAULT_IMAGE_PREPROCESSING,
+        photoEnhancer:
+          existing.photoEnhancer &&
+          (existing.photoEnhancer.preset === 'natural-clean' ||
+            existing.photoEnhancer.preset === 'studio-crisp' ||
+            existing.photoEnhancer.preset === 'hd-upscale')
+            ? { ...DEFAULT_PHOTO_ENHANCER, ...existing.photoEnhancer }
+            : {
+                ...DEFAULT_PHOTO_ENHANCER,
+                enabled: Boolean(existing.photoEnhancer?.enabled),
+              },
       };
     }
     await db.settings.put(DEFAULT_APP_SETTINGS);

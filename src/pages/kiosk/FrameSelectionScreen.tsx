@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { GalleryHorizontal, LayoutGrid } from 'lucide-react';
 import { db } from '../../db';
 import { fetchFramesMetadata } from '../../data/defaultFrames';
 import { usePhotobox } from '../../context/PhotoboxContext';
@@ -15,6 +16,7 @@ export const FrameSelectionScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [activeFilter, setActiveFilter] = useState<FrameFilterType>('all');
+  const [viewMode, setViewMode] = useState<'slides' | 'grid'>('slides');
   const [isScrolling, setIsScrolling] = useState(false);
   const isScrollingRef = useRef(false);
 
@@ -361,10 +363,21 @@ export const FrameSelectionScreen: React.FC = () => {
     }
   }, [focusedIndex, scrollToIndex, cancelMomentum]);
 
-  // Keyboard navigation (Left / Right / Enter / Space)
+  // Re-center carousel when switching back from grid to slides view
+  useEffect(() => {
+    if (viewMode === 'slides' && !loading && filteredFrames.length > 0) {
+      const targetIdx = Math.max(0, Math.min(focusedIndex, filteredFrames.length - 1));
+      const rafId = requestAnimationFrame(() => {
+        scrollToIndex(targetIdx, false);
+      });
+      return () => cancelAnimationFrame(rafId);
+    }
+  }, [viewMode]);
+
+  // Keyboard navigation (Left / Right / Enter / Space) in slides view
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (loading || filteredFrames.length === 0) return;
+      if (loading || filteredFrames.length === 0 || viewMode !== 'slides') return;
 
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
@@ -382,7 +395,7 @@ export const FrameSelectionScreen: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [focusedIndex, filteredFrames, loading, handlePrev, handleNext]);
+  }, [focusedIndex, filteredFrames, loading, handlePrev, handleNext, viewMode]);
 
   // Mouse wheel & trackpad horizontal translation
   const handleWheel = (e: React.WheelEvent) => {
@@ -648,6 +661,41 @@ export const FrameSelectionScreen: React.FC = () => {
             </button>
           </div>
 
+          {/* View Mode Switcher: Slides (Carousel) vs Grid */}
+          <div
+            role="group"
+            aria-label="Frame view mode"
+            className="inline-flex items-center p-0.5 bg-zinc-900/90 border border-zinc-800/80 rounded-lg shadow-inner text-[11px] sm:text-xs"
+          >
+            <button
+              type="button"
+              data-testid="frame-view-slides-btn"
+              onClick={() => setViewMode('slides')}
+              className={`h-7 sm:h-7.5 px-2 sm:px-2.5 rounded-md font-medium transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap ${
+                viewMode === 'slides'
+                  ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm font-bold'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+              }`}
+            >
+              <GalleryHorizontal className="w-3.5 h-3.5" />
+              <span>{t.frameSelect.viewSlides}</span>
+            </button>
+
+            <button
+              type="button"
+              data-testid="frame-view-grid-btn"
+              onClick={() => setViewMode('grid')}
+              className={`h-7 sm:h-7.5 px-2 sm:px-2.5 rounded-md font-medium transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap ${
+                viewMode === 'grid'
+                  ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm font-bold'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>{t.frameSelect.viewGrid}</span>
+            </button>
+          </div>
+
           {/* Desktop Back button */}
           <button
             type="button"
@@ -678,6 +726,108 @@ export const FrameSelectionScreen: React.FC = () => {
           >
             {t.frameSelect.filterAll}
           </button>
+        </div>
+      ) : viewMode === 'grid' ? (
+        <div
+          data-testid="frame-grid-view"
+          className="flex-1 min-h-0 w-full overflow-y-auto py-3 sm:py-4 pr-1"
+        >
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 content-start">
+            {filteredFrames.map((frame, index) => {
+              const isSelected = selectedFrame
+                ? selectedFrame.id === frame.id
+                : index === focusedIndex;
+              const isDoubleWidth = isDoubleWidthFrame(frame);
+
+              return (
+                <div
+                  key={frame.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    setFocusedIndex(index);
+                    handleSelectFrame(frame);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setFocusedIndex(index);
+                      handleSelectFrame(frame);
+                    }
+                  }}
+                  aria-label={`${frame.name}, ${frame.photoCount} ${t.frameSelect.poses}`}
+                  className={`rounded-2xl flex flex-col justify-between p-3 select-none border transition-all cursor-pointer outline-none focus-visible:ring-4 focus-visible:ring-[var(--theme-accent,#E11D48)]/60 hover:-translate-y-0.5 ${
+                    isSelected
+                      ? 'bg-zinc-900 border-[var(--theme-accent,#E11D48)] ring-2 ring-[var(--theme-accent,#E11D48)]/40 shadow-[0_12px_30px_rgba(0,0,0,0.65)]'
+                      : 'bg-zinc-900/75 border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900'
+                  }`}
+                >
+                  <div className="flex items-center justify-between pb-1.5 text-[11px] font-mono-tabular text-zinc-400 gap-1">
+                    <div className="flex items-center gap-1 overflow-hidden">
+                      <span className="font-bold text-white bg-black/60 px-1.5 py-0.5 rounded border border-white/10 shrink-0">
+                        {frame.photoCount} {t.frameSelect.poses}
+                      </span>
+                      <span
+                        className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border shrink-0 ${
+                          isDoubleWidth
+                            ? 'text-amber-300 bg-amber-500/15 border-amber-500/30'
+                            : 'text-sky-300 bg-sky-500/15 border-sky-500/30'
+                        }`}
+                      >
+                        {isDoubleWidth ? `👥 ${t.frameSelect.doubleStripBadge}` : `📱 ${t.frameSelect.singleStripBadge}`}
+                      </span>
+                    </div>
+
+                    {isSelected && (
+                      <span className="text-[10px] font-bold text-[var(--theme-accent,#E11D48)] bg-[var(--theme-accent,#E11D48)]/10 px-1.5 py-0.5 rounded border border-[var(--theme-accent,#E11D48)]/30 shrink-0">
+                        ✓
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="w-full h-48 sm:h-56 bg-zinc-950/90 rounded-xl p-2 flex items-center justify-center border border-zinc-800/80 shadow-inner overflow-hidden">
+                    <img
+                      src={frame.previewImg}
+                      alt={`Pratinjau ${frame.name}`}
+                      referrerPolicy="no-referrer"
+                      loading="lazy"
+                      decoding="async"
+                      draggable={false}
+                      className="h-full w-auto max-w-full object-contain pointer-events-none drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
+                    />
+                  </div>
+
+                  <div className="pt-2 pb-1 text-center space-y-0.5">
+                    <h2 className="font-display text-xs sm:text-sm font-bold text-[#F4F4F0] line-clamp-1">
+                      {frame.name}
+                    </h2>
+                    {frame.subtitle && (
+                      <p className="text-[10px] sm:text-[11px] text-zinc-400 line-clamp-1">
+                        {frame.subtitle}
+                      </p>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFocusedIndex(index);
+                      handleSelectFrame(frame);
+                    }}
+                    className={`w-full min-h-[38px] py-1.5 px-3 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      isSelected
+                        ? 'bg-[var(--theme-accent,#E11D48)] hover:bg-[var(--theme-accent-hover,#BE123C)] text-white shadow-md'
+                        : 'bg-zinc-800/90 hover:bg-[var(--theme-accent,#E11D48)] text-zinc-200 hover:text-white border border-zinc-700/80'
+                    }`}
+                  >
+                    <span>{t.frameSelect.selectAction}</span>
+                    <span>📸</span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       ) : (
         <div className="relative flex-1 min-h-0 w-full flex flex-col justify-center py-1 sm:py-2 my-auto overflow-hidden">

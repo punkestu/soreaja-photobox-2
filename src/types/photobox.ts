@@ -46,6 +46,72 @@ export type PhotoFilter = 'original' | 'warm-sore' | 'noir-bw' | 'vintage-film' 
 
 export type AppLanguage = 'id' | 'en';
 
+export interface ImagePreprocessingSettings {
+  enabled: boolean;
+  brightness: number; // -100 to 100 (default 0)
+  contrast: number; // -100 to 100 (default 0)
+  saturation: number; // -100 to 100 (default 0)
+  ambiance: number; // -100 to 100 (default 0)
+  highlights: number; // -100 to 100 (default 0)
+  shadows: number; // -100 to 100 (default 0)
+  warmth: number; // -100 to 100 (default 0)
+}
+
+export type PhotoEnhancerPreset = 'natural-clean' | 'studio-crisp' | 'hd-upscale';
+
+export interface PhotoEnhancerSettings {
+  enabled: boolean; // Default: false; toggleable anytime for low-end devices
+  preset: PhotoEnhancerPreset;
+  upscaleScale: 1 | 1.5 | 2; // Output resolution multiplier (capped safely at max output dimension)
+  sharpenAmount: number; // 0 to 100 luminance unsharp mask strength
+  denoiseLevel: number; // 0 to 100 edge-preserving grain smoothing
+  autoTone: boolean; // Gentle studio dynamic-range & clarity boost
+}
+
+export type IdleHeroLayout = 'centered' | 'editorial-left' | 'minimal';
+export type IdleCtaStyle = 'solid' | 'pill' | 'glass' | 'outline';
+export type IdleGradientStrength = 'none' | 'soft' | 'medium' | 'dark';
+export type IdlePolaroidSource = 'mixed' | 'real-only' | 'samples-only';
+
+export interface IdlePageSettings {
+  mode: 'standard' | 'fullscreen-camera';
+  heroLayout: IdleHeroLayout;
+  // Top bar & branding
+  showTopPill: boolean;
+  topPillText: string; // Empty = "{studioName} · {eventName}"
+  showCameraModeSwitch: boolean;
+  showLogo: boolean;
+  customLogoUrl: string; // Empty = default /assets/logo.webp
+  logoSize: 'md' | 'lg' | 'xl' | '2xl';
+  // Copy & typography
+  headlineText: string; // Empty = t.appName
+  headlineScale: 'md' | 'lg' | 'xl';
+  subtitleText: string; // Empty = t.idle.touchSubtitle
+  // CTA button
+  ctaText: string; // Empty = t.idle.touchPrompt
+  ctaEmoji: string;
+  ctaStyle: IdleCtaStyle;
+  ctaSize: 'md' | 'lg' | 'xl';
+  ctaBounceIcon: boolean;
+  showReadyBadge: boolean;
+  readyBadgeText: string; // Empty = t.idle.readyBadge
+  // Backdrop & atmosphere
+  backdropFit: 'cover' | 'contain';
+  backdropBlurPx: number;
+  backdropGradientStrength: IdleGradientStrength;
+  // Floating polaroids & spotlight
+  showFloatingPolaroids: boolean;
+  floatingPolaroidCount: 0 | 2 | 4 | 6;
+  floatingPolaroidSource: IdlePolaroidSource;
+  enableFloatAnimation: boolean;
+  showLatestSpotlight: boolean;
+  spotlightIntervalSeconds: number;
+  // Fullscreen camera mode & interaction
+  fullscreenCameraPrompt: string; // Empty = t.idle.photoNowSaveLater
+  tapAnywhereToStart: boolean;
+  autoFullscreenOnStart: boolean;
+}
+
 export interface AppSettings {
   id: string; // 'app_settings'
   driveUrl: string;
@@ -71,7 +137,10 @@ export interface AppSettings {
   themePreset?: string; // 'crimson' | 'amber' | etc.
   language?: AppLanguage; // 'id' | 'en'
   idleScreenMode?: 'standard' | 'fullscreen-camera'; // Mode layar tunggu standby
+  idlePage?: IdlePageSettings; // Pengaturan lengkap halaman Welcoming / Idle
   activeFramePack?: string; // ID paket bingkai yang aktif (misal 'default', 'pasar-sejati')
+  imagePreprocessing?: ImagePreprocessingSettings; // Pengaturan pra-pemrosesan citra kamera
+  photoEnhancer?: PhotoEnhancerSettings; // Pengaturan UpscalerJS AI Photo Enhancer (toggleable)
   updatedAt?: string;
 }
 

@@ -1,19 +1,33 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { db, DEFAULT_DRIVE_URL, DEFAULT_APP_SETTINGS } from '../../db';
+import { db, DEFAULT_DRIVE_URL, DEFAULT_APP_SETTINGS, DEFAULT_IMAGE_PREPROCESSING, DEFAULT_PHOTO_ENHANCER, DEFAULT_IDLE_PAGE_SETTINGS } from '../../db';
 import {
   THEME_COLOR_PRESETS,
   BACKDROP_PRESETS,
   applyThemeColor,
   calculateHoverColor,
 } from '../../data/themeConfig';
-import { KIOSK_HERO_BACKDROP } from '../../data/defaultFrames';
+import { KIOSK_HERO_BACKDROP, STUDIO_PORTRAITS } from '../../data/defaultFrames';
 import { playShutterSound } from '../../services/shutterAudio';
 import { testPrintApi, precacheAllFrameAssets } from '../../services/printServices';
 import { usePhotobox } from '../../context/PhotoboxContext';
 import { ResetAllDataModal } from '../../components/common/ResetAllDataModal';
 import { BrandLogo } from '../../components/common/BrandLogo';
+import { IdlePageSettingsTab } from '../../components/admin/IdlePageSettingsTab';
 import { gphotoService, type GPhotoStatus } from '../../services/gphotoService';
+import type { ImagePreprocessingSettings, PhotoEnhancerSettings, IdlePageSettings } from '../../types/photobox';
+import {
+  PREPROCESSING_PRESETS,
+  isPreprocessingNeutral,
+  getPreprocessingCssFilter,
+  applyImagePreprocessingToDataUrl,
+} from '../../services/imagePreprocessingService';
+import {
+  ENHANCER_PRESETS,
+  enhancePhotoDataUrl,
+  normalizeEnhancerSettings,
+} from '../../services/photoEnhancerService';
 
 export const AdminSettings: React.FC = () => {
   const {
@@ -37,6 +51,49 @@ export const AdminSettings: React.FC = () => {
   const [mirrorCamera, setMirrorCamera] = useState<boolean>(true);
   const [showCropGuide, setShowCropGuide] = useState<boolean>(true);
   const [cameraSourceMode, setCameraSourceMode] = useState<'auto' | 'gphoto' | 'simulator'>('auto');
+  const [dslrLiveFrame, setDslrLiveFrame] = useState<string | null>(null);
+
+  // Camera Image Preprocessing Settings
+  const [imagePreprocessing, setImagePreprocessing] = useState<ImagePreprocessingSettings>(
+    DEFAULT_APP_SETTINGS.imagePreprocessing || DEFAULT_IMAGE_PREPROCESSING
+  );
+  const [previewPoseIdx, setPreviewPoseIdx] = useState<number>(0);
+
+  // Lightweight Studio Photo Enhancer Settings & Benchmark State
+  const [photoEnhancer, setPhotoEnhancer] = useState<PhotoEnhancerSettings>(
+    DEFAULT_APP_SETTINGS.photoEnhancer || DEFAULT_PHOTO_ENHANCER
+  );
+  const [isTestingEnhancer, setIsTestingEnhancer] = useState<boolean>(false);
+  const [enhancerProgress, setEnhancerProgress] = useState<number>(0);
+  const [enhancerTestResult, setEnhancerTestResult] = useState<{
+    beforeUrl: string;
+    afterUrl: string;
+    durationMs: number;
+    inputDims: string;
+    outputDims: string;
+    backend?: string;
+    fallbackUsed?: boolean;
+    error?: string;
+  } | null>(null);
+  const [enhancerCompareView, setEnhancerCompareView] = useState<'after' | 'before'>('after');
+
+  // Real Test Capture State
+  interface TestCaptureResult {
+    rawUrl: string;
+    processedUrl: string;
+    width: number;
+    height: number;
+    durationMs: number;
+    source: string;
+    timestamp: string;
+  }
+  const [isTestCapturing, setIsTestCapturing] = useState<boolean>(false);
+  const [testCaptureResult, setTestCaptureResult] = useState<TestCaptureResult | null>(null);
+  const [testCaptureViewModal, setTestCaptureViewModal] = useState<boolean>(false);
+  const [testCaptureTab, setTestCaptureTab] = useState<'processed' | 'raw' | 'side-by-side'>('processed');
+  const [testWebcamActive, setTestWebcamActive] = useState<boolean>(false);
+  const testVideoRef = useRef<HTMLVideoElement | null>(null);
+  const testStreamRef = useRef<MediaStream | null>(null);
 
   // Hardware: Print Server API & Shutter Sound
   const [printApiEndpoint, setPrintApiEndpoint] = useState<string>(
@@ -69,14 +126,31 @@ export const AdminSettings: React.FC = () => {
   const [cachingOffline, setCachingOffline] = useState<boolean>(false);
   const [offlineCacheStatus, setOfflineCacheStatus] = useState<string | null>(null);
 
-  // External DSLR / web-gphoto2 state
+  // External DSLR / web-gphoto2 state & live preview frames
   const [dslrStatus, setDslrStatus] = useState<GPhotoStatus>(gphotoService.getStatus());
 
   useEffect(() => {
-    return gphotoService.subscribeState((status) => {
+    const unsubState = gphotoService.subscribeState((status) => {
       setDslrStatus(status);
     });
+    const unsubFrames = gphotoService.subscribeFrames((frameUrl) => {
+      setDslrLiveFrame(frameUrl);
+    });
+    return () => {
+      unsubState();
+      unsubFrames();
+    };
   }, []);
+
+  // When cameraSourceMode is gphoto and connected, activate live view for testing
+  useEffect(() => {
+    if (cameraSourceMode === 'gphoto' && dslrStatus.isConnected) {
+      gphotoService.startLiveView();
+      return () => {
+        gphotoService.stopLiveView();
+      };
+    }
+  }, [cameraSourceMode, dslrStatus.isConnected]);
 
   const handleConnectDslr = async () => {
     await gphotoService.requestAndConnect();
@@ -107,6 +181,227 @@ export const AdminSettings: React.FC = () => {
     }
   };
 
+  // Cleanup test webcam stream on unmount
+  useEffect(() => {
+    return () => {
+      if (testStreamRef.current) {
+        testStreamRef.current.getTracks().forEach((t) => t.stop());
+        testStreamRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (testWebcamActive && testStreamRef.current && testVideoRef.current) {
+      testVideoRef.current.srcObject = testStreamRef.current;
+      testVideoRef.current.play().catch(() => { });
+    }
+  }, [testWebcamActive]);
+
+  const handleToggleTestWebcam = async () => {
+    if (testWebcamActive) {
+      if (testStreamRef.current) {
+        testStreamRef.current.getTracks().forEach((t) => t.stop());
+        testStreamRef.current = null;
+      }
+      if (testVideoRef.current) {
+        testVideoRef.current.srcObject = null;
+      }
+      setTestWebcamActive(false);
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      alert('Browser tidak mendukung akses kamera webcam.');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1920, min: 1280 },
+          height: { ideal: 1080, min: 720 },
+        },
+        audio: false,
+      });
+      testStreamRef.current = stream;
+      setTestWebcamActive(true);
+    } catch (err: any) {
+      alert(`Gagal mengakses kamera: ${err?.message || err}`);
+    }
+  };
+
+  const handlePerformTestCapture = async () => {
+    setIsTestCapturing(true);
+    if (enableShutterSound !== false) {
+      playShutterSound();
+    }
+
+    try {
+      const startTime = performance.now();
+      let rawUrl = '';
+      let sourceName = 'Studio Simulator Portrait';
+      let width = 1200;
+      let height = 900;
+
+      // 1. If camera source setting is gPhoto DSLR
+      if (cameraSourceMode === 'gphoto') {
+        if (!dslrStatus.isConnected) {
+          alert('Kamera DSLR belum terhubung via WebUSB. Silakan hubungkan kamera DSLR terlebih dahulu pada bagian Sumber Kamera di atas.');
+          setIsTestCapturing(false);
+          return;
+        }
+        try {
+          rawUrl = await gphotoService.captureHighResPhoto(mirrorCamera);
+          sourceName = dslrStatus.modelName || 'Kamera DSLR (WebUSB)';
+        } catch (err: any) {
+          alert(`Gagal mengambil foto dari kamera DSLR: ${err?.message || err}`);
+          setIsTestCapturing(false);
+          return;
+        }
+      }
+
+      // 2. If camera source setting is WebRTC (auto)
+      if (cameraSourceMode === 'auto') {
+        if (!testStreamRef.current) {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+              video: { width: { ideal: 1920, min: 1280 }, height: { ideal: 1080, min: 720 } },
+              audio: false,
+            });
+            testStreamRef.current = stream;
+            setTestWebcamActive(true);
+            if (testVideoRef.current) {
+              testVideoRef.current.srcObject = stream;
+              await testVideoRef.current.play().catch(() => { });
+            }
+            await new Promise((r) => setTimeout(r, 400));
+          } catch (camErr: any) {
+            alert(`Gagal mengakses kamera webcam: ${camErr?.message || camErr}`);
+            setIsTestCapturing(false);
+            return;
+          }
+        }
+
+        const v = testVideoRef.current;
+        if (v && v.videoWidth > 0) {
+          const canvas = document.createElement('canvas');
+          canvas.width = v.videoWidth;
+          canvas.height = v.videoHeight;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            if (mirrorCamera) {
+              ctx.translate(canvas.width, 0);
+              ctx.scale(-1, 1);
+            }
+            ctx.drawImage(v, 0, 0);
+            rawUrl = canvas.toDataURL('image/jpeg', 0.98);
+            sourceName = 'Kamera Webcam (WebRTC)';
+            width = canvas.width;
+            height = canvas.height;
+          }
+        }
+      }
+
+      // 3. If camera source setting is simulator (or explicit fallback)
+      if (cameraSourceMode === 'simulator' || !rawUrl) {
+        const simImgSrc = STUDIO_PORTRAITS[previewPoseIdx % STUDIO_PORTRAITS.length].src;
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject();
+          img.src = simImgSrc;
+        });
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || 1200;
+        canvas.height = img.naturalHeight || 900;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          rawUrl = canvas.toDataURL('image/jpeg', 0.98);
+          sourceName = `Studio Simulator (Pose ${previewPoseIdx + 1})`;
+          width = canvas.width;
+          height = canvas.height;
+        }
+      }
+
+      // Apply actual pixel preprocessing transformation
+      const processedUrl = await applyImagePreprocessingToDataUrl(
+        rawUrl,
+        imagePreprocessing,
+        'image/jpeg',
+        0.98
+      );
+
+      const durationMs = Math.round(performance.now() - startTime);
+
+      // Measure dimensions
+      const finalImg = new Image();
+      finalImg.src = processedUrl;
+      await new Promise<void>((res) => {
+        finalImg.onload = () => {
+          width = finalImg.naturalWidth || width;
+          height = finalImg.naturalHeight || height;
+          res();
+        };
+        finalImg.onerror = () => res();
+      });
+
+      setTestCaptureResult({
+        rawUrl,
+        processedUrl,
+        width,
+        height,
+        durationMs,
+        source: sourceName,
+        timestamp: new Date().toLocaleTimeString(language === 'id' ? 'id-ID' : 'en-US'),
+      });
+    } catch (err: any) {
+      console.error('Test capture error:', err);
+      alert(`Gagal mengambil foto uji: ${err?.message || err}`);
+    } finally {
+      setIsTestCapturing(false);
+    }
+  };
+
+  const handleDownloadTestCapture = () => {
+    if (!testCaptureResult) return;
+    const a = document.createElement('a');
+    a.href = testCaptureTab === 'raw' ? testCaptureResult.rawUrl : testCaptureResult.processedUrl;
+    a.download = `soreaja-test-capture-${Date.now()}.jpg`;
+    a.click();
+  };
+
+  const handleTestPhotoEnhancer = async () => {
+    setIsTestingEnhancer(true);
+    setEnhancerProgress(0);
+    try {
+      const sampleSrc =
+        testCaptureResult?.processedUrl ||
+        STUDIO_PORTRAITS[previewPoseIdx % STUDIO_PORTRAITS.length].src;
+      const res = await enhancePhotoDataUrl(
+        sampleSrc,
+        photoEnhancer,
+        (pct) => setEnhancerProgress(pct),
+        true
+      );
+      setEnhancerTestResult({
+        beforeUrl: sampleSrc,
+        afterUrl: res.url,
+        durationMs: res.durationMs,
+        inputDims: `${res.inputWidth}×${res.inputHeight}px`,
+        outputDims: `${res.outputWidth}×${res.outputHeight}px`,
+        backend: res.backend,
+        fallbackUsed: res.fallbackUsed,
+        error: res.error,
+      });
+      setEnhancerCompareView('after');
+    } finally {
+      setIsTestingEnhancer(false);
+    }
+  };
+
   // Tema & Background Kiosk
   const [themeColor, setThemeColor] = useState<string>(DEFAULT_APP_SETTINGS.themeColor || '#E11D48');
   const [themePreset, setThemePreset] = useState<string>(DEFAULT_APP_SETTINGS.themePreset || 'crimson');
@@ -119,8 +414,9 @@ export const AdminSettings: React.FC = () => {
   const [idleScreenMode, setIdleScreenMode] = useState<'standard' | 'fullscreen-camera'>(
     DEFAULT_APP_SETTINGS.idleScreenMode || 'standard'
   );
+  const [idlePage, setIdlePage] = useState<IdlePageSettings>(DEFAULT_IDLE_PAGE_SETTINGS);
 
-  const [activeTab, setActiveTab] = useState<'appearance' | 'packs' | 'session' | 'hardware'>('appearance');
+  const [activeTab, setActiveTab] = useState<'appearance' | 'idle' | 'packs' | 'session' | 'hardware'>('appearance');
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showResetAllModal, setShowResetAllModal] = useState(false);
@@ -245,6 +541,17 @@ export const AdminSettings: React.FC = () => {
         if (data.idleScreenMode) {
           setIdleScreenMode(data.idleScreenMode);
         }
+        setIdlePage({
+          ...DEFAULT_IDLE_PAGE_SETTINGS,
+          ...(data.idlePage || {}),
+          mode: data.idlePage?.mode || data.idleScreenMode || 'standard',
+        });
+        if (data.imagePreprocessing) {
+          setImagePreprocessing(data.imagePreprocessing);
+        }
+        if (data.photoEnhancer) {
+          setPhotoEnhancer(normalizeEnhancerSettings(data.photoEnhancer));
+        }
       }
     });
   }, []);
@@ -276,12 +583,21 @@ export const AdminSettings: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      setUploadNotice('Harap pilih file gambar (JPG, PNG, atau WebP).');
+    const lowerName = file.name.toLowerCase();
+    const isGif = file.type === 'image/gif' || lowerName.endsWith('.gif');
+    const isWebp = file.type === 'image/webp' || lowerName.endsWith('.webp');
+
+    if (!file.type.startsWith('image/') && !isGif) {
+      setUploadNotice('Harap pilih file gambar (JPG, PNG, WebP, atau GIF).');
+      e.target.value = '';
       return;
     }
 
-    setUploadNotice('Memproses dan mengoptimalkan gambar latar...');
+    setUploadNotice(
+      isGif
+        ? 'Memuat animasi GIF latar...'
+        : 'Memproses dan mengoptimalkan gambar latar...'
+    );
     const reader = new FileReader();
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string;
@@ -289,6 +605,19 @@ export const AdminSettings: React.FC = () => {
 
       const img = new Image();
       img.onload = () => {
+        // Preserve animated GIFs (and compact WebPs) directly without canvas flattening
+        if (isGif || (isWebp && file.size <= 6 * 1024 * 1024)) {
+          const gifDataUrl =
+            isGif && !dataUrl.startsWith('data:image/gif')
+              ? dataUrl.replace(/^data:[^;]*;/, 'data:image/gif;')
+              : dataUrl;
+          setKioskBackground(gifDataUrl);
+          setUploadNotice(
+            `${isGif ? 'GIF animasi' : 'Gambar'} berhasil dimuat (${file.name} · ${img.width}×${img.height}px). Klik Simpan Pengaturan untuk menerapkan.`
+          );
+          return;
+        }
+
         const maxWidth = 1920;
         const maxHeight = 1080;
         let width = img.width;
@@ -320,6 +649,7 @@ export const AdminSettings: React.FC = () => {
       img.src = dataUrl;
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleApplyCustomUrl = () => {
@@ -447,8 +777,11 @@ export const AdminSettings: React.FC = () => {
       themePreset,
       kioskBackground,
       kioskBackgroundOverlayOpacity,
-      idleScreenMode,
+      idleScreenMode: idlePage.mode,
+      idlePage,
       language,
+      imagePreprocessing,
+      photoEnhancer,
       updatedAt: new Date().toISOString(),
     });
 
@@ -488,6 +821,9 @@ export const AdminSettings: React.FC = () => {
     setKioskBackgroundOverlayOpacity(60);
     setCustomBackdropUrl('');
     setIdleScreenMode(DEFAULT_APP_SETTINGS.idleScreenMode || 'standard');
+    setIdlePage(DEFAULT_IDLE_PAGE_SETTINGS);
+    setImagePreprocessing(DEFAULT_IMAGE_PREPROCESSING);
+    setPhotoEnhancer(DEFAULT_PHOTO_ENHANCER);
     setUploadNotice(null);
     setTestApiResult(null);
     applyThemeColor('#E11D48');
@@ -519,6 +855,10 @@ export const AdminSettings: React.FC = () => {
     setKioskBackground('');
     setKioskBackgroundOverlayOpacity(60);
     setCustomBackdropUrl('');
+    setIdleScreenMode(DEFAULT_IDLE_PAGE_SETTINGS.mode);
+    setIdlePage(DEFAULT_IDLE_PAGE_SETTINGS);
+    setImagePreprocessing(DEFAULT_IMAGE_PREPROCESSING);
+    setPhotoEnhancer(DEFAULT_PHOTO_ENHANCER);
     setUploadNotice(null);
     setTestApiResult(null);
     applyThemeColor('#E11D48');
@@ -559,6 +899,17 @@ export const AdminSettings: React.FC = () => {
             }`}
         >
           🎨 {t.admin.settingsTabAppearance}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('idle')}
+          style={activeTab === 'idle' ? { borderColor: themeColor, color: themeColor } : {}}
+          className={`min-h-[44px] px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer border-b-2 active:scale-95 ${activeTab === 'idle'
+            ? 'border-b-2 bg-white text-neutral-900 shadow-xs'
+            : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+            }`}
+        >
+          🏠 {t.admin.settingsTabIdle}
         </button>
         <button
           type="button"
@@ -803,15 +1154,15 @@ export const AdminSettings: React.FC = () => {
                 {/* Unggah Foto Kustom Sendiri */}
                 <div className="space-y-2 pt-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-neutral-700">Atau Unggah Foto Kustom Anda Sendiri (Offline):</p>
-                    <span className="text-[11px] text-neutral-500">JPG, PNG, WebP</span>
+                    <p className="text-xs font-semibold text-neutral-700">Atau Unggah Foto / GIF Kustom Anda Sendiri (Offline):</p>
+                    <span className="text-[11px] text-neutral-500">JPG, PNG, WebP, GIF</span>
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/webp,image/gif,image/*"
                       onChange={handleFileUpload}
                       className="hidden"
                     />
@@ -887,12 +1238,14 @@ export const AdminSettings: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button
                       type="button"
-                      onClick={() => setIdleScreenMode('standard')}
-                      className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
-                        idleScreenMode === 'standard'
-                          ? 'border-neutral-900 ring-2 ring-neutral-900 bg-neutral-900 text-white shadow-md'
-                          : 'border-neutral-200 bg-white hover:border-neutral-400 text-neutral-800'
-                      }`}
+                      onClick={() => {
+                        setIdleScreenMode('standard');
+                        setIdlePage((prev) => ({ ...prev, mode: 'standard' }));
+                      }}
+                      className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${idleScreenMode === 'standard'
+                        ? 'border-neutral-900 ring-2 ring-neutral-900 bg-neutral-900 text-white shadow-md'
+                        : 'border-neutral-200 bg-white hover:border-neutral-400 text-neutral-800'
+                        }`}
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-base">🖼️</span>
@@ -905,12 +1258,14 @@ export const AdminSettings: React.FC = () => {
 
                     <button
                       type="button"
-                      onClick={() => setIdleScreenMode('fullscreen-camera')}
-                      className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
-                        idleScreenMode === 'fullscreen-camera'
-                          ? 'border-neutral-900 ring-2 ring-neutral-900 bg-neutral-900 text-white shadow-md'
-                          : 'border-neutral-200 bg-white hover:border-neutral-400 text-neutral-800'
-                      }`}
+                      onClick={() => {
+                        setIdleScreenMode('fullscreen-camera');
+                        setIdlePage((prev) => ({ ...prev, mode: 'fullscreen-camera' }));
+                      }}
+                      className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${idleScreenMode === 'fullscreen-camera'
+                        ? 'border-neutral-900 ring-2 ring-neutral-900 bg-neutral-900 text-white shadow-md'
+                        : 'border-neutral-200 bg-white hover:border-neutral-400 text-neutral-800'
+                        }`}
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-base">📸</span>
@@ -924,6 +1279,24 @@ export const AdminSettings: React.FC = () => {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* TAB: WELCOME / IDLE PAGE CUSTOMIZATION */}
+          {activeTab === 'idle' && (
+            <IdlePageSettingsTab
+              idlePage={idlePage}
+              setIdlePage={setIdlePage}
+              themeColor={themeColor}
+              studioName={studioName}
+              eventName={eventName}
+              onSyncMode={(mode) => setIdleScreenMode(mode)}
+              onResetIdleDefaults={() => {
+                setIdlePage(DEFAULT_IDLE_PAGE_SETTINGS);
+                setIdleScreenMode(DEFAULT_IDLE_PAGE_SETTINGS.mode);
+                setUploadNotice('Pengaturan Layar Selamat Datang dikembalikan ke default.');
+              }}
+              onNotice={(msg) => setUploadNotice(msg)}
+            />
           )}
 
           {/* TAB: FRAME PACKS MANAGEMENT */}
@@ -996,11 +1369,10 @@ export const AdminSettings: React.FC = () => {
                   return (
                     <div
                       key={pack.id}
-                      className={`relative rounded-2xl border p-4.5 flex flex-col justify-between gap-4 transition-all ${
-                        isActive
-                          ? 'border-[var(--theme-accent,#E11D48)] bg-[var(--theme-accent,#E11D48)]/[0.03] ring-2 ring-[var(--theme-accent,#E11D48)]/40 shadow-xs'
-                          : 'border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-2xs'
-                      }`}
+                      className={`relative rounded-2xl border p-4.5 flex flex-col justify-between gap-4 transition-all ${isActive
+                        ? 'border-[var(--theme-accent,#E11D48)] bg-[var(--theme-accent,#E11D48)]/[0.03] ring-2 ring-[var(--theme-accent,#E11D48)]/40 shadow-xs'
+                        : 'border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-2xs'
+                        }`}
                     >
                       <div className="space-y-3">
                         <div className="flex items-start justify-between gap-3">
@@ -1288,169 +1660,167 @@ export const AdminSettings: React.FC = () => {
                     <option value="gphoto">Kamera Eksternal DSLR/Mirrorless (web-gphoto2 WebUSB)</option>
                     <option value="simulator">Paksa Mode Simulator Studio</option>
                   </select>
-
-                  {/* DSLR diagnostics & test pairing in Admin */}
-                  <div className="mt-2 p-3 bg-neutral-100 rounded-lg border border-neutral-200 text-xs space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-neutral-700">Kamera DSLR (WebUSB):</span>
-                      <span className="flex items-center gap-1.5 font-medium">
-                        <span
-                          className={`w-2 h-2 rounded-full ${
-                            dslrStatus.isConnected
-                              ? 'bg-emerald-500 animate-pulse'
-                              : dslrStatus.isConnecting
-                              ? 'bg-amber-500 animate-pulse'
-                              : 'bg-neutral-400'
+                </div>
+                {/* DSLR diagnostics & test pairing in Admin */}
+                <div className="mt-2 p-3 bg-neutral-100 rounded-lg border border-neutral-200 text-xs space-y-2 col-span-full">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-neutral-700">Kamera DSLR (WebUSB):</span>
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <span
+                        className={`w-2 h-2 rounded-full ${dslrStatus.isConnected
+                          ? 'bg-emerald-500 animate-pulse'
+                          : dslrStatus.isConnecting
+                            ? 'bg-amber-500 animate-pulse'
+                            : 'bg-neutral-400'
                           }`}
-                        />
-                        <span className={dslrStatus.isConnected ? 'text-emerald-700' : 'text-neutral-600'}>
-                          {dslrStatus.isConnected
-                            ? dslrStatus.modelName || 'DSLR Terhubung'
-                            : dslrStatus.isConnecting
+                      />
+                      <span className={dslrStatus.isConnected ? 'text-emerald-700' : 'text-neutral-600'}>
+                        {dslrStatus.isConnected
+                          ? dslrStatus.modelName || 'DSLR Terhubung'
+                          : dslrStatus.isConnecting
                             ? 'Menghubungkan...'
                             : 'Tidak Terhubung'}
-                        </span>
                       </span>
+                    </span>
+                  </div>
+
+                  {!dslrStatus.isSupported ? (
+                    <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded border border-amber-200">
+                      ⚠️ Browser tidak mendukung WebUSB atau koneksi bukan HTTPS/localhost. Gunakan Google Chrome/Edge.
+                    </p>
+                  ) : (
+                    <div className="flex items-center gap-2 pt-1">
+                      {!dslrStatus.isConnected ? (
+                        <button
+                          type="button"
+                          onClick={handleConnectDslr}
+                          disabled={dslrStatus.isConnecting}
+                          className="px-3 py-1.5 text-xs font-semibold bg-emerald-700 hover:bg-emerald-600 text-white rounded-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer flex items-center gap-1"
+                        >
+                          <span>🔌</span>
+                          <span>Hubungkan / Uji Kamera DSLR</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleDisconnectDslr}
+                          className="px-3 py-1.5 text-xs font-semibold bg-neutral-200 hover:bg-rose-100 text-neutral-800 hover:text-rose-700 rounded-md transition-all border border-neutral-300 cursor-pointer"
+                        >
+                          ✕ Putuskan DSLR
+                        </button>
+                      )}
                     </div>
+                  )}
 
-                    {!dslrStatus.isSupported ? (
-                      <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded border border-amber-200">
-                        ⚠️ Browser tidak mendukung WebUSB atau koneksi bukan HTTPS/localhost. Gunakan Google Chrome/Edge.
-                      </p>
-                    ) : (
-                      <div className="flex items-center gap-2 pt-1">
-                        {!dslrStatus.isConnected ? (
-                          <button
-                            type="button"
-                            onClick={handleConnectDslr}
-                            disabled={dslrStatus.isConnecting}
-                            className="px-3 py-1.5 text-xs font-semibold bg-emerald-700 hover:bg-emerald-600 text-white rounded-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer flex items-center gap-1"
-                          >
-                            <span>🔌</span>
-                            <span>Hubungkan / Uji Kamera DSLR</span>
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={handleDisconnectDslr}
-                            className="px-3 py-1.5 text-xs font-semibold bg-neutral-200 hover:bg-rose-100 text-neutral-800 hover:text-rose-700 rounded-md transition-all border border-neutral-300 cursor-pointer"
-                          >
-                            ✕ Putuskan DSLR
-                          </button>
-                        )}
+                  {dslrStatus.isConnected && dslrStatus.config && (
+                    <div className="mt-2.5 pt-2 border-t border-neutral-200 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-neutral-800 text-[11px] uppercase tracking-wide">
+                          Konfigurasi Hardware Kamera:
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleRefreshDslrConfig}
+                          disabled={syncingDslrConfig}
+                          className="text-[11px] px-2 py-0.5 rounded bg-neutral-200 hover:bg-neutral-300 text-neutral-700 font-medium transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        >
+                          <span className={syncingDslrConfig ? 'animate-spin' : ''}>🔄</span>
+                          <span>{syncingDslrConfig ? 'Menyinkronkan...' : 'Sinkron dari Kamera'}</span>
+                        </button>
                       </div>
-                    )}
 
-                    {dslrStatus.isConnected && dslrStatus.config && (
-                      <div className="mt-2.5 pt-2 border-t border-neutral-200 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-neutral-800 text-[11px] uppercase tracking-wide">
-                            Konfigurasi Hardware Kamera:
-                          </span>
-                          <button
-                            type="button"
-                            onClick={handleRefreshDslrConfig}
-                            disabled={syncingDslrConfig}
-                            className="text-[11px] px-2 py-0.5 rounded bg-neutral-200 hover:bg-neutral-300 text-neutral-700 font-medium transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                          >
-                            <span className={syncingDslrConfig ? 'animate-spin' : ''}>🔄</span>
-                            <span>{syncingDslrConfig ? 'Menyinkronkan...' : 'Sinkron dari Kamera'}</span>
-                          </button>
-                        </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                        {/* ISO */}
+                        {dslrStatus.config['iso'] && (
+                          <div className="bg-white p-2 rounded border border-neutral-200">
+                            <span className="text-[10px] text-neutral-500 font-bold block uppercase">ISO</span>
+                            {dslrStatus.config['iso'].choices && dslrStatus.config['iso'].choices.length > 0 ? (
+                              <select
+                                value={String(dslrStatus.config['iso'].value)}
+                                onChange={(e) => handleSetDslrConfig('iso', e.target.value)}
+                                className="w-full text-xs font-semibold bg-neutral-50 border border-neutral-300 rounded p-1 mt-0.5"
+                              >
+                                {dslrStatus.config['iso'].choices.map((c) => (
+                                  <option key={c} value={c}>{c}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span className="font-mono text-xs font-bold text-neutral-800">{String(dslrStatus.config['iso'].value)}</span>
+                            )}
+                          </div>
+                        )}
 
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                          {/* ISO */}
-                          {dslrStatus.config['iso'] && (
+                        {/* Shutter */}
+                        {(dslrStatus.config['shutterspeed'] || dslrStatus.config['shutter-speed']) && (() => {
+                          const f = dslrStatus.config['shutterspeed'] || dslrStatus.config['shutter-speed'];
+                          return (
                             <div className="bg-white p-2 rounded border border-neutral-200">
-                              <span className="text-[10px] text-neutral-500 font-bold block uppercase">ISO</span>
-                              {dslrStatus.config['iso'].choices && dslrStatus.config['iso'].choices.length > 0 ? (
+                              <span className="text-[10px] text-neutral-500 font-bold block uppercase">Shutter</span>
+                              {f.choices && f.choices.length > 0 ? (
                                 <select
-                                  value={String(dslrStatus.config['iso'].value)}
-                                  onChange={(e) => handleSetDslrConfig('iso', e.target.value)}
+                                  value={String(f.value)}
+                                  onChange={(e) => handleSetDslrConfig(f.name, e.target.value)}
                                   className="w-full text-xs font-semibold bg-neutral-50 border border-neutral-300 rounded p-1 mt-0.5"
                                 >
-                                  {dslrStatus.config['iso'].choices.map((c) => (
+                                  {f.choices.map((c) => (
                                     <option key={c} value={c}>{c}</option>
                                   ))}
                                 </select>
                               ) : (
-                                <span className="font-mono text-xs font-bold text-neutral-800">{String(dslrStatus.config['iso'].value)}</span>
+                                <span className="font-mono text-xs font-bold text-neutral-800">{String(f.value)}</span>
                               )}
                             </div>
-                          )}
+                          );
+                        })()}
 
-                          {/* Shutter */}
-                          {(dslrStatus.config['shutterspeed'] || dslrStatus.config['shutter-speed']) && (() => {
-                            const f = dslrStatus.config['shutterspeed'] || dslrStatus.config['shutter-speed'];
-                            return (
-                              <div className="bg-white p-2 rounded border border-neutral-200">
-                                <span className="text-[10px] text-neutral-500 font-bold block uppercase">Shutter</span>
-                                {f.choices && f.choices.length > 0 ? (
-                                  <select
-                                    value={String(f.value)}
-                                    onChange={(e) => handleSetDslrConfig(f.name, e.target.value)}
-                                    className="w-full text-xs font-semibold bg-neutral-50 border border-neutral-300 rounded p-1 mt-0.5"
-                                  >
-                                    {f.choices.map((c) => (
-                                      <option key={c} value={c}>{c}</option>
-                                    ))}
-                                  </select>
-                                ) : (
-                                  <span className="font-mono text-xs font-bold text-neutral-800">{String(f.value)}</span>
-                                )}
-                              </div>
-                            );
-                          })()}
+                        {/* Aperture */}
+                        {(dslrStatus.config['aperture'] || dslrStatus.config['f-number']) && (() => {
+                          const f = dslrStatus.config['aperture'] || dslrStatus.config['f-number'];
+                          return (
+                            <div className="bg-white p-2 rounded border border-neutral-200">
+                              <span className="text-[10px] text-neutral-500 font-bold block uppercase">Aperture</span>
+                              {f.choices && f.choices.length > 0 ? (
+                                <select
+                                  value={String(f.value)}
+                                  onChange={(e) => handleSetDslrConfig(f.name, e.target.value)}
+                                  className="w-full text-xs font-semibold bg-neutral-50 border border-neutral-300 rounded p-1 mt-0.5"
+                                >
+                                  {f.choices.map((c) => (
+                                    <option key={c} value={c}>{c}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span className="font-mono text-xs font-bold text-neutral-800">{String(f.value)}</span>
+                              )}
+                            </div>
+                          );
+                        })()}
 
-                          {/* Aperture */}
-                          {(dslrStatus.config['aperture'] || dslrStatus.config['f-number']) && (() => {
-                            const f = dslrStatus.config['aperture'] || dslrStatus.config['f-number'];
-                            return (
-                              <div className="bg-white p-2 rounded border border-neutral-200">
-                                <span className="text-[10px] text-neutral-500 font-bold block uppercase">Aperture</span>
-                                {f.choices && f.choices.length > 0 ? (
-                                  <select
-                                    value={String(f.value)}
-                                    onChange={(e) => handleSetDslrConfig(f.name, e.target.value)}
-                                    className="w-full text-xs font-semibold bg-neutral-50 border border-neutral-300 rounded p-1 mt-0.5"
-                                  >
-                                    {f.choices.map((c) => (
-                                      <option key={c} value={c}>{c}</option>
-                                    ))}
-                                  </select>
-                                ) : (
-                                  <span className="font-mono text-xs font-bold text-neutral-800">{String(f.value)}</span>
-                                )}
-                              </div>
-                            );
-                          })()}
-
-                          {/* White Balance */}
-                          {(dslrStatus.config['whitebalance'] || dslrStatus.config['white-balance']) && (() => {
-                            const f = dslrStatus.config['whitebalance'] || dslrStatus.config['white-balance'];
-                            return (
-                              <div className="bg-white p-2 rounded border border-neutral-200">
-                                <span className="text-[10px] text-neutral-500 font-bold block uppercase">WB</span>
-                                {f.choices && f.choices.length > 0 ? (
-                                  <select
-                                    value={String(f.value)}
-                                    onChange={(e) => handleSetDslrConfig(f.name, e.target.value)}
-                                    className="w-full text-xs font-semibold bg-neutral-50 border border-neutral-300 rounded p-1 mt-0.5"
-                                  >
-                                    {f.choices.map((c) => (
-                                      <option key={c} value={c}>{c}</option>
-                                    ))}
-                                  </select>
-                                ) : (
-                                  <span className="font-mono text-xs font-bold text-neutral-800">{String(f.value)}</span>
-                                )}
-                              </div>
-                            );
-                          })()}
-                        </div>
+                        {/* White Balance */}
+                        {(dslrStatus.config['whitebalance'] || dslrStatus.config['white-balance']) && (() => {
+                          const f = dslrStatus.config['whitebalance'] || dslrStatus.config['white-balance'];
+                          return (
+                            <div className="bg-white p-2 rounded border border-neutral-200">
+                              <span className="text-[10px] text-neutral-500 font-bold block uppercase">WB</span>
+                              {f.choices && f.choices.length > 0 ? (
+                                <select
+                                  value={String(f.value)}
+                                  onChange={(e) => handleSetDslrConfig(f.name, e.target.value)}
+                                  className="w-full text-xs font-semibold bg-neutral-50 border border-neutral-300 rounded p-1 mt-0.5"
+                                >
+                                  {f.choices.map((c) => (
+                                    <option key={c} value={c}>{c}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span className="font-mono text-xs font-bold text-neutral-800">{String(f.value)}</span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1494,6 +1864,1010 @@ export const AdminSettings: React.FC = () => {
                     Tampilkan Panduan Batas Crop Kamera secara default (menampilkan area yang terpotong saat ukuran foto bingkai berbeda dari rasio kamera)
                   </span>
                 </label>
+              </div>
+
+              {/* Bagian: Pra-pemrosesan Citra Kamera (Image Preprocessing) */}
+              <div className="pt-4 border-t border-neutral-200 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
+                      <span>🎨 Image Preprocessing</span>
+                      {!isPreprocessingNeutral(imagePreprocessing) && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold border border-emerald-300">
+                          Aktif
+                        </span>
+                      )}
+                    </h3>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      Kalibrasi warna sumber kamera.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setImagePreprocessing((prev) => ({ ...prev, enabled: !prev.enabled }))
+                      }
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${imagePreprocessing.enabled !== false
+                        ? 'bg-neutral-900 text-white border-neutral-900'
+                        : 'bg-neutral-100 text-neutral-500 border-neutral-300'
+                        }`}
+                    >
+                      {imagePreprocessing.enabled !== false ? 'Aktif' : 'Nonaktif'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setImagePreprocessing(DEFAULT_IMAGE_PREPROCESSING)}
+                      className="px-3 py-1.5 text-xs font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 rounded-lg transition-colors cursor-pointer"
+                    >
+                      ↺ Reset
+                    </button>
+                  </div>
+                </div>
+
+                {/* Interactive Live Comparison Card - Driven by Selected Camera from Settings */}
+                <div className="bg-[#FAF9F5] p-4 rounded-xl border border-neutral-200 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-neutral-800 uppercase tracking-wide flex items-center gap-1.5">
+                      <span>👁️</span>
+                      <span>Komparasi Visual</span>
+                      <span className="ml-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-neutral-200 text-neutral-700 font-sans normal-case">
+                        Kamera: {cameraSourceMode === 'gphoto' ? '📸 DSLR (WebUSB)' : cameraSourceMode === 'simulator' ? '🖥️ Simulator Studio' : '📹 Webcam Live'}
+                      </span>
+                    </span>
+                    {cameraSourceMode === 'simulator' && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] text-neutral-500">Pose Uji:</span>
+                        {STUDIO_PORTRAITS.map((p, idx) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => setPreviewPoseIdx(idx)}
+                            className={`w-6 h-6 text-[10px] font-mono font-bold rounded cursor-pointer transition-all ${previewPoseIdx === idx
+                              ? 'bg-neutral-900 text-white'
+                              : 'bg-neutral-200 hover:bg-neutral-300 text-neutral-700'
+                              }`}
+                          >
+                            {idx + 1}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 1. If Camera Source Setting is gPhoto DSLR */}
+                  {cameraSourceMode === 'gphoto' && (
+                    dslrStatus.isConnected && dslrLiveFrame ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* Sebelum */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-[11px] text-neutral-600 font-semibold">
+                            <span>Sebelum</span>
+                            <span className="text-neutral-400 font-mono">filter: none</span>
+                          </div>
+                          <div className="relative aspect-4/3 rounded-lg overflow-hidden bg-black border border-neutral-300">
+                            <img
+                              src={dslrLiveFrame}
+                              alt="Sebelum"
+                              className={`w-full h-full object-cover ${mirrorCamera ? 'scale-x-[-1]' : ''}`}
+                            />
+                            <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/70 text-white text-[10px] font-mono">
+                              RAW DSLR LIVE
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Sesudah */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-[11px] font-semibold text-neutral-900">
+                            <span>Sesudah</span>
+                            <span className="text-emerald-700 font-mono text-[10px]">
+                              {isPreprocessingNeutral(imagePreprocessing) ? 'Netral' : 'Teraplikasi'}
+                            </span>
+                          </div>
+                          <div className="relative aspect-4/3 rounded-lg overflow-hidden bg-black border border-neutral-300">
+                            <img
+                              src={dslrLiveFrame}
+                              alt="Sesudah"
+                              style={{
+                                filter:
+                                  imagePreprocessing.enabled !== false
+                                    ? getPreprocessingCssFilter(imagePreprocessing)
+                                    : 'none',
+                              }}
+                              className={`w-full h-full object-cover ${mirrorCamera ? 'scale-x-[-1]' : ''}`}
+                            />
+                            <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-[var(--theme-accent,#E11D48)] text-white text-[10px] font-bold">
+                              PREPROCESSED
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-6 rounded-lg bg-white border border-neutral-200 text-center space-y-3">
+                        <span className="text-3xl">📸</span>
+                        <div className="space-y-1">
+                          <h5 className="text-xs font-bold text-neutral-800">
+                            Kamera DSLR (Sesuai Pengaturan: WebUSB) Belum Terhubung
+                          </h5>
+                          <p className="text-[11px] text-neutral-500 max-w-md mx-auto">
+                            Pengaturan kamera saat ini adalah DSLR. Sambungkan kamera melalui kabel USB dan klik tombol di bawah untuk mengaktifkan live view sensor.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleConnectDslr}
+                          disabled={dslrStatus.isConnecting}
+                          className="px-3.5 py-2 text-xs font-semibold bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg shadow-sm transition-all cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5"
+                        >
+                          <span>🔌</span>
+                          <span>{dslrStatus.isConnecting ? 'Menghubungkan...' : 'Hubungkan Kamera DSLR'}</span>
+                        </button>
+                      </div>
+                    )
+                  )}
+
+                  {/* 2. If Camera Source Setting is WebRTC (auto) */}
+                  {cameraSourceMode === 'auto' && (
+                    testWebcamActive ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* Sebelum */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-[11px] text-neutral-600 font-semibold">
+                            <span>Sebelum (Sensor Asli Webcam)</span>
+                            <span className="text-neutral-400 font-mono">filter: none</span>
+                          </div>
+                          <div className="relative aspect-4/3 rounded-lg overflow-hidden bg-black border border-neutral-300 flex items-center justify-center">
+                            <video
+                              ref={(el) => {
+                                if (el && testStreamRef.current && el.srcObject !== testStreamRef.current) {
+                                  el.srcObject = testStreamRef.current;
+                                  el.play().catch(() => { });
+                                }
+                              }}
+                              playsInline
+                              autoPlay
+                              muted
+                              className={`w-full h-full object-cover ${mirrorCamera ? 'scale-x-[-1]' : ''}`}
+                            />
+                            <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/70 text-white text-[10px] font-mono">
+                              RAW WEBCAM LIVE
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Sesudah */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-[11px] font-semibold text-neutral-900">
+                            <span>Sesudah (Terkalibrasi Studio)</span>
+                            <span className="text-emerald-700 font-mono text-[10px]">
+                              {isPreprocessingNeutral(imagePreprocessing) ? 'Netral' : 'Teraplikasi'}
+                            </span>
+                          </div>
+                          <div className="relative aspect-4/3 rounded-lg overflow-hidden bg-black border border-neutral-300 flex items-center justify-center">
+                            <video
+                              ref={(el) => {
+                                if (el && testStreamRef.current && el.srcObject !== testStreamRef.current) {
+                                  el.srcObject = testStreamRef.current;
+                                  el.play().catch(() => { });
+                                }
+                              }}
+                              playsInline
+                              autoPlay
+                              muted
+                              style={{
+                                filter:
+                                  imagePreprocessing.enabled !== false
+                                    ? getPreprocessingCssFilter(imagePreprocessing)
+                                    : 'none',
+                              }}
+                              className={`w-full h-full object-cover ${mirrorCamera ? 'scale-x-[-1]' : ''}`}
+                            />
+                            <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-[var(--theme-accent,#E11D48)] text-white text-[10px] font-bold">
+                              PREPROCESSED
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-6 rounded-lg bg-white border border-neutral-200 text-center space-y-3">
+                        <span className="text-3xl">📹</span>
+                        <div className="space-y-1">
+                          <h5 className="text-xs font-bold text-neutral-800">
+                            Kamera Webcam (Sesuai Pengaturan: Otomatis / WebRTC)
+                          </h5>
+                          <p className="text-[11px] text-neutral-500 max-w-md mx-auto">
+                            Nyalakan kamera untuk melihat pratinjau komparasi filter sebelum vs sesudah langsung dari kamera aktif.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleToggleTestWebcam}
+                          className="px-3.5 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg shadow-sm transition-all cursor-pointer inline-flex items-center gap-1.5"
+                        >
+                          <span>📹</span>
+                          <span>Buka Live Camera untuk Pratinjau</span>
+                        </button>
+                      </div>
+                    )
+                  )}
+
+                  {/* 3. If Camera Source Setting is Simulator */}
+                  {cameraSourceMode === 'simulator' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Original Raw Preview */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-[11px] text-neutral-600 font-semibold">
+                          <span>Sebelum (Asli Sensor / Netral)</span>
+                          <span className="text-neutral-400 font-mono">filter: none</span>
+                        </div>
+                        <div className="relative aspect-4/3 rounded-lg overflow-hidden bg-black border border-neutral-300">
+                          <img
+                            src={STUDIO_PORTRAITS[previewPoseIdx % STUDIO_PORTRAITS.length].src}
+                            alt="Sebelum"
+                            className="w-full h-full object-cover"
+                          />
+                          <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/70 text-white text-[10px] font-mono">
+                            RAW SIMULATOR
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Preprocessed Result Preview */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-[11px] font-semibold text-neutral-900">
+                          <span>Sesudah (Terkalibrasi Studio)</span>
+                          <span className="text-emerald-700 font-mono text-[10px] truncate max-w-[150px]">
+                            {isPreprocessingNeutral(imagePreprocessing) ? 'Netral' : 'Teraplikasi'}
+                          </span>
+                        </div>
+                        <div className="relative aspect-4/3 rounded-lg overflow-hidden bg-black border border-neutral-300">
+                          <img
+                            src={STUDIO_PORTRAITS[previewPoseIdx % STUDIO_PORTRAITS.length].src}
+                            alt="Sesudah"
+                            style={{
+                              filter:
+                                imagePreprocessing.enabled !== false
+                                  ? getPreprocessingCssFilter(imagePreprocessing)
+                                  : 'none',
+                            }}
+                            className="w-full h-full object-cover"
+                          />
+                          <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-[var(--theme-accent,#E11D48)] text-white text-[10px] font-bold">
+                            PREPROCESSED
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Real Test Capture Control & Result Card */}
+                <div className="bg-white p-4 rounded-xl border border-neutral-300 shadow-xs space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h4 className="text-xs font-bold text-neutral-900 uppercase tracking-wide flex items-center gap-1.5">
+                        <span>📸</span>
+                        <span>Uji Jepret Kamera</span>
+                      </h4>
+                      <p className="text-[11px] text-neutral-500 mt-0.5">
+                        Ambil foto uji dari kamera aktif sesuai pengaturan: <strong className="text-neutral-800">{cameraSourceMode === 'gphoto' ? (dslrStatus.modelName || 'Kamera DSLR (WebUSB)') : cameraSourceMode === 'simulator' ? 'Simulator Studio' : 'Webcam Live (WebRTC)'}</strong> dan proses langsung melalui engine kalibrasi.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      {cameraSourceMode === 'auto' && (
+                        <button
+                          type="button"
+                          onClick={handleToggleTestWebcam}
+                          className={`px-3 py-2 text-xs font-semibold rounded-lg border transition-all cursor-pointer flex items-center gap-1.5 ${testWebcamActive
+                            ? 'bg-rose-100 hover:bg-rose-200 text-rose-800 border-rose-300'
+                            : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border-neutral-300'
+                            }`}
+                          title="Nyalakan kamera webcam langsung untuk uji coba pose Anda sendiri"
+                        >
+                          <span>{testWebcamActive ? '✕' : '📹'}</span>
+                          <span>{testWebcamActive ? (t.camera.preprocessing?.testWebcamClose || 'Tutup Kamera Uji') : (t.camera.preprocessing?.testWebcamOpen || 'Aktifkan Kamera Uji')}</span>
+                        </button>
+                      )}
+
+                      {cameraSourceMode === 'gphoto' && !dslrStatus.isConnected && (
+                        <button
+                          type="button"
+                          onClick={handleConnectDslr}
+                          disabled={dslrStatus.isConnecting}
+                          className="px-3 py-2 text-xs font-semibold bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                        >
+                          <span>🔌</span>
+                          <span>{dslrStatus.isConnecting ? 'Menghubungkan...' : 'Hubungkan Kamera DSLR'}</span>
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={handlePerformTestCapture}
+                        disabled={isTestCapturing}
+                        className="px-4 py-2 text-xs font-bold bg-[var(--theme-accent,#E11D48)] hover:brightness-110 active:scale-95 text-white rounded-lg shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center gap-2"
+                      >
+                        <span>{isTestCapturing ? '⏳' : '📸'}</span>
+                        <span>{isTestCapturing ? 'Diproses...' : (t.camera.preprocessing?.testCaptureBtn || 'Ambil Foto Uji Coba')}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Active Live Webcam Test Box */}
+                  {testWebcamActive && (
+                    <div className="bg-black rounded-xl overflow-hidden border border-neutral-800 p-3 space-y-2 animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between text-xs text-white">
+                        <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                          <span>Kamera Uji Live (Viewfinder)</span>
+                        </span>
+                        <span className="text-[11px] text-zinc-400">
+                          Efek filter live terpasang di layar
+                        </span>
+                      </div>
+                      <div className="relative aspect-video max-h-72 w-full rounded-lg overflow-hidden bg-zinc-950 flex items-center justify-center">
+                        <video
+                          ref={testVideoRef}
+                          playsInline
+                          autoPlay
+                          muted
+                          style={{
+                            filter: imagePreprocessing.enabled !== false
+                              ? getPreprocessingCssFilter(imagePreprocessing)
+                              : 'none',
+                          }}
+                          className={`w-full h-full object-contain ${mirrorCamera ? 'scale-x-[-1]' : ''}`}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Real Test Capture Output Result Display */}
+                  {testCaptureResult && (
+                    <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-4 space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200/80 pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                          <div>
+                            <span className="text-xs font-bold text-emerald-900 block">
+                              {t.camera.preprocessing?.testCaptureTitle || 'Hasil Jepretan Uji Nyata'}
+                            </span>
+                            <span className="text-[11px] text-emerald-700 font-mono">
+                              {testCaptureResult.source} · {testCaptureResult.width}×{testCaptureResult.height}px · {testCaptureResult.durationMs}ms processing · {testCaptureResult.timestamp}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* View Mode Switcher & Actions */}
+                        <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                          <div className="bg-white/80 p-0.5 rounded-lg border border-emerald-300 flex items-center text-[11px] font-medium">
+                            <button
+                              type="button"
+                              onClick={() => setTestCaptureTab('processed')}
+                              className={`px-2 py-1 rounded cursor-pointer transition-all ${testCaptureTab === 'processed'
+                                ? 'bg-emerald-600 text-white font-bold shadow-xs'
+                                : 'text-emerald-900 hover:text-black'
+                                }`}
+                            >
+                              {t.camera.preprocessing?.processedView || 'Hasil'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setTestCaptureTab('raw')}
+                              className={`px-2 py-1 rounded cursor-pointer transition-all ${testCaptureTab === 'raw'
+                                ? 'bg-emerald-600 text-white font-bold shadow-xs'
+                                : 'text-emerald-900 hover:text-black'
+                                }`}
+                            >
+                              {t.camera.preprocessing?.rawView || 'Asli (Sensor)'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setTestCaptureTab('side-by-side')}
+                              className={`px-2 py-1 rounded cursor-pointer transition-all ${testCaptureTab === 'side-by-side'
+                                ? 'bg-emerald-600 text-white font-bold shadow-xs'
+                                : 'text-emerald-900 hover:text-black'
+                                }`}
+                            >
+                              {t.camera.preprocessing?.sideBySideView || 'Berdampingan'}
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setTestCaptureViewModal(true)}
+                            className="px-2.5 py-1 text-xs font-semibold bg-white hover:bg-neutral-100 text-neutral-800 border border-neutral-300 rounded-lg transition-all cursor-pointer shadow-xs"
+                            title="Buka gambar ukuran penuh"
+                          >
+                            {t.camera.preprocessing?.viewFullBtn || '🔍 Perbesar'}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={handleDownloadTestCapture}
+                            className="px-2.5 py-1 text-xs font-semibold bg-white hover:bg-neutral-100 text-neutral-800 border border-neutral-300 rounded-lg transition-all cursor-pointer shadow-xs"
+                            title="Unduh file hasil uji coba"
+                          >
+                            {t.camera.preprocessing?.downloadTestBtn || '⬇️ Unduh'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Display Picture(s) */}
+                      {testCaptureTab === 'side-by-side' ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <span className="text-[11px] font-bold text-neutral-700 block">
+                              1. Sensor Mentah Asli (Raw Input)
+                            </span>
+                            <div className="relative aspect-4/3 rounded-lg overflow-hidden bg-black border border-neutral-300">
+                              <img
+                                src={testCaptureResult.rawUrl}
+                                alt="Raw Sensor Capture"
+                                className="w-full h-full object-contain"
+                              />
+                              <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/80 text-white text-[10px] font-mono">
+                                RAW SENSOR
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <span className="text-[11px] font-bold text-emerald-800 block">
+                              2. Hasil Nyata Kalibrasi (Engine Output)
+                            </span>
+                            <div className="relative aspect-4/3 rounded-lg overflow-hidden bg-black border border-emerald-400 shadow-md">
+                              <img
+                                src={testCaptureResult.processedUrl}
+                                alt="Processed Real Output"
+                                className="w-full h-full object-contain"
+                              />
+                              <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-bold">
+                                PREPROCESSED OUTPUT
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="relative aspect-16/9 sm:aspect-21/9 max-h-80 w-full rounded-lg overflow-hidden bg-black border border-emerald-300 flex items-center justify-center">
+                          <img
+                            src={testCaptureTab === 'raw' ? testCaptureResult.rawUrl : testCaptureResult.processedUrl}
+                            alt="Hasil Jepretan Uji"
+                            className="w-full h-full object-contain"
+                          />
+                          <span className={`absolute bottom-2 left-2 px-2.5 py-1 rounded text-xs font-bold ${testCaptureTab === 'raw'
+                            ? 'bg-black/85 text-white font-mono'
+                            : 'bg-emerald-600 text-white shadow-md'
+                            }`}>
+                            {testCaptureTab === 'raw' ? 'SENSOR RAW ASLI' : 'HASIL NYATA KALIBRASI (PIXEL ENGINE)'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Preset Buttons */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-semibold text-neutral-700 block">
+                    Pilihan Preset Cepat Studio:
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {PREPROCESSING_PRESETS.map((preset) => {
+                      const isMatched =
+                        (imagePreprocessing.brightness ?? 0) === preset.settings.brightness &&
+                        (imagePreprocessing.contrast ?? 0) === preset.settings.contrast &&
+                        (imagePreprocessing.saturation ?? 0) === preset.settings.saturation &&
+                        (imagePreprocessing.ambiance ?? 0) === preset.settings.ambiance &&
+                        (imagePreprocessing.highlights ?? 0) === preset.settings.highlights &&
+                        (imagePreprocessing.shadows ?? 0) === preset.settings.shadows &&
+                        (imagePreprocessing.warmth ?? 0) === preset.settings.warmth;
+
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() =>
+                            setImagePreprocessing({
+                              ...preset.settings,
+                              enabled: true,
+                            })
+                          }
+                          className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all cursor-pointer flex items-center gap-1.5 ${isMatched
+                            ? 'bg-neutral-900 text-white border-neutral-900 shadow-sm font-semibold'
+                            : 'bg-white hover:bg-neutral-100 text-neutral-800 border-neutral-300'
+                            }`}
+                        >
+                          <span>{preset.icon}</span>
+                          <span>{preset.nameId}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 7 Adjustment Sliders in 2 Columns */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-neutral-50 p-4 rounded-xl border border-neutral-200">
+                  {/* 1. Brightness */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <label className="font-semibold text-neutral-800 flex items-center gap-1.5">
+                        <span>☀️</span>
+                        <span>Kecerahan (Brightness)</span>
+                      </label>
+                      <span className="font-mono text-xs font-bold text-neutral-900 px-1.5 py-0.5 rounded bg-white border border-neutral-200">
+                        {imagePreprocessing.brightness > 0 ? `+${imagePreprocessing.brightness}` : imagePreprocessing.brightness}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={-100}
+                      max={100}
+                      step={1}
+                      value={imagePreprocessing.brightness ?? 0}
+                      onChange={(e) =>
+                        setImagePreprocessing((prev) => ({
+                          ...prev,
+                          brightness: Number(e.target.value),
+                        }))
+                      }
+                      className="w-full accent-[var(--theme-accent,#E11D48)] cursor-pointer"
+                    />
+                    <p className="text-[11px] text-neutral-500">Mengatur tingkat exposure dan pencahayaan global.</p>
+                  </div>
+
+                  {/* 2. Contrast */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <label className="font-semibold text-neutral-800 flex items-center gap-1.5">
+                        <span>🌓</span>
+                        <span>Kontras (Contrast)</span>
+                      </label>
+                      <span className="font-mono text-xs font-bold text-neutral-900 px-1.5 py-0.5 rounded bg-white border border-neutral-200">
+                        {imagePreprocessing.contrast > 0 ? `+${imagePreprocessing.contrast}` : imagePreprocessing.contrast}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={-100}
+                      max={100}
+                      step={1}
+                      value={imagePreprocessing.contrast ?? 0}
+                      onChange={(e) =>
+                        setImagePreprocessing((prev) => ({
+                          ...prev,
+                          contrast: Number(e.target.value),
+                        }))
+                      }
+                      className="w-full accent-[var(--theme-accent,#E11D48)] cursor-pointer"
+                    />
+                    <p className="text-[11px] text-neutral-500">Mempertegas rentang dinamis antara area gelap dan terang.</p>
+                  </div>
+
+                  {/* 3. Saturation */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <label className="font-semibold text-neutral-800 flex items-center gap-1.5">
+                        <span>🎨</span>
+                        <span>Saturasi (Saturation)</span>
+                      </label>
+                      <span className="font-mono text-xs font-bold text-neutral-900 px-1.5 py-0.5 rounded bg-white border border-neutral-200">
+                        {imagePreprocessing.saturation > 0 ? `+${imagePreprocessing.saturation}` : imagePreprocessing.saturation}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={-100}
+                      max={100}
+                      step={1}
+                      value={imagePreprocessing.saturation ?? 0}
+                      onChange={(e) =>
+                        setImagePreprocessing((prev) => ({
+                          ...prev,
+                          saturation: Number(e.target.value),
+                        }))
+                      }
+                      className="w-full accent-[var(--theme-accent,#E11D48)] cursor-pointer"
+                    />
+                    <p className="text-[11px] text-neutral-500">Mengontrol kepekatan dan kekayaan warna gambar.</p>
+                  </div>
+
+                  {/* 4. Ambiance */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <label className="font-semibold text-neutral-800 flex items-center gap-1.5">
+                        <span>✨</span>
+                        <span>Ambiance (Fill Light & Balance)</span>
+                      </label>
+                      <span className="font-mono text-xs font-bold text-neutral-900 px-1.5 py-0.5 rounded bg-white border border-neutral-200">
+                        {imagePreprocessing.ambiance > 0 ? `+${imagePreprocessing.ambiance}` : imagePreprocessing.ambiance}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={-100}
+                      max={100}
+                      step={1}
+                      value={imagePreprocessing.ambiance ?? 0}
+                      onChange={(e) =>
+                        setImagePreprocessing((prev) => ({
+                          ...prev,
+                          ambiance: Number(e.target.value),
+                        }))
+                      }
+                      className="w-full accent-[var(--theme-accent,#E11D48)] cursor-pointer"
+                    />
+                    <p className="text-[11px] text-neutral-500">Keseimbangan pencahayaan dinamis & kejelasan midtone.</p>
+                  </div>
+
+                  {/* 5. Highlights */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <label className="font-semibold text-neutral-800 flex items-center gap-1.5">
+                        <span>🔆</span>
+                        <span>Highlights (Area Terang)</span>
+                      </label>
+                      <span className="font-mono text-xs font-bold text-neutral-900 px-1.5 py-0.5 rounded bg-white border border-neutral-200">
+                        {imagePreprocessing.highlights > 0 ? `+${imagePreprocessing.highlights}` : imagePreprocessing.highlights}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={-100}
+                      max={100}
+                      step={1}
+                      value={imagePreprocessing.highlights ?? 0}
+                      onChange={(e) =>
+                        setImagePreprocessing((prev) => ({
+                          ...prev,
+                          highlights: Number(e.target.value),
+                        }))
+                      }
+                      className="w-full accent-[var(--theme-accent,#E11D48)] cursor-pointer"
+                    />
+                    <p className="text-[11px] text-neutral-500">Meredam overexposure atau mempertegas kilau putih.</p>
+                  </div>
+
+                  {/* 6. Shadows */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <label className="font-semibold text-neutral-800 flex items-center gap-1.5">
+                        <span>👥</span>
+                        <span>Shadows (Area Gelap)</span>
+                      </label>
+                      <span className="font-mono text-xs font-bold text-neutral-900 px-1.5 py-0.5 rounded bg-white border border-neutral-200">
+                        {imagePreprocessing.shadows > 0 ? `+${imagePreprocessing.shadows}` : imagePreprocessing.shadows}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={-100}
+                      max={100}
+                      step={1}
+                      value={imagePreprocessing.shadows ?? 0}
+                      onChange={(e) =>
+                        setImagePreprocessing((prev) => ({
+                          ...prev,
+                          shadows: Number(e.target.value),
+                        }))
+                      }
+                      className="w-full accent-[var(--theme-accent,#E11D48)] cursor-pointer"
+                    />
+                    <p className="text-[11px] text-neutral-500">Mengangkat detail bayangan pada wajah dan pakaian gelap.</p>
+                  </div>
+
+                  {/* 7. Warmth */}
+                  <div className="space-y-1 sm:col-span-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <label className="font-semibold text-neutral-800 flex items-center gap-1.5">
+                        <span>🌡️</span>
+                        <span>Temperatur Warna (Warmth / Kelvin)</span>
+                        <span className="text-[11px] text-neutral-500 font-normal">
+                          ({imagePreprocessing.warmth < 0 ? 'Dingin / Biru' : imagePreprocessing.warmth > 0 ? 'Hangat / Oranye' : 'Netral'})
+                        </span>
+                      </label>
+                      <span className="font-mono text-xs font-bold text-neutral-900 px-1.5 py-0.5 rounded bg-white border border-neutral-200">
+                        {imagePreprocessing.warmth > 0 ? `+${imagePreprocessing.warmth}` : imagePreprocessing.warmth}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={-100}
+                      max={100}
+                      step={1}
+                      value={imagePreprocessing.warmth ?? 0}
+                      onChange={(e) =>
+                        setImagePreprocessing((prev) => ({
+                          ...prev,
+                          warmth: Number(e.target.value),
+                        }))
+                      }
+                      className="w-full accent-[var(--theme-accent,#E11D48)] cursor-pointer"
+                    />
+                    <p className="text-[11px] text-neutral-500">Mengatur white balance antara sejuk (dingin) dan keemasan (hangat).</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bagian: Studio Photo Enhancer (Ringan - Toggleable) */}
+              <div className="pt-4 border-t border-neutral-200 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2 flex-wrap">
+                      <span>✨ {t.admin.photoEnhancer.title}</span>
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
+                          photoEnhancer.enabled
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                            : 'bg-neutral-100 text-neutral-600 border-neutral-300'
+                        }`}
+                      >
+                        {photoEnhancer.enabled
+                          ? t.admin.photoEnhancer.activeBadge
+                          : t.admin.photoEnhancer.inactiveBadge}
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-mono border bg-sky-50 text-sky-700 border-sky-200">
+                        {t.admin.photoEnhancer.engineReady}
+                      </span>
+                    </h3>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      {t.admin.photoEnhancer.subtitle}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      data-testid="toggle-photo-enhancer-btn"
+                      onClick={() =>
+                        setPhotoEnhancer((prev) => ({ ...prev, enabled: !prev.enabled }))
+                      }
+                      className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${
+                        photoEnhancer.enabled
+                          ? 'bg-neutral-900 text-white border-neutral-900'
+                          : 'bg-neutral-100 text-neutral-600 border-neutral-300 hover:bg-neutral-200'
+                      }`}
+                    >
+                      {photoEnhancer.enabled
+                        ? t.admin.photoEnhancer.activeBadge
+                        : t.admin.photoEnhancer.inactiveBadge}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPhotoEnhancer(DEFAULT_PHOTO_ENHANCER)}
+                      className="px-3 py-1.5 text-xs font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 rounded-lg transition-colors cursor-pointer"
+                    >
+                      ↺ Reset
+                    </button>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-3 cursor-pointer bg-neutral-50 p-3 rounded-xl border border-neutral-200">
+                  <input
+                    type="checkbox"
+                    checked={photoEnhancer.enabled}
+                    onChange={(e) =>
+                      setPhotoEnhancer((prev) => ({ ...prev, enabled: e.target.checked }))
+                    }
+                    style={{ accentColor: themeColor }}
+                    className="w-4 h-4 rounded cursor-pointer"
+                  />
+                  <span className="text-sm font-medium text-neutral-800">
+                    {t.admin.photoEnhancer.enableLabel}
+                  </span>
+                </label>
+
+                <div className="space-y-3 bg-[#FAF9F5] p-4 rounded-xl border border-neutral-200">
+                  <div>
+                    <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide block mb-2">
+                      {t.admin.photoEnhancer.presetLabel}
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {ENHANCER_PRESETS.map((preset) => {
+                        const isSelected = photoEnhancer.preset === preset.id;
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() =>
+                              setPhotoEnhancer((prev) => ({
+                                ...prev,
+                                preset: preset.id,
+                                upscaleScale: preset.upscaleScale,
+                                sharpenAmount: preset.sharpenAmount,
+                                denoiseLevel: preset.denoiseLevel,
+                                autoTone: preset.autoTone,
+                              }))
+                            }
+                            className={`text-left p-3 rounded-xl border transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-white border-neutral-900 ring-1 ring-neutral-900 shadow-xs'
+                                : 'bg-white/60 border-neutral-200 hover:border-neutral-300'
+                            }`}
+                          >
+                            <p className="text-xs font-bold text-neutral-900">
+                              {language === 'en' ? preset.nameEn : preset.nameId}
+                            </p>
+                            <p className="text-[11px] text-neutral-500 mt-1 leading-snug">
+                              {language === 'en' ? preset.descEn : preset.descId}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                    <label className="space-y-1 text-xs">
+                      <span className="font-semibold text-neutral-700 block">
+                        {t.admin.photoEnhancer.scaleLabel}
+                      </span>
+                      <select
+                        value={photoEnhancer.upscaleScale}
+                        onChange={(e) =>
+                          setPhotoEnhancer((prev) => ({
+                            ...prev,
+                            upscaleScale: Number(e.target.value) as 1 | 1.5 | 2,
+                          }))
+                        }
+                        className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-lg text-xs font-mono text-neutral-900"
+                      >
+                        <option value={1}>1× (Native · Fastest)</option>
+                        <option value={1.5}>1.5× (Studio Crisp)</option>
+                        <option value={2}>2× (HD Max 2400px)</option>
+                      </select>
+                    </label>
+
+                    <div className="space-y-1 text-xs">
+                      <div className="flex justify-between font-semibold text-neutral-700">
+                        <span>{t.admin.photoEnhancer.sharpenLabel}</span>
+                        <span className="font-mono">{photoEnhancer.sharpenAmount}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={5}
+                        value={photoEnhancer.sharpenAmount}
+                        onChange={(e) =>
+                          setPhotoEnhancer((prev) => ({
+                            ...prev,
+                            sharpenAmount: Number(e.target.value),
+                          }))
+                        }
+                        className="w-full accent-[var(--theme-accent,#E11D48)] cursor-pointer mt-1.5"
+                      />
+                    </div>
+
+                    <div className="space-y-1 text-xs">
+                      <div className="flex justify-between font-semibold text-neutral-700">
+                        <span>{t.admin.photoEnhancer.denoiseLabel}</span>
+                        <span className="font-mono">{photoEnhancer.denoiseLevel}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={5}
+                        value={photoEnhancer.denoiseLevel}
+                        onChange={(e) =>
+                          setPhotoEnhancer((prev) => ({
+                            ...prev,
+                            denoiseLevel: Number(e.target.value),
+                          }))
+                        }
+                        className="w-full accent-[var(--theme-accent,#E11D48)] cursor-pointer mt-1.5"
+                      />
+                    </div>
+                  </div>
+
+                  <label className="flex items-center gap-2.5 cursor-pointer pt-1">
+                    <input
+                      type="checkbox"
+                      checked={photoEnhancer.autoTone}
+                      onChange={(e) =>
+                        setPhotoEnhancer((prev) => ({
+                          ...prev,
+                          autoTone: e.target.checked,
+                        }))
+                      }
+                      style={{ accentColor: themeColor }}
+                      className="w-4 h-4 rounded cursor-pointer"
+                    />
+                    <span className="text-xs text-neutral-700">
+                      {t.admin.photoEnhancer.autoToneLabel}
+                    </span>
+                  </label>
+
+                  {/* Test & Benchmark Row */}
+                  <div className="pt-2 border-t border-neutral-200/80 flex flex-wrap items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      disabled={isTestingEnhancer}
+                      onClick={handleTestPhotoEnhancer}
+                      className="px-3.5 py-2 text-xs font-bold text-white rounded-lg shadow-xs transition-all cursor-pointer disabled:opacity-60 flex items-center gap-2"
+                      style={{ backgroundColor: themeColor }}
+                    >
+                      <span>⚡</span>
+                      <span>
+                        {isTestingEnhancer
+                          ? `${t.admin.photoEnhancer.testingBtn} (${enhancerProgress}%)`
+                          : t.admin.photoEnhancer.testBtn}
+                      </span>
+                    </button>
+
+                    {enhancerTestResult && (
+                      <div className="text-[11px] font-mono text-neutral-600 flex flex-wrap items-center gap-2">
+                        <span className="px-2 py-0.5 bg-white rounded border border-neutral-200">
+                          ⏱️ {enhancerTestResult.durationMs}ms
+                        </span>
+                        <span className="px-2 py-0.5 bg-white rounded border border-neutral-200">
+                          {enhancerTestResult.inputDims} → {enhancerTestResult.outputDims}
+                        </span>
+                        {enhancerTestResult.backend && (
+                          <span className="px-2 py-0.5 bg-white rounded border border-neutral-200 uppercase">
+                            {enhancerTestResult.backend}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {enhancerTestResult && (
+                    <div className="space-y-2 pt-2">
+                      {(enhancerTestResult.durationMs > 4000 || enhancerTestResult.fallbackUsed) && (
+                        <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-xs">
+                          ⚠️{' '}
+                          {enhancerTestResult.fallbackUsed
+                            ? enhancerTestResult.error || 'Fallback triggered.'
+                            : t.admin.photoEnhancer.slowWarning}
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEnhancerCompareView('before')}
+                          className={`px-2.5 py-1 text-[11px] font-semibold rounded-md border cursor-pointer ${
+                            enhancerCompareView === 'before'
+                              ? 'bg-neutral-900 text-white border-neutral-900'
+                              : 'bg-white text-neutral-700 border-neutral-300'
+                          }`}
+                        >
+                          {t.admin.photoEnhancer.beforeLabel}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEnhancerCompareView('after')}
+                          className={`px-2.5 py-1 text-[11px] font-semibold rounded-md border cursor-pointer ${
+                            enhancerCompareView === 'after'
+                              ? 'bg-neutral-900 text-white border-neutral-900'
+                              : 'bg-white text-neutral-700 border-neutral-300'
+                          }`}
+                        >
+                          {t.admin.photoEnhancer.afterLabel}
+                        </button>
+                      </div>
+
+                      <div className="bg-neutral-900 rounded-xl p-2 flex justify-center">
+                        <img
+                          src={
+                            enhancerCompareView === 'before'
+                              ? enhancerTestResult.beforeUrl
+                              : enhancerTestResult.afterUrl
+                          }
+                          alt="Photo enhancer benchmark comparison"
+                          className="max-h-56 w-auto rounded-lg object-contain"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Bagian: Suara Shutter Kamera */}
@@ -1774,50 +3148,166 @@ export const AdminSettings: React.FC = () => {
         </form>
 
         {/* Live Simulation Panels */}
-        <div className="lg:col-span-5 space-y-6">
+        <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
           {/* Live Start Kiosk Screen Mockup */}
           <div className="bg-neutral-950 text-white rounded-2xl p-5 border border-neutral-800 shadow-xl space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
                   Pratinjau Layar Awal Kiosk
                 </h3>
                 <p className="text-[11px] text-zinc-500">Simulasi langsung tampilan (/app/idle)</p>
               </div>
-              <span className="text-[10px] font-mono-tabular bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded">
-                Live Preview
-              </span>
+              <div className="flex items-center gap-1.5">
+                <Link
+                  to="/app/idle"
+                  className="text-[10px] font-semibold bg-white/10 hover:bg-white/20 text-white px-2.5 py-1 rounded transition-colors"
+                >
+                  ↗ {t.admin.idleSettings.openIdleBtn}
+                </Link>
+                <span className="text-[10px] font-mono-tabular bg-zinc-800 text-zinc-300 px-2 py-1 rounded">
+                  Live Preview
+                </span>
+              </div>
             </div>
 
-            {/* Mock Screen 16:9 */}
-            <div className="relative aspect-[16/10] w-full rounded-xl overflow-hidden border border-zinc-800 flex items-center justify-center p-4 text-center select-none shadow-2xl">
-              <img
-                src={previewBackdropSrc}
-                alt="Pratinjau Backdrop"
-                className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
-                style={{ opacity: kioskBackgroundOverlayOpacity / 100 }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/30" />
+            {/* Mock Screen 16:10 */}
+            <div className="relative aspect-[16/10] w-full rounded-xl overflow-hidden border border-zinc-800 bg-[#09090B] flex items-center justify-center p-4 select-none shadow-2xl">
+              {idlePage.mode === 'fullscreen-camera' ? (
+                <>
+                  <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black flex items-center justify-center">
+                    <span className="text-[10px] font-mono-tabular text-zinc-500 uppercase tracking-widest">
+                      🎥 Live Camera Feed
+                    </span>
+                  </div>
+                  <div className="absolute top-2.5 left-2.5 z-20 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/10">
+                    <BrandLogo src={idlePage.customLogoUrl || undefined} size="xs" showRing={false} />
+                    <span className="text-[9px] font-bold text-white/90 truncate max-w-[120px]">
+                      {studioName || 'SoreAja Studio'}
+                    </span>
+                  </div>
+                  <div className="relative z-10 text-center px-3">
+                    <h4 className="font-display text-sm sm:text-base font-black text-white drop-shadow-lg">
+                      {idlePage.fullscreenCameraPrompt.trim() || t.idle.photoNowSaveLater}
+                    </h4>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <img
+                    src={previewBackdropSrc}
+                    alt="Pratinjau Backdrop"
+                    className={`absolute inset-0 w-full h-full transition-all duration-300 ${
+                      idlePage.backdropFit === 'contain' ? 'object-contain' : 'object-cover'
+                    }`}
+                    style={{
+                      opacity: kioskBackgroundOverlayOpacity / 100,
+                      filter: idlePage.backdropBlurPx > 0 ? `blur(${Math.min(8, idlePage.backdropBlurPx * 0.5)}px)` : undefined,
+                    }}
+                  />
+                  {idlePage.backdropGradientStrength !== 'none' && (
+                    <div
+                      className={`absolute inset-0 ${
+                        idlePage.backdropGradientStrength === 'soft'
+                          ? 'bg-gradient-to-t from-black/60 via-black/25 to-transparent'
+                          : idlePage.backdropGradientStrength === 'dark'
+                            ? 'bg-gradient-to-t from-black via-black/80 to-black/55'
+                            : 'bg-gradient-to-t from-black via-black/60 to-black/30'
+                      }`}
+                    />
+                  )}
 
-              <div className="relative z-10 space-y-2 w-full px-2">
-                <p className="text-[9px] font-mono-tabular text-zinc-300 truncate">
-                  {studioName || 'SoreAja Studio — Booth 02'} · {eventName || 'SoreAja Sunset Session 2026'}
-                </p>
-                <h4 className="font-display text-base sm:text-lg font-extrabold text-[#F4F4F0] tracking-tight">
-                  SoreAja Pose
-                </h4>
-                <p className="font-serif-editorial italic text-xs text-zinc-300">
-                  Abadikan momen sore terbaikmu
-                </p>
-                <div className="pt-1">
-                  <span
-                    style={{ backgroundColor: themeColor }}
-                    className="inline-block px-4 py-1.5 rounded-lg text-[11px] font-bold text-white shadow-lg transition-transform"
+                  {/* Mini Floating Polaroid Indicators */}
+                  {idlePage.showFloatingPolaroids && idlePage.floatingPolaroidCount > 0 && (
+                    <>
+                      <div className="hidden sm:block absolute top-3 left-3 w-7 h-11 bg-white/90 rounded-[2px] shadow-md -rotate-12 opacity-80 p-0.5">
+                        <div className="w-full h-8 bg-zinc-700 rounded-[1px]" />
+                      </div>
+                      {idlePage.floatingPolaroidCount >= 4 && (
+                        <div className="hidden sm:block absolute bottom-3 right-3 w-7 h-11 bg-white/90 rounded-[2px] shadow-md rotate-12 opacity-80 p-0.5">
+                          <div className="w-full h-8 bg-zinc-700 rounded-[1px]" />
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  <div
+                    className={`relative z-10 space-y-1.5 w-full px-3 ${
+                      idlePage.heroLayout === 'editorial-left' ? 'text-left' : 'text-center'
+                    }`}
                   >
-                    Sentuh untuk Memulai
-                  </span>
-                </div>
-              </div>
+                    {idlePage.showTopPill && (
+                      <p
+                        className={`text-[8px] font-mono-tabular text-zinc-300 truncate bg-black/40 px-2 py-0.5 rounded-full w-fit border border-white/10 ${
+                          idlePage.heroLayout === 'editorial-left' ? '' : 'mx-auto'
+                        }`}
+                      >
+                        {idlePage.topPillText.trim() ||
+                          `${studioName || 'SoreAja Studio — Booth 02'} · ${eventName || 'SoreAja Sunset Session 2026'}`}
+                      </p>
+                    )}
+
+                    {idlePage.showLogo && idlePage.heroLayout !== 'minimal' && (
+                      <div
+                        className={`flex ${
+                          idlePage.heroLayout === 'editorial-left' ? 'justify-start' : 'justify-center'
+                        }`}
+                      >
+                        <BrandLogo
+                          src={idlePage.customLogoUrl || undefined}
+                          size={idlePage.logoSize === '2xl' || idlePage.logoSize === 'xl' ? 'md' : 'sm'}
+                          showRing={false}
+                        />
+                      </div>
+                    )}
+
+                    <h4 className="font-display text-sm sm:text-base font-extrabold text-[#F4F4F0] tracking-tight truncate">
+                      {idlePage.headlineText.trim() || t.appName}
+                    </h4>
+                    <p className="font-serif-editorial italic text-[11px] text-zinc-300 truncate">
+                      {idlePage.subtitleText.trim() || t.idle.touchSubtitle}
+                    </p>
+                    <div className="pt-0.5">
+                      <span
+                        style={
+                          idlePage.ctaStyle === 'solid' || idlePage.ctaStyle === 'pill'
+                            ? { backgroundColor: themeColor }
+                            : idlePage.ctaStyle === 'outline'
+                              ? { borderColor: themeColor }
+                              : undefined
+                        }
+                        className={`inline-flex items-center gap-1 px-3 py-1 text-[10px] font-bold text-white shadow-lg transition-transform ${
+                          idlePage.ctaStyle === 'pill'
+                            ? 'rounded-full'
+                            : idlePage.ctaStyle === 'glass'
+                              ? 'rounded-xl bg-white/15 backdrop-blur-md border border-white/30'
+                              : idlePage.ctaStyle === 'outline'
+                                ? 'rounded-lg border-2 bg-black/30'
+                                : 'rounded-lg'
+                        }`}
+                      >
+                        {idlePage.ctaEmoji && <span>{idlePage.ctaEmoji}</span>}
+                        <span>{idlePage.ctaText.trim() || t.idle.touchPrompt}</span>
+                      </span>
+                    </div>
+                    {idlePage.showReadyBadge && idlePage.heroLayout !== 'minimal' && (
+                      <p className="text-[8px] font-mono-tabular text-zinc-400 truncate">
+                        {idlePage.readyBadgeText.trim() || t.idle.readyBadge}
+                      </p>
+                    )}
+                    {idlePage.showLatestSpotlight && idlePage.heroLayout !== 'minimal' && (
+                      <div
+                        className={`inline-flex items-center gap-1 bg-zinc-900/80 border border-white/10 rounded-full px-2 py-0.5 text-[8px] text-zinc-300 ${
+                          idlePage.heroLayout === 'editorial-left' ? '' : 'mx-auto'
+                        }`}
+                      >
+                        <span>📸</span>
+                        <span>{t.idle.latestShowcase}</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="text-[11px] text-zinc-400 space-y-1 bg-zinc-900/60 p-3 rounded-xl border border-zinc-800/80">
@@ -1886,6 +3376,47 @@ export const AdminSettings: React.FC = () => {
         onClose={() => setShowResetAllModal(false)}
         onSuccess={handleResetAllSuccess}
       />
+
+      {/* Fullscreen High-Resolution Test Capture Viewer Modal */}
+      {testCaptureViewModal && testCaptureResult && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md p-4 sm:p-6 flex flex-col justify-between animate-in fade-in duration-150">
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-white font-bold text-sm sm:text-base">
+                🔍 {t.camera.preprocessing?.testCaptureTitle || 'Detail Foto Uji Coba Kalibrasi'}
+              </span>
+              <span className="text-xs font-mono text-zinc-400">
+                {testCaptureResult.width}×{testCaptureResult.height}px ({testCaptureResult.source})
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleDownloadTestCapture}
+                className="px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg cursor-pointer transition-all"
+              >
+                {t.camera.preprocessing?.downloadTestBtn || '⬇️ Unduh Foto'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setTestCaptureViewModal(false)}
+                className="px-3 py-1.5 text-xs font-bold text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 rounded-lg cursor-pointer transition-all"
+              >
+                ✕ Tutup
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-auto flex items-center justify-center p-2 sm:p-4">
+            <img
+              src={testCaptureTab === 'raw' ? testCaptureResult.rawUrl : testCaptureResult.processedUrl}
+              alt="Full view"
+              className="max-h-full max-w-full object-contain rounded-lg shadow-2xl"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

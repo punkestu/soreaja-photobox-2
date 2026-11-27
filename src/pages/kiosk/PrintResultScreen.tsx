@@ -17,7 +17,9 @@ import {
   generateSideBySideStrip,
   isVerticalLongStrip,
 } from '../../services/canvasCompositor';
+import { Play } from 'lucide-react';
 import { BrandLogo } from '../../components/common/BrandLogo';
+import { PrintAnimationModal } from '../../components/kiosk/PrintAnimationModal';
 
 export const PrintResultScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -57,10 +59,36 @@ export const PrintResultScreen: React.FC = () => {
     DownloadedFileManifest[]
   >([]);
   const [stripDisplayMode, setStripDisplayMode] = useState<'single' | 'double'>('double');
+  const [isPrintAnimOpen, setIsPrintAnimOpen] = useState<boolean>(false);
+  const [printAnimImage, setPrintAnimImage] = useState<string | null>(null);
+  const [printAnimKey, setPrintAnimKey] = useState<number>(0);
 
   const hasInitializedRef = useRef<boolean>(false);
+  const hasAutoShownAnimRef = useRef<boolean>(false);
   const sessionIdRef = useRef<number | null>(null);
   const activeFrame = selectedFrame || DEFAULT_FRAMES[0];
+
+  const activeDisplayImage =
+    stripDisplayMode === 'double' && doubleStripBase64
+      ? doubleStripBase64
+      : finalLayoutBase64;
+
+  const openPrintAnimation = (image: string | null) => {
+    if (!image) return;
+    setPrintAnimImage(image);
+    setPrintAnimKey((prev) => prev + 1);
+    setIsPrintAnimOpen(true);
+  };
+
+  useEffect(() => {
+    if (!isHydrated || !finalLayoutBase64 || hasAutoShownAnimRef.current) return;
+    hasAutoShownAnimRef.current = true;
+    const initialImg =
+      stripDisplayMode === 'double' && doubleStripBase64
+        ? doubleStripBase64
+        : finalLayoutBase64;
+    openPrintAnimation(initialImg);
+  }, [doubleStripBase64, finalLayoutBase64, isHydrated, stripDisplayMode]);
 
   // Sesuai TSD 4.2.6: Proses On-Mount
   useEffect(() => {
@@ -95,8 +123,8 @@ export const PrintResultScreen: React.FC = () => {
         capturedPhotos.length > 0
           ? capturedPhotos
           : Array.from({ length: activeFrame.photoCount }).map(
-              (_, i) => STUDIO_PORTRAITS[i % STUDIO_PORTRAITS.length].src
-            );
+            (_, i) => STUDIO_PORTRAITS[i % STUDIO_PORTRAITS.length].src
+          );
 
       let layoutToUse = finalLayoutBase64;
       let doubleStripToUse = doubleStripBase64;
@@ -234,8 +262,8 @@ export const PrintResultScreen: React.FC = () => {
       settings?.printApiEndpoint
         ? `Mengirim ${isDouble ? '2-strip (berdampingan)' : '1-foto 4R'} ke Printer Warna (${targetPrinter || 'Color'})...`
         : isDouble
-        ? 'Menghubungkan ke Printer Warna (Dye-Sub 4R - 2 Strip Side-by-Side)...'
-        : 'Menghubungkan ke Printer Warna (Dye-Sub 4R - Full Card)...'
+          ? 'Menghubungkan ke Printer Warna (Dye-Sub 4R - 2 Strip Side-by-Side)...'
+          : 'Menghubungkan ke Printer Warna (Dye-Sub 4R - Full Card)...'
     );
     try {
       const res = await printColor(
@@ -325,8 +353,8 @@ export const PrintResultScreen: React.FC = () => {
               {isPrintingThermal
                 ? t.printResult.printing
                 : thermalPrintCount > 0
-                ? `${t.printResult.printThermal} (${thermalPrintCount}x)`
-                : t.printResult.printThermal}
+                  ? `${t.printResult.printThermal} (${thermalPrintCount}x)`
+                  : t.printResult.printThermal}
             </span>
           </button>
 
@@ -341,8 +369,8 @@ export const PrintResultScreen: React.FC = () => {
               {isPrintingColor
                 ? t.printResult.printing
                 : colorPrintCount > 0
-                ? `${t.printResult.printColor} (${colorPrintCount}x)`
-                : t.printResult.printColor}
+                  ? `${t.printResult.printColor} (${colorPrintCount}x)`
+                  : t.printResult.printColor}
             </span>
           </button>
 
@@ -418,7 +446,17 @@ export const PrintResultScreen: React.FC = () => {
                 <p className="text-xs text-zinc-400">Bingkai: {activeFrame.name}</p>
               </div>
 
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center justify-end gap-2 flex-wrap">
+                <button
+                  type="button"
+                  data-testid="reshow-print-animation-btn"
+                  disabled={!activeDisplayImage}
+                  onClick={() => openPrintAnimation(activeDisplayImage)}
+                  className="min-h-[42px] px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-zinc-100 bg-zinc-800 hover:bg-zinc-700 active:scale-95 disabled:opacity-50 rounded-xl transition-all whitespace-nowrap cursor-pointer border border-zinc-700/80 shadow-sm flex items-center gap-1.5"
+                  title={t.printResult.reshowAnimation}
+                >
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                </button>
                 {doubleStripBase64 && (
                   <button
                     type="button"
@@ -462,22 +500,20 @@ export const PrintResultScreen: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setStripDisplayMode('single')}
-                    className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
-                      stripDisplayMode === 'single'
-                        ? 'bg-zinc-700 text-white'
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
+                    className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 ${stripDisplayMode === 'single'
+                      ? 'bg-zinc-700 text-white'
+                      : 'text-zinc-400 hover:text-white'
+                      }`}
                   >
                     📱 1-Strip
                   </button>
                   <button
                     type="button"
                     onClick={() => setStripDisplayMode('double')}
-                    className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 ${
-                      stripDisplayMode === 'double'
-                        ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
+                    className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 ${stripDisplayMode === 'double'
+                      ? 'bg-[var(--theme-accent,#E11D48)] text-white shadow-sm'
+                      : 'text-zinc-400 hover:text-white'
+                      }`}
                   >
                     <span>👥 2-Strip (4R)</span>
                     <span className="text-[10px] px-1 bg-white/20 text-white rounded font-mono">
@@ -494,11 +530,7 @@ export const PrintResultScreen: React.FC = () => {
             {finalLayoutBase64 ? (
               <>
                 <img
-                  src={
-                    stripDisplayMode === 'double' && doubleStripBase64
-                      ? doubleStripBase64
-                      : finalLayoutBase64
-                  }
+                  src={activeDisplayImage ?? undefined}
                   alt="Hasil akhir strip foto berbingkai"
                   className="max-h-[560px] sm:max-h-[640px] md:max-h-[680px] w-auto max-w-full object-contain rounded-xl shadow-2xl transition-all"
                 />
@@ -675,6 +707,13 @@ export const PrintResultScreen: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <PrintAnimationModal
+        isOpen={isPrintAnimOpen}
+        imageSrc={printAnimImage}
+        animationKey={printAnimKey}
+        onClose={() => setIsPrintAnimOpen(false)}
+      />
     </div>
   );
 };

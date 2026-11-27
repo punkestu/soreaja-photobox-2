@@ -1,7 +1,11 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../../db';
+import { db, DEFAULT_IMAGE_PREPROCESSING, DEFAULT_PHOTO_ENHANCER } from '../../db';
+import type { ImagePreprocessingSettings } from '../../types/photobox';
+import {
+  enhancePhotoDataUrl,
+} from '../../services/photoEnhancerService';
 import { usePhotobox } from '../../context/PhotoboxContext';
 import { DEFAULT_FRAMES, STUDIO_PORTRAITS } from '../../data/defaultFrames';
 import { playShutterSound } from '../../services/shutterAudio';
@@ -11,6 +15,12 @@ import { CountdownOverlay } from '../../components/kiosk/camera/CountdownOverlay
 import { PhotoTray } from '../../components/kiosk/camera/PhotoTray';
 import { ShutterControls } from '../../components/kiosk/camera/ShutterControls';
 import { CameraToolsModal } from '../../components/kiosk/camera/CameraToolsModal';
+import {
+  applyImagePreprocessingToCanvas,
+  applyImagePreprocessingToDataUrl,
+  getPreprocessingCssFilter,
+  isPreprocessingNeutral,
+} from '../../services/imagePreprocessingService';
 
 export const CameraCaptureScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -28,6 +38,7 @@ export const CameraCaptureScreen: React.FC = () => {
   } = usePhotobox();
 
   const settings = useLiveQuery(() => db.settings.get('app_settings'), []);
+  const [enhancingStatusText, setEnhancingStatusText] = useState<string | null>(null);
 
   const activeFrame = selectedFrame || DEFAULT_FRAMES[0];
   const isRetakeMode = retakeIndex !== null;
@@ -65,6 +76,11 @@ export const CameraCaptureScreen: React.FC = () => {
   const [isCapturingSequence, setIsCapturingSequence] = useState<boolean>(false);
   const [localShots, setLocalShots] = useState<string[]>(capturedPhotos);
   const [showTools, setShowTools] = useState<boolean>(false);
+
+  // Live real-time CSS filter for camera viewfinder feeds
+  const liveCssFilter = useMemo(() => {
+    return getPreprocessingCssFilter(settings?.imagePreprocessing);
+  }, [settings?.imagePreprocessing]);
 
   // Safe timer helpers with automatic tracking
   const safeSetTimeout = useCallback((fn: () => void, delayMs: number) => {
@@ -228,9 +244,8 @@ export const CameraCaptureScreen: React.FC = () => {
       try {
         const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: {
-            width: { ideal: 1280 },
-            height: { ideal: 960 },
-            facingMode: 'user',
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 },
           },
           audio: false,
         });
@@ -243,7 +258,7 @@ export const CameraCaptureScreen: React.FC = () => {
         streamRef.current = mediaStream;
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
-          await videoRef.current.play().catch(() => {});
+          await videoRef.current.play().catch(() => { });
         }
         setCameraReady(true);
       } catch {
@@ -284,28 +299,43 @@ export const CameraCaptureScreen: React.FC = () => {
       // 1. High-resolution hardware shutter if DSLR is active and connected
       if (cameraSource === 'gphoto' && gphotoStatus.isConnected) {
         try {
-          return await gphotoService.captureHighResPhoto(shouldMirror);
+          const rawDslr = await gphotoService.captureHighResPhoto(shouldMirror);
+          return await applyImagePreprocessingToDataUrl(rawDslr, settings?.imagePreprocessing);
         } catch (err) {
           console.warn('[CameraCaptureScreen] DSLR shutter failed, using fallback:', err);
         }
       }
 
-      // 2. High-speed recycled canvas capture (WebRTC video, DSLR live frame, or Simulator)
-      const width = 800;
-      const height = 600;
+      // 2. High-speed full-resolution recycled canvas capture (WebRTC video, DSLR live frame, or Simulator)
+      const videoEl = videoRef.current;
+      const isWebRTC =
+        cameraSource === 'webrtc' &&
+        videoEl &&
+        videoEl.readyState >= 2 &&
+        videoEl.videoWidth > 0;
+      const poseIndex = shotIndexZeroBased % STUDIO_PORTRAITS.length;
+      const simImg = simulatorImagesRef.current[poseIndex];
+
+      const width = isWebRTC
+        ? Math.max(1280, videoEl.videoWidth)
+        : simImg && simImg.naturalWidth > 0
+          ? simImg.naturalWidth
+          : 1200;
+      const height = isWebRTC
+        ? Math.max(960, videoEl.videoHeight)
+        : simImg && simImg.naturalHeight > 0
+          ? simImg.naturalHeight
+          : 900;
+
       const canvas = getRecycledCanvas(width, height);
       const ctx = canvas.getContext('2d');
       if (!ctx) return '';
 
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       ctx.clearRect(0, 0, width, height);
-      const videoEl = videoRef.current;
 
-      if (
-        cameraSource === 'webrtc' &&
-        videoEl &&
-        videoEl.readyState >= 2 &&
-        videoEl.videoWidth > 0
-      ) {
+      if (isWebRTC && videoEl) {
         ctx.save();
         if (shouldMirror) {
           ctx.translate(width, 0);
@@ -332,9 +362,7 @@ export const CameraCaptureScreen: React.FC = () => {
           ctx.translate(width, 0);
           ctx.scale(-1, 1);
         }
-        // Draw from Studio Simulator Portrait
-        const poseIndex = shotIndexZeroBased % STUDIO_PORTRAITS.length;
-        const simImg = simulatorImagesRef.current[poseIndex];
+        // Draw from Studio Simulator Portrait at full natural resolution
         if (simImg && simImg.complete && simImg.naturalWidth > 0) {
           const iRatio = simImg.naturalWidth / simImg.naturalHeight;
           const cRatio = width / height;
@@ -351,19 +379,55 @@ export const CameraCaptureScreen: React.FC = () => {
           }
           ctx.drawImage(simImg, sx, sy, sw, sh, 0, 0, width, height);
         } else {
-          ctx.fillStyle = '#27272A';
+          ctx.fillStyle = '#18181B';
           ctx.fillRect(0, 0, width, height);
           ctx.fillStyle = '#F4F4F0';
-          ctx.font = '700 36px "Syne", sans-serif';
-          ctx.fillText(`SOREAJA STUDIO · POSE 0${shotIndexZeroBased + 1}`, 60, 300);
+          ctx.font = '700 48px "Syne", sans-serif';
+          ctx.fillText(`SOREAJA STUDIO · POSE 0${shotIndexZeroBased + 1}`, 80, height / 2);
         }
         ctx.restore();
       }
 
-      // JPEG at 0.92 gives ~5x faster encoding and ~8x smaller base64 payloads
-      return canvas.toDataURL('image/jpeg', 0.92);
+      // Apply calibrated image preprocessing across builtin/simulator/fallback captures
+      applyImagePreprocessingToCanvas(canvas, settings?.imagePreprocessing);
+
+      // High-fidelity JPEG at 0.98 ensures studio sharpness and zero compression artifacts
+      return canvas.toDataURL('image/jpeg', 0.98);
     },
-    [cameraSource, getRecycledCanvas, gphotoStatus.isConnected, settings?.mirrorCamera]
+    [
+      cameraSource,
+      getRecycledCanvas,
+      gphotoStatus.isConnected,
+      settings?.mirrorCamera,
+      settings?.imagePreprocessing,
+    ]
+  );
+
+  const applyOptionalEnhancement = useCallback(
+    async (photos: string[]): Promise<string[]> => {
+      const enhancerCfg = settings?.photoEnhancer;
+      if (!enhancerCfg?.enabled || photos.length === 0) {
+        return photos;
+      }
+
+      const enhanced: string[] = [];
+
+      for (let i = 0; i < photos.length; i++) {
+        setEnhancingStatusText(
+          `${t.camera.enhancer.enhancingProgress} (${i + 1}/${photos.length})...`
+        );
+        const res = await enhancePhotoDataUrl(photos[i], enhancerCfg, (pct) => {
+          setEnhancingStatusText(
+            `${t.camera.enhancer.enhancingProgress} (${i + 1}/${photos.length}) · ${pct}%`
+          );
+        });
+        enhanced.push(res.url);
+      }
+
+      setEnhancingStatusText(null);
+      return enhanced;
+    },
+    [settings?.photoEnhancer, t.camera.enhancer.enhancingProgress]
   );
 
   // Instant capture handler (captures remaining or retake shot immediately)
@@ -386,7 +450,8 @@ export const CameraCaptureScreen: React.FC = () => {
         const newPhoto = await captureSinglePhoto(activePoseIdx);
         setIsImageLoading(false);
         setIsSaving(true);
-        updatePhotoAtIndex(retakeIndex, newPhoto);
+        const [finalPhoto] = await applyOptionalEnhancement([newPhoto]);
+        updatePhotoAtIndex(retakeIndex, finalPhoto);
         setRetakeIndex(null);
         setIsSaving(false);
         navigate('/app/review-photos');
@@ -400,17 +465,20 @@ export const CameraCaptureScreen: React.FC = () => {
       }
       setIsImageLoading(false);
       setIsSaving(true);
-      setLocalShots(generated);
-      setCapturedPhotos(generated);
+      const finalPhotos = await applyOptionalEnhancement(generated);
+      setLocalShots(finalPhotos);
+      setCapturedPhotos(finalPhotos);
       setIsSaving(false);
       navigate('/app/review-photos');
     } catch (err) {
       console.error('[CameraCaptureScreen] Instant capture failed:', err);
+      setEnhancingStatusText(null);
       setIsImageLoading(false);
       setIsSaving(false);
     }
   }, [
     activePoseIdx,
+    applyOptionalEnhancement,
     captureSinglePhoto,
     clearAllTimers,
     isRetakeMode,
@@ -431,7 +499,7 @@ export const CameraCaptureScreen: React.FC = () => {
     setIsCapturingSequence(true);
 
     const secondsPerShot = settings?.countdownSeconds || 3;
-    const PREP_DURATION_MS = 2500; // Continuous auto circular progress duration
+    const CAPTURE_COOLDOWN_MS = 1000; // Fast 1.5s capture cooldown/preparation stage
 
     if (isRetakeMode && retakeIndex !== null) {
       // Retake Mode: Preparation stage (auto progress) -> Shot countdown -> Image loading -> Save
@@ -462,16 +530,17 @@ export const CameraCaptureScreen: React.FC = () => {
             // Show image loading screen while processing capture from camera
             setIsImageLoading(true);
             captureSinglePhoto(activePoseIdx)
-              .then((newPhoto) => {
+              .then(async (newPhoto) => {
                 setIsImageLoading(false);
                 setIsSaving(true);
-                updatePhotoAtIndex(retakeIndex, newPhoto);
+                const [finalPhoto] = await applyOptionalEnhancement([newPhoto]);
+                updatePhotoAtIndex(retakeIndex, finalPhoto);
                 setRetakeIndex(null);
                 safeSetTimeout(() => {
                   setIsCapturingSequence(false);
                   setIsSaving(false);
                   navigate('/app/review-photos');
-                }, 600);
+                }, 400);
               })
               .catch((err) => {
                 console.error('[CameraCaptureScreen] Retake capture error:', err);
@@ -481,7 +550,7 @@ export const CameraCaptureScreen: React.FC = () => {
               });
           }
         }, 900);
-      }, PREP_DURATION_MS);
+      }, CAPTURE_COOLDOWN_MS);
       return;
     }
 
@@ -523,7 +592,7 @@ export const CameraCaptureScreen: React.FC = () => {
             // 4. Show image loading screen while fetching/processing from camera
             setIsImageLoading(true);
             captureSinglePhoto(shotIdx)
-              .then((snap) => {
+              .then(async (snap) => {
                 setIsImageLoading(false);
                 accumulated.push(snap);
                 const currentShots = [...accumulated];
@@ -535,13 +604,16 @@ export const CameraCaptureScreen: React.FC = () => {
                   // Next shot also starts with auto preparation progress!
                   runNextShot(nextIdx);
                 } else {
-                  // All photos captured: show saving loading screen!
+                  // All photos captured: show saving loading screen & run optional AI enhancement
                   setIsSaving(true);
+                  const finalShots = await applyOptionalEnhancement(currentShots);
+                  setLocalShots(finalShots);
+                  setCapturedPhotos(finalShots);
                   safeSetTimeout(() => {
                     setIsCapturingSequence(false);
                     setIsSaving(false);
                     navigate('/app/review-photos');
-                  }, 800);
+                  }, 400);
                 }
               })
               .catch((err) => {
@@ -552,13 +624,14 @@ export const CameraCaptureScreen: React.FC = () => {
               });
           }
         }, 900);
-      }, PREP_DURATION_MS);
+      }, CAPTURE_COOLDOWN_MS);
     };
 
     // Begin sequence starting with shot 0
     runNextShot(0);
   }, [
     activePoseIdx,
+    applyOptionalEnhancement,
     captureSinglePhoto,
     clearAllTimers,
     clearRegisteredInterval,
@@ -646,6 +719,22 @@ export const CameraCaptureScreen: React.FC = () => {
     }
   }, []);
 
+  const handleUpdatePreprocessing = useCallback(
+    async (updater: Partial<ImagePreprocessingSettings> | ImagePreprocessingSettings) => {
+      const current = settings?.imagePreprocessing || DEFAULT_IMAGE_PREPROCESSING;
+      const updated: ImagePreprocessingSettings = {
+        ...current,
+        ...updater,
+      };
+      try {
+        await db.settings.update('app_settings', { imagePreprocessing: updated });
+      } catch (err) {
+        console.warn('Failed to update image preprocessing settings:', err);
+      }
+    },
+    [settings?.imagePreprocessing]
+  );
+
   const currentPortrait =
     STUDIO_PORTRAITS[activePoseIdx % STUDIO_PORTRAITS.length] || STUDIO_PORTRAITS[0];
 
@@ -729,9 +818,9 @@ export const CameraCaptureScreen: React.FC = () => {
           <img
             src={gphotoLiveFrame}
             alt="DSLR Live View"
-            className={`w-full h-full object-cover select-none pointer-events-none ${
-              settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
-            }`}
+            style={{ filter: liveCssFilter }}
+            className={`w-full h-full object-cover select-none pointer-events-none ${settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
+              }`}
           />
         )}
 
@@ -769,9 +858,9 @@ export const CameraCaptureScreen: React.FC = () => {
             ref={videoRef}
             playsInline
             muted
-            className={`w-full h-full object-cover ${
-              settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
-            }`}
+            style={{ filter: liveCssFilter }}
+            className={`w-full h-full object-cover ${settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
+              }`}
           />
         )}
 
@@ -781,9 +870,9 @@ export const CameraCaptureScreen: React.FC = () => {
             src={currentPortrait.src}
             alt={currentPortrait.label}
             referrerPolicy="no-referrer"
-            className={`w-full h-full object-cover transition-all duration-300 ${
-              settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
-            }`}
+            style={{ filter: liveCssFilter }}
+            className={`w-full h-full object-cover transition-all duration-300 ${settings?.mirrorCamera !== false ? 'scale-x-[-1]' : ''
+              }`}
           />
         )}
 
@@ -809,13 +898,13 @@ export const CameraCaptureScreen: React.FC = () => {
           countdown={countdown}
           isPreparing={isPreparing}
           prepKey={prepKey}
-          prepDurationMs={2500}
+          prepDurationMs={1500}
           isFlashing={isFlashing}
           isSaving={isSaving}
           isImageLoading={isImageLoading}
           getReadyText={t.camera.getReady}
           savingTitle={t.camera.savingTitle}
-          savingSubtitle={t.camera.savingSubtitle}
+          savingSubtitle={enhancingStatusText || t.camera.savingSubtitle}
           imageLoadingTitle={t.camera.imageLoadingTitle}
           imageLoadingSubtitle={t.camera.imageLoadingSubtitle}
         />
@@ -842,13 +931,12 @@ export const CameraCaptureScreen: React.FC = () => {
             <div
               title={t.sessionTimer.timeRemaining}
               aria-label={t.sessionTimer.timeRemaining}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-mono-tabular backdrop-blur-md shadow-lg transition-all select-none ${
-                sessionSecondsLeft === 0
-                  ? 'bg-rose-950/80 border-rose-500/80 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.5)] animate-pulse'
-                  : sessionSecondsLeft <= 60
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-mono-tabular backdrop-blur-md shadow-lg transition-all select-none ${sessionSecondsLeft === 0
+                ? 'bg-rose-950/80 border-rose-500/80 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.5)] animate-pulse'
+                : sessionSecondsLeft <= 60
                   ? 'bg-amber-950/80 border-amber-500/80 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.4)]'
                   : 'bg-black/60 border-white/20 text-zinc-200'
-              }`}
+                }`}
             >
               <span className="text-[11px]">{sessionSecondsLeft === 0 ? '🔔' : '⏳'}</span>
               <span className="font-bold tracking-wider">
@@ -872,17 +960,39 @@ export const CameraCaptureScreen: React.FC = () => {
           />
         </div>
 
-        {/* Floating Camera Tools Button (Top Right - z-20) */}
-        <div className="absolute top-3 sm:top-5 right-3 sm:right-5 z-20 pointer-events-auto">
+        {/* Floating Camera Tools Button & Small Preprocessing Preview Pill (Top Right - z-20) */}
+        <div className="absolute top-3 sm:top-5 right-3 sm:right-5 z-20 pointer-events-auto flex items-center gap-2">
+          {!isPreprocessingNeutral(settings?.imagePreprocessing) && (
+            <button
+              type="button"
+              onClick={() => setShowTools(true)}
+              className="min-h-[44px] flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/65 hover:bg-black/90 backdrop-blur-md border border-emerald-500/50 text-emerald-300 text-xs shadow-xl active:scale-95 transition-all cursor-pointer group"
+              title="Pra-pemrosesan citra kamera aktif. Klik untuk melihat pratinjau atau mengubah kalibrasi."
+            >
+              {/* Mini preview thumbnail showing calibrated output */}
+              <div className="relative w-6 h-6 rounded-full overflow-hidden bg-black border border-emerald-400 shrink-0">
+                <img
+                  src={currentPortrait.src}
+                  alt="Thumbnail"
+                  style={{ filter: liveCssFilter }}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <span className="font-semibold text-[11px] hidden sm:inline flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>{t.camera.preprocessing?.activePill || 'Kalibrasi Aktif'}</span>
+              </span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setShowTools((prev) => !prev)}
             aria-expanded={showTools}
-            className={`min-h-[44px] min-w-[44px] px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-full backdrop-blur-md transition-all cursor-pointer shadow-xl flex items-center justify-center gap-1.5 border active:scale-95 ${
-              showTools
-                ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)] shadow-[0_0_20px_rgba(225,29,72,0.6)]'
-                : 'text-zinc-200 hover:text-white bg-black/60 hover:bg-black/85 border-white/20'
-            }`}
+            className={`min-h-[44px] min-w-[44px] px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-full backdrop-blur-md transition-all cursor-pointer shadow-xl flex items-center justify-center gap-1.5 border active:scale-95 ${showTools
+              ? 'bg-[var(--theme-accent,#E11D48)] text-white border-[var(--theme-accent,#E11D48)] shadow-[0_0_20px_rgba(225,29,72,0.6)]'
+              : 'text-zinc-200 hover:text-white bg-black/60 hover:bg-black/85 border-white/20'
+              }`}
             title={showTools ? t.camera.closeTools : t.camera.tools}
           >
             <span className="text-base">⚙️</span>
@@ -918,6 +1028,12 @@ export const CameraCaptureScreen: React.FC = () => {
           activeFrameName={activeFrame.name}
           cameraSource={cameraSource}
           setCameraSource={setCameraSource}
+          onSetCameraSourceMode={async (source: 'webrtc' | 'gphoto' | 'simulator') => {
+            setCameraSource(source);
+            await db.settings.update('app_settings', {
+              cameraSourceMode: source === 'simulator' ? 'simulator' : source === 'gphoto' ? 'gphoto' : 'auto',
+            });
+          }}
           gphotoStatus={gphotoStatus}
           onConnectGPhoto={handleConnectGPhoto}
           onDisconnectGPhoto={handleDisconnectGPhoto}
@@ -931,6 +1047,16 @@ export const CameraCaptureScreen: React.FC = () => {
           activePoseIdx={activePoseIdx}
           setActivePoseIdx={setActivePoseIdx}
           t={t}
+          imagePreprocessing={settings?.imagePreprocessing}
+          onUpdatePreprocessing={handleUpdatePreprocessing}
+          onTestCapture={async () => await captureSinglePhoto(activePoseIdx)}
+          photoEnhancer={settings?.photoEnhancer}
+          onTogglePhotoEnhancer={async (enabled: boolean) => {
+            const current = settings?.photoEnhancer || DEFAULT_PHOTO_ENHANCER;
+            await db.settings.update('app_settings', {
+              photoEnhancer: { ...current, enabled },
+            });
+          }}
         />
       </div>
     </div>

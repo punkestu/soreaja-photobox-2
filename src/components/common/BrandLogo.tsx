@@ -4,6 +4,7 @@ export interface BrandLogoProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'custom';
   className?: string;
   alt?: string;
+  src?: string;
   onClick?: () => void;
   showRing?: boolean;
 }
@@ -22,10 +23,12 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   size = 'md',
   className = '',
   alt = 'SoreAja Logo',
+  src,
   onClick,
   showRing = true,
 }) => {
   const sizeClasses = SIZE_MAP[size] || SIZE_MAP.md;
+  const resolvedSrc = src && src.trim() ? src : '/assets/logo.webp';
 
   return (
     <div
@@ -35,7 +38,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
       } ${sizeClasses} ${className}`}
     >
       <img
-        src="/assets/logo.webp"
+        src={resolvedSrc}
         alt={alt}
         className="w-full h-full object-cover rounded-full"
         loading="eager"
